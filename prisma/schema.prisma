@@ -1,0 +1,11 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Production tables will be introduced after M0 persistence, tenancy, and
+// event vocabulary decisions are accepted. Do not add aggregate-stat tables as
+// the source of truth; persisted game events must remain primary.
