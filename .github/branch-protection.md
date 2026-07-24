@@ -1,10 +1,29 @@
 # Repository security and branch baseline
 
-The connected GitHub integration cannot apply repository settings or branch rules directly. These are the intended settings for an administrator to apply before the first production release.
+## Applied settings
 
-## Main branch
+As of 2026-07-24:
 
-- Protect main.
+- Repository remains private.
+- Dependabot vulnerability alerts are enabled.
+- Automated Dependabot security fixes are enabled.
+- Dependabot updates are configured for npm and GitHub Actions.
+- CODEOWNERS, issue templates, pull-request checklist, and SECURITY.md are present.
+- Actions default workflow token permissions are restricted to read-only where supported.
+
+## Plan-limited settings
+
+The following settings could not be enabled because GitHub reports that this private repository requires GitHub Pro or a public repository:
+
+- Protected branch rules/rulesets for main
+- Secret scanning and push protection
+
+Private vulnerability reporting is also not exposed by the current repository API response. Revisit it after changing plan or visibility.
+
+## Main branch target state
+
+Apply these protections as soon as the repository plan allows:
+
 - Require pull requests before merging.
 - Require at least one approving review.
 - Dismiss stale approvals when new commits are pushed.
@@ -12,16 +31,15 @@ The connected GitHub integration cannot apply repository settings or branch rule
 - Require the required CI checks once the stack exists.
 - Require branches to be up to date before merging.
 - Restrict force pushes and branch deletion.
-- Allow administrators to bypass only for documented emergencies.
+- Allow administrator bypass only for documented emergencies.
 
-## Repository security
+## Repository security target state
 
 - Keep the repository private until the product and data-handling model are reviewed.
 - Enable Dependabot alerts, security updates, and grouped updates.
 - Enable secret scanning and push protection when available.
-- Enable private vulnerability reporting.
+- Enable private vulnerability reporting when available.
 - Review Actions permissions and pin third-party actions to trusted versions or commit SHAs.
-- Limit workflow token permissions to read-only by default.
 - Add environment approvals for production deployments.
 - Review collaborators and outside access quarterly.
 
