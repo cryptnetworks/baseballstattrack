@@ -1,10 +1,8 @@
 # GitHub taxonomy and planning blueprint
 
-The connected GitHub integration used to initialize this repository does not expose label, milestone, or Projects mutations. Use this document as the canonical configuration to apply when those operations are available.
+The repository now has a materialized issue taxonomy and five dated milestones. Keep labels lowercase except for size labels, and use one type, one or more areas, one priority, one status, and one size on planned issues.
 
 ## Labels
-
-Use lowercase, stable names.
 
 Type: type:epic, type:feature, type:task, type:bug, type:decision, type:docs.
 
@@ -14,18 +12,25 @@ Priority: priority:p0, priority:p1, priority:p2, priority:p3.
 
 Status: status:blocked, status:needs-design, status:needs-review, status:ready.
 
+Size: size:XS, size:S, size:M, size:L, size:XL.
+
 ## Milestones
 
-- M0 — Foundation: decisions, architecture, governance, and development baseline.
-- M1 — Domain and data: schema, event model, calculations, and persistence.
-- M2 — Scorekeeping MVP: game setup, live scoring, corrections, and box score.
-- M3 — Season experience: dashboards, reports, exports, and accessibility polish.
-- M4 — Production readiness: security, observability, performance, backup, and release readiness.
+- M0 — Foundation — due 2026-08-14
+- M1 — Domain and data — due 2026-09-18
+- M2 — Scorekeeping MVP — due 2026-11-06
+- M3 — Season experience — due 2026-12-18
+- M4 — Production readiness — due 2027-02-05
 
-## GitHub Project layout
+## Project board target
 
-Create a Projects v2 board named Baseball Stat Track Delivery with columns Backlog, Ready, In progress, In review, Blocked, and Done.
+Create a Projects v2 board named Baseball Stat Track Delivery with:
 
-Recommended fields: Status, Priority, Area, Target (M0–M4), Size (XS/S/M/L/XL), Start date, and Target date.
+- Board view grouped by Status: Backlog, Ready, In progress, In review, Blocked, Done
+- Roadmap view grouped by Target (M0–M4)
+- Table view filtered to open issues
+- My work view filtered to assignee
 
-Recommended views: Board grouped by Status; Roadmap grouped by Target; Table filtered to open issues; My work filtered by assignee.
+Recommended fields: Status, Priority, Area, Target, Size, Start date, and Target date.
+
+The issue and milestone tracker is live. The Projects v2 board remains pending GitHub Projects authorization for the account.
