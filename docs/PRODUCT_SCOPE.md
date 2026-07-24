@@ -80,7 +80,7 @@ Players, parents, league administrators, public spectators, and external data pr
 - The baseline scoring model follows standard baseball semantics for plate appearances, baserunning, pitching, fielding, substitutions, outs, innings, and earned or unearned outcomes.
 - The event vocabulary must be versioned so future league variations can be supported without rewriting historical games.
 - First-release configurable boundaries may include inning count, home or away designation, roster eligibility, lineup order, defensive positions, pitching changes, and game completion state.
-- Materially uncertain: exact support for continuous batting orders, free substitutions, mercy rules, time limits, extra-inning runners, pitch-count limits, and league-specific stat interpretations. Issue #4 owns the detailed scoring vocabulary and ambiguous-case decisions.
+- Materially uncertain: exact support for continuous batting orders, free substitutions, mercy rules, time limits, extra-inning runners, pitch-count limits, and league-specific stat interpretations. Issue #4 owns the detailed scoring vocabulary and ambiguous-case decisions; accepted scoring semantics are documented in [SCORING_SEMANTICS.md](SCORING_SEMANTICS.md).
 
 ## Privacy Expectations
 
