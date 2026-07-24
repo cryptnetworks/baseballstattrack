@@ -12,6 +12,8 @@ The app will let a scorekeeper record a game pitch-by-pitch or play-by-play on p
 
 The design should preserve the source events so a scoring correction can be audited and statistics can be recalculated without losing history.
 
+The first usable release boundary, personas, MVP workflow, non-goals, success metrics, privacy assumptions, and unresolved product decisions are documented in [docs/PRODUCT_SCOPE.md](docs/PRODUCT_SCOPE.md).
+
 ## Planned delivery targets
 
 1. Foundation — product decisions, architecture, repository governance, and local development.
