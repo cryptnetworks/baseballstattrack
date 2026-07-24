@@ -1,6 +1,6 @@
 # GitHub taxonomy and planning blueprint
 
-The repository now has a materialized issue taxonomy and five dated milestones. Keep labels lowercase except for size labels, and use one type, one or more areas, one priority, one status, and one size on planned issues.
+The repository has a materialized issue taxonomy, five dated milestones, and a live Projects v2 delivery board. Keep labels lowercase except for size labels, and use one type, one or more areas, one priority, one status, and one size on planned issues.
 
 ## Labels
 
@@ -22,15 +22,13 @@ Size: size:XS, size:S, size:M, size:L, size:XL.
 - M3 — Season experience — due 2026-12-18
 - M4 — Production readiness — due 2027-02-05
 
-## Project board target
+## Projects v2 delivery board
 
-Create a Projects v2 board named Baseball Stat Track Delivery with:
+- Board: [Baseball Stat Track Delivery](https://github.com/users/cryptnetworks/projects/4)
+- Repository: https://github.com/cryptnetworks/baseballstattrack
+- Views: Table (open issues), Board (workflow by Status), Roadmap (roadmap planning), My Work (assignee filter).
+- Fields: Status, Priority, Type, Area, Target, Size, plus GitHub's built-in issue fields.
+- The board contains the 37 canonical roadmap and planning issues (#1–#34, #51, #67, #68).
+- Use milestone dates for roadmap targets; use the custom Target field for filtering and grouping.
 
-- Board view grouped by Status: Backlog, Ready, In progress, In review, Blocked, Done
-- Roadmap view grouped by Target (M0–M4)
-- Table view filtered to open issues
-- My work view filtered to assignee
-
-Recommended fields: Status, Priority, Area, Target, Size, Start date, and Target date.
-
-The issue and milestone tracker is live. The Projects v2 board remains pending GitHub Projects authorization for the account.
+The issue, milestone, security, and project trackers are live. GitHub's built-in Status field currently provides Todo, In Progress, and Done; blocked/needs-design/needs-review/ready remain labels for finer triage.
