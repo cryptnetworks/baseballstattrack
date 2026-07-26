@@ -12,11 +12,13 @@ Baseball Stat Track uses Next.js, PostgreSQL/Supabase, Prisma, strict TypeScript
 
 Use an `Account` as the primary tenant and authorization boundary. An account owns teams, seasons, player identities, rosters, games, source events, play transactions, correction relationships, projections, and audit records. Users authenticate independently and receive access through account memberships and optional scoped grants.
 
-Use PostgreSQL relational integrity through Prisma-managed migrations for M1 persistence. Account-owned records must carry tenant scope, and critical relationships must prevent cross-account references through database constraints rather than relying only on application code.
+For M1, account-owned baseball records do not move across accounts after creation. A future transfer or sharing feature requires a separate ADR that defines authorization, audit, privacy, export/import, and tenant-scoped integrity for the whole object graph.
+
+Use PostgreSQL relational integrity through Prisma-managed migrations for M1 persistence. Account-owned records must carry tenant scope, and critical relationships must prevent cross-account references through composite tenant-scoped foreign keys or equivalent database constraints rather than relying only on application code.
 
 Persist accepted source events and atomic play transactions as authoritative, append-only records. Derived game state, box scores, player statistics, team statistics, and season summaries may be cached only as rebuildable projections tied to source revisions, ruleset versions, and derivation versions.
 
-Use forward-compatible migration practices: reviewed Prisma migrations in `prisma/migrations`, one logical purpose per migration, no editing applied production migrations, expand-and-contract for risky changes, restartable backfills, and roll-forward repair by default.
+Use forward-compatible migration practices: reviewed Prisma migrations in `prisma/migrations`, one logical purpose per migration, no editing applied production migrations, clean-database migration-chain validation before merge, production deploy tooling rather than development migration commands, expand-and-contract for risky changes, restartable backfills, and roll-forward repair by default.
 
 ## Rejected Alternatives
 

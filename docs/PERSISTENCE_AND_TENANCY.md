@@ -29,9 +29,10 @@ An account is a neutral ownership container for one independent scorekeeping dom
 - A user may belong to multiple accounts.
 - Cross-account references are forbidden unless a future explicit sharing feature creates a constrained share record.
 - Ownership transfer is allowed by changing account owner membership, not by rewriting historical event actors.
-- Teams may move between accounts only through an explicit administrative transfer workflow that audits the transfer and proves no cross-account references remain. This is not required for M1.
-- Games and seasons cannot silently change accounts after creation. If a future transfer exists, the game, season, snapshots, source events, corrections, and projections move together in one reviewed operation.
-- Public or shareable data is out of MVP scope. Until issue #7/#8 decide otherwise, reports remain private to authorized account/team users.
+- M1 prohibits moving teams, seasons, games, source events, play transactions, corrections, projections, snapshots, and audit records between accounts after creation.
+- A future cross-account transfer or sharing feature requires a separate ADR that defines authorization, audit, privacy, export/import, historical actor handling, and tenant-scoped relational integrity for the entire object graph.
+- Games, events, corrections, projections, snapshots, and audit records cannot split across accounts or inherit access through an unverified parent relationship.
+- Public or shareable data is out of MVP scope. Until issue #7/#8 decide otherwise, reports remain private to authorized account/team users, and share tokens or public links must not bypass server-side authorization.
 - Account deletion must not hard-delete accepted historical baseball source events until retention/privacy policy is accepted. Prefer archival, transfer, or pseudonymization.
 
 ## Authorization Model
@@ -41,7 +42,17 @@ Authentication identity and authorization membership are separate:
 - Authentication identity: the Supabase-authenticated user or future identity provider subject.
 - Authorization membership: database records that grant a user capabilities within an account and optional team/season/game scope.
 
-M1 should use a small role model plus scoped grants. Roles are account-wide by default unless a grant narrows them to one team, season, or game.
+M1 should use a small role model plus scoped grants. Permission resolution is monotonic inside one active account membership:
+
+- An active membership is required before any scoped grant is considered.
+- Invited, disabled, removed, expired, or archived memberships grant no access, even if a session token still contains older claims.
+- Account roles define baseline account-wide capabilities. Scoped grants either narrow the resource scope for a scoped role or add an explicit scoped capability inside the same account.
+- Multiple active roles or grants combine by union. M1 does not support explicit deny rules.
+- Disabling or removing a membership invalidates all scoped grants for that user/account pair.
+- The database membership and grant state is authoritative for protected server operations; session claims may be used only as cache hints.
+- The last active owner cannot remove or disable their own ownership unless a replacement active owner exists.
+- Administrators cannot create, remove, or transfer owner membership unless a current owner explicitly grants that capability.
+- Role changes, grant changes, membership disablement, and ownership changes are auditable security events.
 
 | Capability                      | Owner    | Administrator | Coach/Manager       | Scorekeeper    | Viewer         |
 | ------------------------------- | -------- | ------------- | ------------------- | -------------- | -------------- |
@@ -58,11 +69,11 @@ M1 should use a small role model plus scoped grants. Roles are account-wide by d
 
 Role notes:
 
-- `Owner` is accountable for the account and may transfer ownership if another owner or administrator remains.
+- `Owner` is accountable for the account and may transfer ownership only when another active owner remains or the transfer creates the replacement owner atomically.
 - `Administrator` manages account resources but is not the legal/account owner unless also owner.
-- `Coach/Manager` is normally team-scoped and can manage roster/game workflows for assigned teams.
-- `Scorekeeper` can create or score assigned games and propose corrections but does not manage account membership.
-- `Viewer` can view approved reports or assigned private data only when explicitly granted.
+- `Coach/Manager` is normally team-scoped and can manage roster/game workflows for assigned teams. Whether a coach may verify their own completed game is deferred to issue #7; M1 should require an explicit `verify_game` capability rather than infer it from coaching access.
+- `Scorekeeper` can create or score assigned games and propose or apply corrections for assigned in-progress/completed games. Verified games require reopen plus explicit correction capability; scorekeepers do not manage account membership.
+- `Viewer` can view approved reports or assigned private data only when explicitly granted. Viewer access should default to the minimum fields needed for the report.
 - M1 authorization must check database memberships on every protected server operation. Session claims may cache hints, but they are not authoritative.
 
 ## Core Persistence Boundaries
@@ -96,7 +107,7 @@ These are conceptual records for M1 design. They are not final Prisma model name
 
 A historical game must remain understandable and replayable after teams, players, rosters, and settings are edited later.
 
-Snapshot when a game reaches `ready` or `GameStarted`:
+`GameSetupReady` is the deterministic snapshot boundary. It creates the initial immutable setup snapshot and transitions the game to `ready`. `GameStarted` and the first accepted live play must reference the latest ready snapshot; they do not silently create a different setup record.
 
 - Team display names, opponent labels, and home/away designation.
 - Player display names and jersey numbers used in lineups and reports.
@@ -105,7 +116,9 @@ Snapshot when a game reaches `ready` or `GameStarted`:
 - Ruleset version and game settings such as inning count or special runner configuration.
 - Scheduled metadata needed for reports: date/time, location when used, opponent, home/away, season, and team context.
 
-Snapshots coexist with links back to canonical account/team/player/roster records. Reports may show current names where explicitly requested, but replay and audit views default to historical snapshots.
+Pregame setup changes are allowed only while the game remains `draft` or returns to `draft`; accepting a later `GameSetupReady` supersedes the prior ready snapshot through an append-only setup/lifecycle event. After `GameStarted`, substitutions, batting-order changes, defensive changes, pitcher changes, and lineup corrections are source events and may create effective setup checkpoints, not edits to the original setup snapshot.
+
+Snapshots coexist with links back to canonical account/team/player/roster records. Those links are optional for replay; the snapshot must contain enough minimal display and ruleset data to reproduce the historical game if current records are archived, transferred by a future export/import workflow, or pseudonymized. Reports may show current names where explicitly requested, but replay and audit views default to historical snapshots. Privacy redaction may alter display fields through a recorded privacy/audit action without changing baseball meaning.
 
 ## Source Events and Atomic Plays
 
@@ -133,6 +146,19 @@ Database-level guarantees needed by M1:
 - Foreign keys that keep play transactions, events, corrections, and projections in the same account and game.
 - Ruleset references used by accepted events cannot be mutated in place.
 
+### Identifiers and Idempotency
+
+Server-generated identifiers are the stable database identifiers for accounts, users, memberships, teams, seasons, players, games, play transactions, source events, corrections, projections, snapshots, and audit records. Client submission identifiers exist only to make retries safe; they are not resource ids and are not trusted for authorization.
+
+Idempotency rules:
+
+- Scope client submission identifiers to at least account, game, actor, and operation type.
+- Store a request payload fingerprint, expected revision, actor, authorization context, resulting resource id, and accepted/rejected outcome.
+- Retain idempotency records for at least as long as the accepted source event or operation they protect, unless issue #8 defines a shorter safe window for non-source operations.
+- Re-check current database authorization on every retry. If the original actor no longer has access, the server may report that the request was previously accepted or rejected but must not return protected payload data.
+- Reject a reused client submission identifier when the payload fingerprint, expected revision, target account/game, or operation type differs.
+- Do not expose stable ids for records after access removal except through authorized audit or export workflows.
+
 ## Correction Storage
 
 Corrections remain append-only:
@@ -153,6 +179,10 @@ Correction relationships physically retain:
 - Dependency policy: complete play, event range, judgment, or reversal.
 - Projection invalidation scope.
 
+Corrections may form a chain of supersession records, but the effective correction graph must be acyclic and deterministic. A correction target is either the current effective event/play/range or an explicitly historical target with a stated reason. Multiple corrections to the same target are allowed only when their ordering and supersession effect are unambiguous.
+
+Accepted corrections advance the game revision exactly once for the correction operation, even when they supersede multiple events. Lifecycle and setup corrections use the same append-only revision model as live play corrections. Dependent events that no longer replay cleanly remain physically stored but are marked superseded, invalid, or pending replacement in the effective stream; they are not deleted or silently ignored. A corrected verified game remains excluded from verified reports until it is re-verified.
+
 No correction design may require hard-deleting or rewriting accepted source-event rows.
 
 ## Derived Projections
@@ -170,7 +200,7 @@ Expected M1 projections:
 
 Projection records must include:
 
-- Account and projection scope.
+- Account, projection type, projection scope, and source object such as game, season, team, or player.
 - Source game revision or event sequence covered.
 - Ruleset version and derivation version.
 - Verification filter or report state.
@@ -185,8 +215,12 @@ Projection behavior:
 - Full rebuilds must be possible from source events.
 - Incremental rebuilds are allowed only when they prove source revision continuity.
 - Projection writes are idempotent by scope, source revision, ruleset version, and derivation version.
+- Projection uniqueness includes account, projection type, scope, source revision or sequence, ruleset version, derivation version, and report filter.
+- Materialized projections may keep only the latest fresh value per projection identity plus rebuild checkpoints, or retain prior revisions for audit/debug. In either case, stale prior revisions must not be served as verified reports.
+- Projection workers must write conditionally so an older rebuild cannot overwrite a newer projection. A worker that discovers a newer accepted game revision or derivation version marks its result stale or discards it.
 - Projection failures do not block live scoring, but they block marking a game verified when the verified report cannot be reconciled.
 - Live and verified statistics may use the same projection storage with filters, but verified reports must include only verified games unless a report explicitly states otherwise.
+- Read paths may derive directly from source events when projections are stale, provided the response clearly uses the current effective source revision and does not claim a stale projection is fresh.
 - Projections may be deleted and regenerated.
 
 ## Database Integrity and Concurrency
@@ -209,6 +243,20 @@ Critical guarantees should be enforced as close to the database as practical.
 
 Application validation handles baseball-specific rules, role checks, payload schema validation, and user-facing error messages. Replay validation proves deterministic baseball state. Background reconciliation checks projection drift, state-hash mismatch, stale projections, and cross-tenant anomalies.
 
+Every account-owned child relationship should prefer composite tenant-scoped foreign keys or an equivalent database-enforced design. A bare `accountId` column plus application filtering is insufficient for relationships such as roster entry to player/team-season, game to season/team participants, event to game/play transaction, correction to target events, projection to source scope, and audit record to tenant target.
+
+## Audit Records
+
+Baseball source events are already an audit trail for game scoring, corrections, verification, and replay. Separate audit records are still required for privileged or security-relevant actions that are not themselves baseball source events.
+
+Separate audit records should cover:
+
+- Membership invitation, acceptance, disablement, removal, role changes, scoped grant changes, and ownership transfer attempts.
+- Team, season, roster, game, report, export, privacy, pseudonymization, archival, deletion, and recovery actions when they affect access or historical visibility.
+- Game verification, reopening, correction approval, projection rebuild failures that affect verified reporting, migration repair, and production backfill/cutover actions.
+
+Audit records must include actor, action, target type/id, account or system scope, timestamp, outcome, reason when supplied, request/correlation id, and enough before/after metadata to review the decision. They should not duplicate full source-event payloads, exported files, or unnecessary personal data. Retention and redaction rules remain issue #8, but M1 must not design audit storage that depends on mutable display names or current membership state.
+
 ## Deletion, Archival, and Retention
 
 Prefer archival/status transitions for historical baseball data.
@@ -223,8 +271,12 @@ Prefer archival/status transitions for historical baseball data.
 | Players       | Pseudonymize or detach personal fields when privacy requires; preserve historical game snapshots and statistics.         |
 | Games         | Cancel or abandon through lifecycle. Hard delete only for never-started drafts without source events.                    |
 | Source events | Never hard-delete accepted events.                                                                                       |
-| Projections   | May be deleted and regenerated.                                                                                          |
+| Projections   | May be deleted and regenerated; rebuild after privacy pseudonymization when projected display fields change.             |
 | Audit records | Retain according to future retention policy; do not delete while source events depend on them.                           |
+
+Archival hierarchy should flow from account to seasons/teams to games and derived views without changing account ownership. Grants are revocable immediately, but historical source events, snapshots, correction relationships, and audit records remain according to retention policy. Draft/test data may be hard-deleted only when it has no accepted source events and lives in a disposable environment.
+
+Exports are snapshots outside normal application control. The app can revoke future access to generated exports and record that an export occurred, but it must not promise that already downloaded files are retracted. If privacy pseudonymization changes reportable personal fields, derived exports may need reissue or redaction notices under issue #8 policy.
 
 Open privacy/retention decisions for issues #7 and #8:
 
@@ -243,14 +295,17 @@ Rules:
 - Do not edit an already-applied production migration. Add a new migration to repair or advance state.
 - Every migration requires review for schema changes, data movement, locking risk, rollback/roll-forward notes, and source-event/projection impact.
 - Local development: configure `DATABASE_URL` and `DIRECT_URL`, run `npm run db:validate`, generate a migration with Prisma tooling, and run `npm run verify`.
-- CI validates schema with `npm run db:validate` as part of `npm run verify`; future migration checks should detect drift before merge.
-- Production deployment is forward-only by default: backup, deploy expand-compatible schema, deploy compatible app, backfill/rebuild, validate, then contract old schema in a later migration.
+- CI validates schema with `npm run db:validate` as part of `npm run verify`; future migration checks must apply the complete migration chain to a clean database and detect drift before merge.
+- Production deployment must not use `prisma migrate dev` or a local development command. A reviewed deploy command such as Prisma's production migration deploy flow should run with migration credentials that are separate from least-privilege runtime credentials when supported.
+- Production deployment is forward-only by default: backup, deploy expand-compatible schema, deploy compatible app, backfill/rebuild, validate, then contract old schema in a later migration after old code no longer reads or writes it.
 - Rollback means application rollback when safe; schema rollback is not guaranteed and must not be promised for destructive migrations.
 - Data rollback requires explicit backup/restore or compensating migration plan.
 - Long-running migrations must be batched, restartable, observable, and designed to avoid extended write locks.
 - Backfills must record checkpoints, errors, validation counts, and cutover criteria.
+- New non-null columns, unique constraints, and foreign keys on populated tables should use expand/backfill/validate/contract ordering. Add constraints only after backfill validation proves the existing data satisfies them.
 - Data validation must run before and after migrations that change constraints, move data, backfill rows, or affect source-event/projection interpretation.
-- Migration failure response: stop deployment, preserve logs, restore service if possible, decide roll-forward repair versus restore from backup.
+- Backups reduce recovery risk but are not a migration strategy by themselves; rollback, roll-forward repair, and restore criteria must be explicit before production changes.
+- Migration failure response: stop deployment, preserve logs, restore service if possible, decide roll-forward repair versus restore from backup. Failed migrations and failed backfills remain recorded rather than edited away.
 - Drift resolution: compare Prisma schema, migration history, and database state; never manually patch production without recording a follow-up migration.
 
 ## Backfills and Projection Rebuilds
@@ -277,7 +332,7 @@ Seed and fixture data are separate:
 | Demo data                 | Explicitly fake and isolated from production.                                      |
 | Production bootstrap data | Minimal system-owned records only, such as default ruleset versions when accepted. |
 
-Do not add a large seed dataset in issue #5. Future M1 fixtures should cover representative scoring edge cases from `docs/SCORING_SEMANTICS.md` without using real youth-player data.
+Development seed scripts must refuse to run against production-like hosts, schemas, or environment names. Automated tests must fail closed when their dedicated test database is not configured; they must not fall back to development, preview, staging, or production. Destructive reseeding is allowed only for disposable local/test databases. Do not add a large seed dataset in issue #5. Future M1 fixtures should cover representative scoring edge cases from `docs/SCORING_SEMANTICS.md` without using real youth-player data.
 
 ## Environment and Secrets
 
@@ -290,7 +345,10 @@ Persistence-related environment rules:
 - Secrets and production credentials must not be committed.
 - Prefer least-privilege runtime credentials and separate migration credentials when Supabase/PostgreSQL configuration supports it.
 - Preview environments use isolated databases or isolated schemas with clear teardown policy.
-- Local placeholders may live in `.env.example`; real values live in ignored local/hosting secrets.
+- Preview environments must not clone or expose production personal data unless a future privacy/security policy explicitly approves anonymized copies.
+- Runtime logs, error messages, and CI output must not print database URLs, direct URLs, service-role secrets, or connection strings.
+- Production database access must be auditable and limited to approved operators or automation.
+- Local placeholders may live in `.env.example`; real values live in ignored local/hosting secrets. Local defaults must point only at loopback/disposable resources.
 
 ## Observability and Recovery
 
@@ -326,10 +384,17 @@ Recovery policy:
 | Correction applied to stale revision        | Expected revision and target validation.                     | Rejected correction/conflict metric.               | Rebase correction onto latest effective state.                      |
 | Projection ahead of source data             | Projection uniqueness includes covered source revision.      | Reconciliation compares projection to source.      | Mark stale and rebuild.                                             |
 | Projection stale after correction           | Correction invalidates affected scope.                       | Stale status and rebuild lag metric.               | Rebuild projections from source events.                             |
+| Disabled membership with cached session     | Database authorization checked on each protected operation.  | Access-denial audit and session/authz mismatch.    | Revoke sessions if needed and keep membership disabled.             |
+| Correction cycle or ambiguous chain         | Acyclic correction graph and target validation.              | Replay validation rejects non-determinism.         | Add repair correction or audited migration.                         |
+| Old worker overwrites newer projection      | Conditional projection writes by source/derivation revision. | Projection revision reconciliation.                | Discard stale result and rebuild from current source revision.      |
 | Failed migration after partial backfill     | Expand-and-contract, checkpoints, no destructive first step. | Migration/backfill status.                         | Resume backfill or roll forward repair.                             |
+| Migration succeeds but backfill fails       | Separate migration and backfill checkpoints/cutover gates.   | Backfill status and validation counts.             | Keep compatibility path, resume or roll forward repair.             |
 | Application rollback after schema expansion | Backward-compatible expand phase.                            | Deployment health checks.                          | Roll back app while keeping expanded schema.                        |
+| Last account owner removed                  | Sole-owner guard in membership writes.                       | Audit and membership invariant check.              | Restore owner membership through audited admin recovery.            |
+| Restore leaves stale projections            | Restore runbook requires replay/rebuild before reports.      | Projection/source revision reconciliation.         | Mark stale, rebuild, and block verified reports until reconciled.   |
 | Deleted user authored historical events     | Stable actor id and pseudonymized display.                   | Audit display validation.                          | Preserve event actor reference with redacted personal data.         |
 | Player privacy deletion request             | Snapshot/pseudonymization policy.                            | Privacy workflow audit.                            | Remove personal fields, keep historical snapshots/stat continuity.  |
+| Export contains later-redacted player data  | Track exports and minimize report fields.                    | Privacy workflow/export audit.                     | Reissue/redact where possible; record limits under issue #8 policy. |
 
 ## Explicit Deferrals
 
