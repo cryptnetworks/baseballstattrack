@@ -126,7 +126,7 @@ The release is not complete if core statistics require manual aggregate edits, c
 ## Risks, Assumptions, and Open Questions
 
 - Scoring complexity risk: ambiguous plays such as errors, fielder's choice, sacrifice plays, interference, double plays, and earned-run attribution may expand the event vocabulary. Issue #4 must resolve these before full scoring implementation.
-- Persistence risk: event storage, derived projections, tenancy, migrations, seed data, and rollback rules must be defined before production schema work. Issue #5 owns these decisions.
+- Persistence risk: event storage, derived projections, tenancy, migrations, seed data, and rollback rules are defined in [PERSISTENCE_AND_TENANCY.md](PERSISTENCE_AND_TENANCY.md). Production schema work remains deferred to M1.
 - Security risk: youth-player data, team isolation, exports, and report sharing require a threat model before production data is accepted.
 - Connectivity risk: online-first MVP expectations may still require local draft or pending-event recovery for scorekeeping confidence.
 - UX risk: fast touch scoring may require iterative usability testing with real scorekeepers before the first release can be considered trustworthy.
