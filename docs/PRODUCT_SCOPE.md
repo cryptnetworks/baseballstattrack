@@ -75,7 +75,7 @@ Players, parents, league administrators, public spectators, and external data pr
 - Pending saves, retry states, and unresolved failures must be visible and actionable before a game is treated as verified.
 - Full offline game scoring, cross-device conflict resolution, and later synchronization are deferred and require a separate product and architecture decision.
 
-## Rule-Set Assumptions
+## Ruleset Assumptions
 
 - The baseline scoring model follows standard baseball semantics for plate appearances, baserunning, pitching, fielding, substitutions, outs, innings, and earned or unearned outcomes.
 - The event vocabulary must be versioned so future league variations can be supported without rewriting historical games.
