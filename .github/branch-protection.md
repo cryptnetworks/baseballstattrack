@@ -33,6 +33,10 @@ Apply these protections as soon as the repository plan allows:
 - Restrict force pushes and branch deletion.
 - Allow administrator bypass only for documented emergencies.
 
+Required check names after the application skeleton:
+
+- `verify`
+
 ## Repository security target state
 
 - Keep the repository private until the product and data-handling model are reviewed.

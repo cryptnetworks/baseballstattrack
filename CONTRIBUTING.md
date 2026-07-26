@@ -20,7 +20,19 @@ Every pull request should explain:
 
 ## Definition of done
 
-A change is complete when acceptance criteria are met, tests cover important behavior, documentation is updated, security and accessibility implications are considered, and the pull request has passed the required checks and review.
+A change is complete when acceptance criteria are met, tests cover important behavior, documentation is updated, security and accessibility implications are considered, and the pull request has passed the required `verify` CI check and review.
+
+## Required commands
+
+- Install: `npm ci`
+- Format: `npm run format`
+- Lint: `npm run lint`
+- Typecheck: `npm run typecheck`
+- Unit tests: `npm run test`
+- Integration tests: not yet configured
+- Full verification: `npm run verify`
+- Production build: `npm run build`
+- Database migration: `npm run db:migrate`
 
 ## Decisions
 

@@ -4,7 +4,7 @@ A production-quality baseball scorekeeping and statistics platform for coaches a
 
 ## Project status
 
-The repository is in the foundation/planning phase. The first milestone is to agree on the domain model and delivery architecture before implementing product code.
+The repository is in the foundation phase. The initial application shell uses Next.js App Router, React, strict TypeScript, Tailwind CSS, Prisma, Supabase boundaries, TanStack Query, Zod, Vitest, and GitHub Actions.
 
 ## Product direction
 
@@ -23,6 +23,41 @@ The first usable release boundary, personas, MVP workflow, non-goals, success me
 5. Operational readiness — authentication, authorization, observability, backups, performance, and release hardening.
 
 See docs/ROADMAP.md, CONTRIBUTING.md, and SECURITY.md.
+
+## Local development
+
+Prerequisites:
+
+- Node.js 24 or newer
+- npm 11 or newer
+
+Install dependencies:
+
+```sh
+npm ci
+```
+
+Start the app:
+
+```sh
+npm run dev
+```
+
+Open `http://localhost:3000` for the application shell or `http://localhost:3000/status` for the smoke page. The JSON health endpoint is available at `http://localhost:3000/api/health`.
+
+Copy `.env.example` to `.env.local` before connecting Supabase or running migrations. The example contains local placeholders only and no secrets.
+
+## Commands
+
+- Format: `npm run format`
+- Lint: `npm run lint`
+- Typecheck: `npm run typecheck`
+- Unit tests: `npm run test`
+- Prisma client generation: `npm run db:generate`
+- Prisma schema validation: `npm run db:validate`
+- Database migration: `npm run db:migrate` after `DATABASE_URL` and `DIRECT_URL` are configured
+- Production build: `npm run build`
+- Full verification: `npm run verify`
 
 ## Working agreement
 
