@@ -25,7 +25,7 @@ The independently runnable commands above are the local reproduction commands fo
 
 ## GitHub Actions contract
 
-`.github/workflows/ci.yml` defines the stable workflow **Quality gates** and one required job named **`verify`**. The exact branch-protection required check name is:
+`.github/workflows/ci.yml` preserves the stable workflow **CI** and one required job named **`verify`**. The exact branch-protection required check name is:
 
 ```text
 verify
