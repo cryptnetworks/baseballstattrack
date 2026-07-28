@@ -1,6 +1,6 @@
 # Persistence and tenancy
 
-This document defines the M0 persistence, tenancy, migration, and projection contract for Baseball Stat Track. It is a decision baseline for M1 schema, replay, statistic derivation, fixtures, and authorization work. It does not add production tables, Prisma models, migrations, API routes, row-level-security policies, workers, or UI.
+This document defines the M0 persistence, tenancy, migration, and projection contract for Baseball Stat Track. It is a decision baseline for M1 schema, replay, statistic derivation, fixtures, and authorization work. The detailed identity, membership, capability, session, recovery, invitation, and audit policy is canonical in [AUTHENTICATION_AND_AUTHORIZATION.md](AUTHENTICATION_AND_AUTHORIZATION.md). It does not add production tables, Prisma models, migrations, API routes, row-level-security policies, workers, or UI.
 
 The primary rule is the same as the scoring contract: accepted source events and atomic play transactions are authoritative. Derived game state, box scores, player totals, team totals, and season reports are rebuildable projections.
 
@@ -32,10 +32,12 @@ An account is a neutral ownership container for one independent scorekeeping dom
 - M1 prohibits moving teams, seasons, games, source events, play transactions, corrections, projections, snapshots, and audit records between accounts after creation.
 - A future cross-account transfer or sharing feature requires a separate ADR that defines authorization, audit, privacy, export/import, historical actor handling, and tenant-scoped relational integrity for the entire object graph.
 - Games, events, corrections, projections, snapshots, and audit records cannot split across accounts or inherit access through an unverified parent relationship.
-- Public or shareable data is out of MVP scope. Until issue #7/#8 decide otherwise, reports remain private to authorized account/team users, and share tokens or public links must not bypass server-side authorization.
+- Public or shareable data is out of MVP scope. Reports remain private to authorized account/team users; public links or share tokens are not an MVP authorization mechanism. See [AUTHENTICATION_AND_AUTHORIZATION.md](AUTHENTICATION_AND_AUTHORIZATION.md).
 - Account deletion must not hard-delete accepted historical baseball source events until retention/privacy policy is accepted. Prefer archival, transfer, or pseudonymization.
 
 ## Authorization Model
+
+The complete authorization contract, including the protected-resource matrix and deterministic server algorithm, is in [AUTHENTICATION_AND_AUTHORIZATION.md](AUTHENTICATION_AND_AUTHORIZATION.md). The following persistence rules are its invariants.
 
 Authentication identity and authorization membership are separate:
 
@@ -46,7 +48,7 @@ M1 should use a small role model plus scoped grants. Permission resolution is mo
 
 - An active membership is required before any scoped grant is considered.
 - Invited, disabled, removed, expired, or archived memberships grant no access, even if a session token still contains older claims.
-- Account roles define baseline account-wide capabilities. Scoped grants either narrow the resource scope for a scoped role or add an explicit scoped capability inside the same account.
+- Role assignments and scoped capability grants are separate. A role assignment may be account-wide or scoped; a scoped capability grant adds exactly one capability and never narrows or changes a role. Their exact semantics and inheritance are defined in [AUTHENTICATION_AND_AUTHORIZATION.md](AUTHENTICATION_AND_AUTHORIZATION.md).
 - Multiple active roles or grants combine by union. M1 does not support explicit deny rules.
 - Disabling or removing a membership invalidates all scoped grants for that user/account pair.
 - The database membership and grant state is authoritative for protected server operations; session claims may be used only as cache hints.
@@ -71,9 +73,9 @@ Role notes:
 
 - `Owner` is accountable for the account and may transfer ownership only when another active owner remains or the transfer creates the replacement owner atomically.
 - `Administrator` manages account resources but is not the legal/account owner unless also owner.
-- `Coach/Manager` is normally team-scoped and can manage roster/game workflows for assigned teams. Whether a coach may verify their own completed game is deferred to issue #7; M1 should require an explicit `verify_game` capability rather than infer it from coaching access.
+- `Coach/Manager` is normally team-scoped and can manage roster/game workflows for assigned teams. A coach may verify a game they scored only with an explicit `game.verify` capability; M1 does not require separation of duties because role labels alone cannot enforce it.
 - `Scorekeeper` can create or score assigned games and propose or apply corrections for assigned in-progress/completed games. Verified games require reopen plus explicit correction capability; scorekeepers do not manage account membership.
-- `Viewer` can view approved reports or assigned private data only when explicitly granted. Viewer access should default to the minimum fields needed for the report.
+- `Viewer` can view only the report type's documented minimum-field allowlist within an explicit scope. It has no private-player-data access unless a future ADR changes that rule.
 - M1 authorization must check database memberships on every protected server operation. Session claims may cache hints, but they are not authoritative.
 
 ## Core Persistence Boundaries
@@ -278,7 +280,7 @@ Archival hierarchy should flow from account to seasons/teams to games and derive
 
 Exports are snapshots outside normal application control. The app can revoke future access to generated exports and record that an export occurred, but it must not promise that already downloaded files are retracted. If privacy pseudonymization changes reportable personal fields, derived exports may need reissue or redaction notices under issue #8 policy.
 
-Open privacy/retention decisions for issues #7 and #8:
+Open privacy/retention decisions for issue #8 and later implementation work:
 
 - Legal retention period for youth-player personal data.
 - Account-owner deletion when no successor owner exists.
@@ -399,7 +401,7 @@ Recovery policy:
 ## Explicit Deferrals
 
 - Production Prisma models and migrations: M1 issues #9-#12.
-- Authentication and authorization implementation details: issue #7.
+- Authentication and authorization implementation details: [AUTHENTICATION_AND_AUTHORIZATION.md](AUTHENTICATION_AND_AUTHORIZATION.md) and [ADR 0007](decisions/0007-authentication-and-authorization-boundaries.md).
 - Privacy threat model, youth-player retention, and public sharing policy: issue #8.
 - Operational backup objectives and release hardening: M4.
 - Projection worker implementation and monitoring dashboards: later M1/M4 work.
