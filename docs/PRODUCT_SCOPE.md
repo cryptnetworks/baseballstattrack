@@ -46,7 +46,7 @@ Players, parents, league administrators, public spectators, and external data pr
 - Derived batting, pitching, fielding, team, and season statistics.
 - Verified box scores and basic season summaries.
 - Responsive web access for phone, tablet, and desktop browsers.
-- Secure team-level access with server-side authorization for protected resources.
+- Secure team-level access with server-side authorization for protected resources, as defined in [AUTHENTICATION_AND_AUTHORIZATION.md](AUTHENTICATION_AND_AUTHORIZATION.md).
 
 ## MVP Exclusions
 
@@ -87,7 +87,7 @@ Players, parents, league administrators, public spectators, and external data pr
 - Youth-player data must be minimized. Store only information needed for roster, scoring, access control, and reports.
 - Birth year, contact information, notes, and exported reports require explicit handling rules before implementation.
 - Team data must be isolated so one team cannot read or mutate another team's roster, games, events, reports, or exports.
-- Public sharing is not part of the MVP. Any future public report must omit sensitive fields by default and require explicit authorization.
+- Public sharing is not part of the MVP. Any future public report must omit sensitive fields by default and require explicit authorization. MVP has no player/parent portal; constrained viewer access remains a future decision under the [authentication and authorization boundaries](AUTHENTICATION_AND_AUTHORIZATION.md).
 - Audit history must record scoring corrections and privileged actions without exposing unnecessary personal data.
 
 ## Success Metrics
