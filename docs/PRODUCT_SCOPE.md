@@ -85,7 +85,7 @@ Players, parents, league administrators, public spectators, and external data pr
 ## Privacy Expectations
 
 - Youth-player data must be minimized. Store only information needed for roster, scoring, access control, and reports.
-- Birth year, contact information, notes, and exported reports require explicit handling rules before implementation.
+- Birth year, contact information, notes, and exported reports follow [PRIVACY_AND_THREAT_MODEL.md](PRIVACY_AND_THREAT_MODEL.md).
 - Team data must be isolated so one team cannot read or mutate another team's roster, games, events, reports, or exports.
 - Public sharing is not part of the MVP. Any future public report must omit sensitive fields by default and require explicit authorization. MVP has no player/parent portal; constrained viewer access remains a future decision under the [authentication and authorization boundaries](AUTHENTICATION_AND_AUTHORIZATION.md).
 - Audit history must record scoring corrections and privileged actions without exposing unnecessary personal data.
@@ -127,7 +127,7 @@ The release is not complete if core statistics require manual aggregate edits, c
 
 - Scoring complexity risk: ambiguous plays such as errors, fielder's choice, sacrifice plays, interference, double plays, and earned-run attribution may expand the event vocabulary. Issue #4 must resolve these before full scoring implementation.
 - Persistence risk: event storage, derived projections, tenancy, migrations, seed data, and rollback rules are defined in [PERSISTENCE_AND_TENANCY.md](PERSISTENCE_AND_TENANCY.md). Production schema work remains deferred to M1.
-- Security risk: youth-player data, team isolation, exports, and report sharing require a threat model before production data is accepted.
+- Security risk: youth-player data, team isolation, exports, and report sharing are governed by [PRIVACY_AND_THREAT_MODEL.md](PRIVACY_AND_THREAT_MODEL.md); production data remains blocked on its implementation follow-ups.
 - Connectivity risk: online-first MVP expectations may still require local draft or pending-event recovery for scorekeeping confidence.
 - UX risk: fast touch scoring may require iterative usability testing with real scorekeepers before the first release can be considered trustworthy.
 - Product assumption: the first release serves one team's coaching and scorekeeping workflow well before expanding to league administration or public spectator experiences.

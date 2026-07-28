@@ -41,6 +41,8 @@ Use [docs/CI_QUALITY_GATES.md](docs/CI_QUALITY_GATES.md) for the canonical `npm 
 
 Record durable architecture decisions under docs/decisions/ using the template in issue #1 once the repository stack is selected.
 
+For changes that collect, expose, export, log, restore, or otherwise handle player/account data, follow [docs/PRIVACY_AND_THREAT_MODEL.md](docs/PRIVACY_AND_THREAT_MODEL.md).
+
 ## Code quality
 
 Use strict typing, input validation at boundaries, small cohesive modules, and explicit error handling. Avoid speculative abstractions and placeholder implementations.

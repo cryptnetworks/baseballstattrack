@@ -1,6 +1,6 @@
 # Persistence and tenancy
 
-This document defines the M0 persistence, tenancy, migration, and projection contract for Baseball Stat Track. It is a decision baseline for M1 schema, replay, statistic derivation, fixtures, and authorization work. The detailed identity, membership, capability, session, recovery, invitation, and audit policy is canonical in [AUTHENTICATION_AND_AUTHORIZATION.md](AUTHENTICATION_AND_AUTHORIZATION.md). It does not add production tables, Prisma models, migrations, API routes, row-level-security policies, workers, or UI.
+This document defines the M0 persistence, tenancy, migration, and projection contract for Baseball Stat Track. It is a decision baseline for M1 schema, replay, statistic derivation, fixtures, and authorization work. The detailed identity, membership, capability, session, recovery, invitation, and audit policy is canonical in [AUTHENTICATION_AND_AUTHORIZATION.md](AUTHENTICATION_AND_AUTHORIZATION.md); privacy/threat rules are in [PRIVACY_AND_THREAT_MODEL.md](PRIVACY_AND_THREAT_MODEL.md). It does not add production tables, Prisma models, migrations, API routes, row-level-security policies, workers, or UI.
 
 The primary rule is the same as the scoring contract: accepted source events and atomic play transactions are authoritative. Derived game state, box scores, player totals, team totals, and season reports are rebuildable projections.
 
@@ -280,7 +280,7 @@ Archival hierarchy should flow from account to seasons/teams to games and derive
 
 Exports are snapshots outside normal application control. The app can revoke future access to generated exports and record that an export occurred, but it must not promise that already downloaded files are retracted. If privacy pseudonymization changes reportable personal fields, derived exports may need reissue or redaction notices under issue #8 policy.
 
-Open privacy/retention decisions for issue #8 and later implementation work:
+Privacy/threat-model decisions are in [PRIVACY_AND_THREAT_MODEL.md](PRIVACY_AND_THREAT_MODEL.md). Retention details still deferred are:
 
 - Legal retention period for youth-player personal data.
 - Account-owner deletion when no successor owner exists.
@@ -402,6 +402,6 @@ Recovery policy:
 
 - Production Prisma models and migrations: M1 issues #9-#12.
 - Authentication and authorization implementation details: [AUTHENTICATION_AND_AUTHORIZATION.md](AUTHENTICATION_AND_AUTHORIZATION.md) and [ADR 0007](decisions/0007-authentication-and-authorization-boundaries.md).
-- Privacy threat model, youth-player retention, and public sharing policy: issue #8.
+- Privacy implementation, youth-player retention periods, and public-sharing implementation: follow-up work defined by [PRIVACY_AND_THREAT_MODEL.md](PRIVACY_AND_THREAT_MODEL.md).
 - Operational backup objectives and release hardening: M4.
 - Projection worker implementation and monitoring dashboards: later M1/M4 work.
