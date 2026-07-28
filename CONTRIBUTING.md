@@ -32,7 +32,10 @@ A change is complete when acceptance criteria are met, tests cover important beh
 - Integration tests: not yet configured
 - Full verification: `npm run verify`
 - Production build: `npm run build`
+- Production dependency audit: `npm run audit:prod`
 - Database migration: `npm run db:migrate`
+
+Use [docs/CI_QUALITY_GATES.md](docs/CI_QUALITY_GATES.md) for the canonical `npm run verify` chain, CI behavior, and local failure triage.
 
 ## Decisions
 
