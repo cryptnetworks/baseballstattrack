@@ -4,7 +4,7 @@ This roadmap is deliberately outcome-based. Issue numbers are the source of exec
 
 ## M0 — Foundation
 
-Choose the stack and architecture, define scoring semantics, establish local development, CI, database migration rules, authentication boundaries, and observability conventions.
+Choose the stack and architecture, define scoring semantics, establish local development, CI, database migration rules, authentication and privacy boundaries, and observability conventions. See [PRIVACY_AND_THREAT_MODEL.md](PRIVACY_AND_THREAT_MODEL.md).
 
 Exit criteria: a new contributor can run the app and tests; core decisions are recorded; the repository has required checks and protected-main settings.
 
