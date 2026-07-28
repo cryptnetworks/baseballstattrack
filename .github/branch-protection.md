@@ -37,6 +37,8 @@ Required check names after the application skeleton:
 
 - `verify`
 
+The workflow contract and exact check-name rationale are documented in [docs/CI_QUALITY_GATES.md](../docs/CI_QUALITY_GATES.md).
+
 ## Repository security target state
 
 - Keep the repository private until the product and data-handling model are reviewed.

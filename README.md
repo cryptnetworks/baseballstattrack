@@ -55,9 +55,12 @@ Copy `.env.example` to `.env.local` before connecting Supabase or running migrat
 - Unit tests: `npm run test`
 - Prisma client generation: `npm run db:generate`
 - Prisma schema validation: `npm run db:validate`
+- Production dependency audit: `npm run audit:prod`
 - Database migration: `npm run db:migrate` after `DATABASE_URL` and `DIRECT_URL` are configured
 - Production build: `npm run build`
 - Full verification: `npm run verify`
+
+The canonical local/CI quality contract, required `verify` branch-protection check, and failure triage guidance are in [docs/CI_QUALITY_GATES.md](docs/CI_QUALITY_GATES.md).
 
 ## Working agreement
 
