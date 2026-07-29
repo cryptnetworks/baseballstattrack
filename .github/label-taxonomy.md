@@ -45,7 +45,6 @@ Reproduction outcomes such as duplicate, expected behavior, cannot reproduce, ve
 
 The issue, milestone, security, and project trackers are live. GitHub's built-in Status field currently provides Todo, In Progress, and Done; blocked/needs-design/needs-review/ready remain labels for finer triage.
 
-
 ## Expansion milestones
 
 The next roadmap targets are defined here and in docs/ROADMAP.md. Issue #96 tracks their native GitHub materialization.

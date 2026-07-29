@@ -32,7 +32,6 @@ Harden authorization, auditability, backups, restore, observability, rate limits
 
 Exit criteria: a documented production release can be deployed, monitored, rolled back, and recovered.
 
-
 ## M5 — Integrations and ecosystem
 
 Turn the versioned statistics API, Discord bot, webhooks, calendar synchronization, notifications, and exports into a safe integration surface.
