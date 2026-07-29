@@ -33,7 +33,7 @@ verify
 
 The workflow runs for pull requests targeting `main` and pushes to `main`. It uses a single combined job so contributors and branch protection share the exact canonical command. Workflow concurrency cancels obsolete runs for the same pull request or branch; it never cancels a different pull request's run.
 
-The job uses Ubuntu, Node 24, npm's dependency cache keyed from the lockfile, `npm ci`, a disposable PostgreSQL 17 service, the complete migration chain, and `npm run verify`. The cache only accelerates download; `npm ci` remains authoritative and fails on a package-lock mismatch. The migration step runs `npm run db:migrate:deploy` followed by `npm run db:migrate:status` against the empty CI database, so invalid SQL and unapplied migrations fail before application verification. The job has a 15-minute timeout and named checkout, setup, install, migration, and verification steps so failures are visible in GitHub Actions logs. No required step uses `continue-on-error`, `|| true`, or a failure-masking pipe.
+The job uses Ubuntu, Node 24, npm's dependency cache keyed from the lockfile, `npm ci`, a disposable PostgreSQL 17 service, the complete migration chain, and `npm run verify`. The cache only accelerates download; `npm ci` remains authoritative and fails on a package-lock mismatch. The migration step runs deploy, status, catalog verification, and the transaction-scoped relational representability proof against the empty CI database, so invalid SQL, unapplied migrations, missing database-only constraints, and lossy representative mappings fail before application verification. The job has a 15-minute timeout and named checkout, setup, install, migration, and verification steps so failures are visible in GitHub Actions logs. No required step uses `continue-on-error`, `|| true`, or a failure-masking pipe.
 
 Node 24 and npm 11 or newer are the supported runtime baseline. The `actions/setup-node` Node 24 distribution supplies a compatible npm release; local contributors should use the versions in `package.json`'s `engines` field.
 
@@ -41,7 +41,7 @@ Node 24 and npm 11 or newer are the supported runtime baseline. The `actions/set
 
 CI has read-only `contents` permission and receives no deployment, identity-provider, production database, or application secrets. Its PostgreSQL credentials are fixed, workflow-local values for the isolated disposable service. Fork pull requests run the same verification without repository secrets. `NEXT_TELEMETRY_DISABLED=1` disables framework telemetry; it is not a credential or application setting.
 
-The application build currently does not create Prisma or Supabase clients. `prisma validate` validates the checked-in schema without changing data. CI sets `DATABASE_URL` only to its disposable service so `prisma migrate deploy` can execute the checked-in chain; no production URL is available to the workflow, and CI never seeds application data.
+The application build currently does not create Prisma or Supabase clients. `prisma validate` validates the checked-in schema without changing data. CI sets `DATABASE_URL` only to its disposable service so `prisma migrate deploy` can execute the checked-in chain. The representability script uses fixed synthetic identifiers inside a transaction and always rolls it back; it is not a seed. No production URL is available to the workflow.
 
 Future CI changes must keep PR verification fail-closed: do not add production secrets, production database access, seeds, destructive access outside the disposable CI database, or deployment steps. Preview and test environments must remain isolated as required by `PERSISTENCE_AND_TENANCY.md`.
 
@@ -58,6 +58,7 @@ Run the named failing command locally after `npm ci`. Common cases:
 - Formatting: run `npm run format:write`, inspect the change, then rerun `npm run format`.
 - Lint, typecheck, or tests: fix the reported file/test and rerun that command before `npm run verify`.
 - Prisma validation: inspect `prisma/schema.prisma` and `prisma.config.ts`; do not run migrations merely to satisfy CI.
+- Migration/representability: reproduce only against an isolated disposable PostgreSQL database; inspect the named constraint or synthetic invariant before changing a migration.
 - Build: reproduce with `npm run build` without adding credentials. Investigate only documented build-time environment requirements.
 - Audit: determine whether the advisory reaches production dependencies and remediate without broad, unrelated upgrades.
 

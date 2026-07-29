@@ -55,6 +55,7 @@ Copy `.env.example` to `.env.local` before connecting Supabase or running migrat
 - Unit tests: `npm run test`
 - Prisma client generation: `npm run db:generate`
 - Prisma schema validation: `npm run db:validate`
+- Relational representability proof: `npm run db:representability` after applying migrations to an isolated disposable database
 - Production dependency audit: `npm run audit:prod`
 - Database migration: `npm run db:migrate` after `DATABASE_URL` and `DIRECT_URL` are configured
 - Production build: `npm run build`
