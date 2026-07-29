@@ -106,4 +106,30 @@ describe("relational domain schema", () => {
       ),
     ).toBe(true);
   });
+
+  it("keeps setup and scoring revisions separate with an exact ready pointer", () => {
+    const gameFields = new Set(model("Game").fields.map((field) => field.name));
+    const setupFields = new Set(
+      model("GameSetupSnapshot").fields.map((field) => field.name),
+    );
+
+    for (const required of [
+      "revision",
+      "setupRevision",
+      "readySetupSnapshotId",
+      "weatherCondition",
+      "temperatureF",
+    ]) {
+      expect(gameFields).toContain(required);
+    }
+    for (const required of [
+      "createdByActorId",
+      "clientSubmissionId",
+      "payloadHash",
+      "weatherCondition",
+      "temperatureF",
+    ]) {
+      expect(setupFields).toContain(required);
+    }
+  });
 });

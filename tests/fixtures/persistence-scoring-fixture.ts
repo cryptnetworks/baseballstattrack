@@ -159,7 +159,6 @@ export async function seedPersistenceScoringFixture(
       accountId: ids.account,
       seasonId: season,
       teamSeasonId: ids.home.teamSeason,
-      status: "READY",
     },
   });
   await prisma.gameSetupSnapshot.create({
@@ -214,6 +213,14 @@ export async function seedPersistenceScoringFixture(
       defensivePosition: role === "batter" ? "SHORTSTOP" : "PITCHER",
       isStartingPitcher: role === "pitcher",
     })),
+  });
+  await prisma.game.update({
+    where: { id: ids.game },
+    data: {
+      status: "READY",
+      setupRevision: 1,
+      readySetupSnapshotId: ids.setup,
+    },
   });
 
   return ids;

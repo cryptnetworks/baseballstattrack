@@ -383,6 +383,12 @@ export class PrismaGameEventRepository {
               "Expected source revision is stale.",
             );
           }
+          if (game.readySetupSnapshotId !== command.setupSnapshotId) {
+            throw new GameEventError(
+              "SETUP_NOT_READY",
+              "Event must reference the exact current ready setup.",
+            );
+          }
 
           const setup = await loadSetup(
             tx,
@@ -390,6 +396,12 @@ export class PrismaGameEventRepository {
             command.gameId,
             command.setupSnapshotId,
           );
+          if (setup.setupRevision !== game.setupRevision) {
+            throw new GameEventError(
+              "IMMUTABLE_HISTORY_VIOLATION",
+              "Ready setup pointer disagrees with the game setup revision.",
+            );
+          }
           const stored = await tx.sourceEvent.findMany({
             where: {
               accountId: command.accountId,
