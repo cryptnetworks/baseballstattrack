@@ -31,3 +31,38 @@ Exit criteria: a coach can answer common season questions and share a trustworth
 Harden authorization, auditability, backups, restore, observability, rate limits, performance, dependency security, release automation, and operational documentation.
 
 Exit criteria: a documented production release can be deployed, monitored, rolled back, and recovered.
+
+
+## M5 — Integrations and ecosystem
+
+Turn the versioned statistics API, Discord bot, webhooks, calendar synchronization, notifications, and exports into a safe integration surface.
+
+Exit criteria: at least one external consumer uses a documented read contract; credentials, quotas, privacy, retries, deprecation, and support workflows are operational.
+
+Primary issues: #73, #91–#99.
+
+## M6 — Advanced analytics
+
+Add optional, explainable analytics such as batted-ball and pitch-location views, lineup and matchup insights, and trend analysis.
+
+Exit criteria: advanced insights are reproducible from versioned source data, disclose sample-size and ruleset assumptions, respect privacy, and never become required for core scoring.
+
+Primary issues: #33, #102–#104.
+
+## M7 — Offline and mobile
+
+Make scorekeeping resilient to unreliable connectivity through conflict-safe sync, an installable PWA, and secure device recovery.
+
+Exit criteria: an interrupted or offline game can be recovered without duplicate or lost events, and the mobile scoring workflow meets accessibility and performance targets.
+
+Primary issues: #34, #100, #105.
+
+## M8 — League ecosystem
+
+Support configurable league rulesets, portable historical data, and carefully delegated organization or league administration.
+
+Exit criteria: multiple documented rulesets can coexist without reinterpreting historical games, imports remain auditable, and cross-team access is explicit and least-privilege.
+
+Primary issues: #4, #26, #101, #106–#107.
+
+Native GitHub milestone creation and assignment for M5–M8 is tracked in issue #96. Until those milestones are materialized, the title prefixes, Target metadata, roadmap, and Projects Target field are the planning source of truth.
