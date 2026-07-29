@@ -1,5 +1,5 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
-  - name: Security vulnerability
-    url: https://github.com/cryptnetworks/baseballstattrack/security/advisories/new
-    about: Report security concerns privately; do not open a public issue.
+  - name: Security vulnerability (private)
+    url: https://mdesocio.com/#hero
+    about: Do not open an issue. Use the maintainer's “Email me!” link and follow SECURITY.md.

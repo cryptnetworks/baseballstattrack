@@ -1,0 +1,156 @@
+name: Bug report
+description: Report incorrect behavior that is safe to discuss in this repository
+title: "[bug] "
+labels:
+  - "type:bug"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve Baseball Stat Track.
+
+        **Stop before submitting** if this might involve authentication bypass, secret or token exposure, cross-Account access, exploitable injection, youth-data exposure, backup exposure, or active abuse. Do not put vulnerability details in an issue. Follow [SECURITY.md](https://github.com/cryptnetworks/baseballstattrack/blob/main/SECURITY.md) and use its private reporting path.
+
+        Use synthetic or redacted identifiers and remove secrets, personal data, private event payloads, and production data from every field and attachment.
+
+  - type: input
+    id: affected_version
+    attributes:
+      label: Affected version
+      description: Exact application version, deployment, or commit SHA when known. Write "unknown" if unavailable.
+      placeholder: commit SHA, version, or unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      description: What should have happened? Reference a documented contract or invariant when possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Do not include secrets, personal data, or raw private event payloads.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction_steps
+    attributes:
+      label: Reproduction steps
+      description: Provide a numbered, deterministic sequence using synthetic data.
+      placeholder: |
+        1. Start from...
+        2. Perform...
+        3. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: minimum_reproduction
+    attributes:
+      label: Minimum reproduction
+      description: Provide the smallest fixture, input, or setup that still demonstrates the problem, or explain why it cannot be reduced further.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reproducibility_rate
+    attributes:
+      label: Reproducibility rate
+      options:
+        - Every attempt
+        - Most attempts
+        - Intermittent
+        - Reproduced once
+        - Not yet reproduced
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Affected environment
+      description: Include OS, browser, device, Node/runtime, database, container, or deployment context where relevant. Write "not applicable" where appropriate.
+    validations:
+      required: true
+
+  - type: textarea
+    id: data_setup
+    attributes:
+      label: Safe data and Account context
+      description: Describe required setup and tenant context using synthetic or redacted Account, team, game, and player identifiers only. State whether real user or youth data was involved, without including that data.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Safe logs or screenshots
+      description: Paste only minimal redacted evidence. Remove tokens, cookies, URLs with secrets, database URLs, contact details, player names, private notes, and production payloads.
+
+  - type: textarea
+    id: errors
+    attributes:
+      label: Error messages
+      description: Include exact safe error text or codes. Redact secrets, private identifiers, and personal data.
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Explain affected users, frequency, data-integrity or accessibility impact, and whether work is blocked.
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: Describe a safe workaround, or write "none known."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regression_status
+    attributes:
+      label: Regression status
+      options:
+        - Suspected regression
+        - Confirmed regression
+        - Not a regression
+        - Unknown
+    validations:
+      required: true
+
+  - type: input
+    id: version_range
+    attributes:
+      label: First-known-good and first-known-bad versions
+      description: Include either or both when known; otherwise write "unknown."
+      placeholder: good=<version or SHA>; bad=<version or SHA>
+    validations:
+      required: true
+
+  - type: input
+    id: related_work
+    attributes:
+      label: Related issue or pull request
+      description: Link related defects, changes, or suspected introducing work when known.
+      placeholder: "#123 or URL"
+
+  - type: checkboxes
+    id: safety_confirmation
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I am not describing a suspected security vulnerability or privacy exposure; if uncertain, I will use the private route in SECURITY.md instead.
+          required: true
+        - label: I removed secrets, tokens, cookies, personal data, real youth data, private notes, production dumps, and raw private event payloads.
+          required: true
+        - label: I used synthetic or safely redacted reproduction data and understand that issue content is not a private reporting channel.
+          required: true

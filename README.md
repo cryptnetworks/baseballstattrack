@@ -56,12 +56,15 @@ Copy `.env.example` to `.env.local` before connecting Supabase or running migrat
 - Prisma client generation: `npm run db:generate`
 - Prisma schema validation: `npm run db:validate`
 - Relational representability proof: `npm run db:representability` after applying migrations to an isolated disposable database
+- Defect-policy and issue-form validation: `npm run policy:validate`
 - Production dependency audit: `npm run audit:prod`
 - Database migration: `npm run db:migrate` after `DATABASE_URL` and `DIRECT_URL` are configured
 - Production build: `npm run build`
 - Full verification: `npm run verify`
 
 The canonical local/CI quality contract, required `verify` branch-protection check, and failure triage guidance are in [docs/CI_QUALITY_GATES.md](docs/CI_QUALITY_GATES.md).
+
+Defect reporting, severity and priority, regression evidence, verification, and closure follow [docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md](docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md). Suspected vulnerabilities must use the private route in [SECURITY.md](SECURITY.md), never an issue.
 
 ## Working agreement
 
