@@ -27,6 +27,10 @@
     "db:migrate:verify": "node scripts/verify-migration.mjs",
     "db:representability": "node scripts/verify-relational-representability.mjs",
     "policy:validate": "node scripts/verify-defect-policy.mjs",
+    "container:config": "docker compose config --quiet",
+    "container:build": "docker build --target runtime --tag baseballstattrack:local .",
+    "container:verify": "bash scripts/container-smoke.sh",
+    "container:scan": "docker scout cves --exit-code --only-severity critical,high local://baseballstattrack:local",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "verify": "npm run format && npm run lint && npm run typecheck && npm run test && npm run policy:validate && npm run db:validate && npm run build && npm run audit:prod"
   },
