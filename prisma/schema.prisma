@@ -474,11 +474,13 @@ model GameSetupSnapshot {
   scheduledInnings Int
   acceptedAt       DateTime  @default(now())
 
-  account        Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  game           Game                 @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
-  rulesetVersion RulesetVersion       @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
-  lineupSlots    LineupSlotSnapshot[]
-  teamSnapshots  GameTeamSnapshot[]
+  account          Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  game             Game                 @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  rulesetVersion   RulesetVersion       @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
+  lineupSlots      LineupSlotSnapshot[]
+  teamSnapshots    GameTeamSnapshot[]
+  playTransactions PlayTransaction[]
+  sourceEvents     SourceEvent[]
 
   @@unique([accountId, id])
   @@unique([gameId, setupRevision])
@@ -518,6 +520,7 @@ model PlayTransaction {
   id                 String    @id @default(cuid())
   accountId          String
   gameId             String
+  setupSnapshotId    String
   acceptedRevision   Int
   expectedRevision   Int
   clientSubmissionId String
@@ -529,13 +532,15 @@ model PlayTransaction {
   actorUserId        String?
   acceptedAt         DateTime  @default(now())
 
-  account      Account       @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  game         Game          @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
-  actorUser    AppUser?      @relation("PlayTransactionActor", fields: [actorUserId], references: [id], onDelete: Restrict)
-  sourceEvents SourceEvent[]
+  account       Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  game          Game              @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  setupSnapshot GameSetupSnapshot @relation(fields: [accountId, gameId, setupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
+  actorUser     AppUser?          @relation("PlayTransactionActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  sourceEvents  SourceEvent[]
 
   @@unique([accountId, id])
   @@unique([accountId, gameId, id])
+  @@unique([accountId, gameId, setupSnapshotId, id])
   @@unique([gameId, acceptedRevision])
   @@unique([accountId, gameId, actorId, clientSubmissionId])
   @@index([accountId, gameId, acceptedAt])
@@ -545,6 +550,7 @@ model SourceEvent {
   id                 String    @id @default(cuid())
   accountId          String
   gameId             String
+  setupSnapshotId    String
   playTransactionId  String?
   sequence           Int
   componentOrder     Int?
@@ -566,7 +572,8 @@ model SourceEvent {
 
   account                Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
   game                   Game              @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
-  playTransaction        PlayTransaction?  @relation(fields: [accountId, gameId, playTransactionId], references: [accountId, gameId, id], onDelete: Restrict)
+  setupSnapshot          GameSetupSnapshot @relation(fields: [accountId, gameId, setupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
+  playTransaction        PlayTransaction?  @relation(fields: [accountId, gameId, setupSnapshotId, playTransactionId], references: [accountId, gameId, setupSnapshotId, id], onDelete: Restrict, map: "SourceEvent_setup_playTransaction_fkey")
   rulesetVersion         RulesetVersion    @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
   actorUser              AppUser?          @relation("SourceEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
   parentEvent            SourceEvent?      @relation("EventParent", fields: [accountId, gameId, parentEventId], references: [accountId, gameId, id], onDelete: Restrict)
@@ -579,20 +586,22 @@ model SourceEvent {
   @@unique([accountId, gameId, id])
   @@unique([gameId, sequence])
   @@unique([playTransactionId, componentOrder])
+  @@index([accountId, gameId, setupSnapshotId, sequence])
   @@index([accountId, gameId, recordedAt])
   @@index([accountId, rulesetVersionId])
   @@index([accountId, gameId, actorId, clientSubmissionId])
 }
 
 model EventCorrection {
-  id                 String           @id @default(cuid())
-  accountId          String
-  gameId             String
-  correctionEventId  String
-  targetEventId      String
-  replacementEventId String?
-  policy             CorrectionPolicy
-  createdAt          DateTime         @default(now())
+  id                   String           @id @default(cuid())
+  accountId            String
+  gameId               String
+  correctionEventId    String
+  targetEventId        String
+  replacementEventId   String?
+  replacementPayloadId String?
+  policy               CorrectionPolicy
+  createdAt            DateTime         @default(now())
 
   account          Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
   correctionEvent  SourceEvent  @relation("CorrectionEvent", fields: [accountId, gameId, correctionEventId], references: [accountId, gameId, id], onDelete: Restrict)

@@ -21,6 +21,11 @@ const expectedConstraints = [
   "SecurityAuditRecord_scope_check",
   "SourceEvent_standalone_idempotency_key",
   "SourceEvent_shape_check",
+  "SourceEvent_accountId_gameId_setupSnapshotId_fkey",
+  "SourceEvent_setup_playTransaction_fkey",
+  "SourceEvent_accountId_gameId_setupSnapshotId_sequence_idx",
+  "PlayTransaction_accountId_gameId_setupSnapshotId_fkey",
+  "PlayTransaction_accountId_gameId_setupSnapshotId_id_key",
 ];
 
 const expectedTriggers = [

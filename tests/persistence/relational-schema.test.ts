@@ -63,6 +63,7 @@ describe("relational domain schema", () => {
       "eventType",
       "schemaVersion",
       "rulesetVersionId",
+      "setupSnapshotId",
       "clientSubmissionId",
       "expectedRevision",
       "acceptedRevision",
@@ -76,6 +77,11 @@ describe("relational domain schema", () => {
     expect(
       model("ProjectionCheckpoint").fields.some(
         (field) => field.name === "privacyOverlayRevision",
+      ),
+    ).toBe(true);
+    expect(
+      model("EventCorrection").fields.some(
+        (field) => field.name === "replacementPayloadId",
       ),
     ).toBe(true);
   });
