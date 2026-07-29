@@ -155,7 +155,6 @@ integration("PrismaGameEventRepository", () => {
         accountId: `${runPrefix}-account`,
         seasonId: `${runPrefix}-season`,
         teamSeasonId: `${runPrefix}-home-season`,
-        status: "READY",
       },
     });
     await prisma.gameSetupSnapshot.create({
@@ -245,6 +244,14 @@ integration("PrismaGameEventRepository", () => {
           isStartingPitcher: true,
         },
       ],
+    });
+    await prisma.game.update({
+      where: { id: `${runPrefix}-game` },
+      data: {
+        status: "READY",
+        setupRevision: 1,
+        readySetupSnapshotId: `${runPrefix}-setup`,
+      },
     });
   });
 

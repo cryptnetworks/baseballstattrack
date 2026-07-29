@@ -98,6 +98,8 @@ The database supplies `acceptedAt`. Failed transactions reserve no idempotency k
 
 `20260729170000_event_setup_reference` is a forward-only issue #10 expansion. It adds exact setup references, the event-to-transaction setup composite key, replay index, and embedded replacement-body relationship ID. Existing history is backfilled only when setup attribution is unambiguous: source events require exactly one setup matching game and ruleset; transactions inherit one consistent component setup or the sole game setup when empty. Ambiguous or missing history aborts visibly.
 
+Issue #14 adds a separate pregame setup revision and `Game.readySetupSnapshotId`. Event acceptance now requires the command to name that exact current ready snapshot and confirms its revision, preventing an older immutable pregame revision from starting the game. This does not consume or reinterpret the source-event revision.
+
 Deployment preflight must find games with multiple setup snapshots sharing a ruleset, events with no matching setup, and transactions whose components resolve to different setups. The migration is additive before making setup references non-null. Operational rollback is roll-forward repair; dropping constraints would re-admit nondeterministic history.
 
 ## Testing and extension boundary

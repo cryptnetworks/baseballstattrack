@@ -96,8 +96,8 @@ try {
     INSERT INTO "Game"
       ("id", "accountId", "seasonId", "teamSeasonId", "status", "revision", "updatedAt")
     VALUES
-      ('fixture-game', 'fixture-account-a', 'fixture-season-2026', 'fixture-team-season-home-2026', 'READY', 0, CURRENT_TIMESTAMP),
-      ('fixture-game-external', 'fixture-account-a', 'fixture-season-2026', 'fixture-team-season-home-2026', 'READY', 0, CURRENT_TIMESTAMP);
+      ('fixture-game', 'fixture-account-a', 'fixture-season-2026', 'fixture-team-season-home-2026', 'DRAFT', 0, CURRENT_TIMESTAMP),
+      ('fixture-game-external', 'fixture-account-a', 'fixture-season-2026', 'fixture-team-season-home-2026', 'DRAFT', 0, CURRENT_TIMESTAMP);
 
     INSERT INTO "GameSetupSnapshot"
       ("id", "accountId", "gameId", "setupRevision", "rulesetVersionId", "scheduledInnings", "acceptedAt")
@@ -121,6 +121,15 @@ try {
       ('fixture-lineup-home-pitcher', 'fixture-account-a', 'fixture-game', 'fixture-setup', 'fixture-side-home', 'fixture-player-pitcher', 'fixture-roster-pitcher', 'Synthetic Pitcher', '22', NULL, 'PITCHER', TRUE, '2026-06-01T12:00:00Z'),
       ('fixture-lineup-away-1', 'fixture-account-a', 'fixture-game', 'fixture-setup', 'fixture-side-away', 'fixture-player-visitor', 'fixture-roster-visitor', 'Synthetic Visitor', '4', 1, 'CENTER_FIELD', FALSE, '2026-06-01T12:00:00Z'),
       ('fixture-lineup-away-pitcher', 'fixture-account-a', 'fixture-game', 'fixture-setup', 'fixture-side-away', 'fixture-player-visitor-pitcher', 'fixture-roster-visitor-pitcher', 'Synthetic Visitor Pitcher', '9', NULL, 'PITCHER', TRUE, '2026-06-01T12:00:00Z');
+
+    UPDATE "Game"
+    SET "status" = 'READY',
+        "setupRevision" = 1,
+        "readySetupSnapshotId" = CASE "id"
+          WHEN 'fixture-game' THEN 'fixture-setup'
+          ELSE 'fixture-setup-external'
+        END
+    WHERE "id" IN ('fixture-game', 'fixture-game-external');
 
     INSERT INTO "SourceEvent"
       ("id", "accountId", "gameId", "setupSnapshotId", "sequence", "eventType", "schemaVersion", "rulesetVersionId", "clientSubmissionId", "expectedRevision", "acceptedRevision", "payloadHash", "payload", "actorKind", "actorId", "recordedAt")
@@ -178,6 +187,14 @@ try {
     `UPDATE "Team"
         SET "accountId" = 'fixture-account-b'
       WHERE "id" = 'fixture-team-home'`,
+    ["P0001"],
+  );
+
+  await rejectWrite(
+    "mismatched_ready_setup_revision",
+    `UPDATE "Game"
+        SET "readySetupSnapshotId" = 'fixture-setup-season-check'
+      WHERE "id" = 'fixture-game-external'`,
     ["P0001"],
   );
 

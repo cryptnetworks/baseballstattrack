@@ -2,6 +2,7 @@ import {
   ActorKind,
   AuditOutcome,
   AuditScope,
+  GameStatus,
   Prisma,
   RosterStatus,
   SeasonStatus,
@@ -504,6 +505,29 @@ export class PrismaTeamSeasonRosterRepository {
             "A season with active roster periods cannot be archived.",
           );
         }
+        if (
+          (next === SeasonStatus.COMPLETED || next === SeasonStatus.ARCHIVED) &&
+          (await tx.game.count({
+            where: {
+              accountId: command.accountId,
+              seasonId: command.seasonId,
+              status: {
+                in: [
+                  GameStatus.DRAFT,
+                  GameStatus.READY,
+                  GameStatus.IN_PROGRESS,
+                  GameStatus.SUSPENDED,
+                  GameStatus.CORRECTED,
+                ],
+              },
+            },
+          })) > 0
+        ) {
+          throw new ManagementError(
+            "LIFECYCLE_CONFLICT",
+            "Operational games block season closure.",
+          );
+        }
         const updated = await tx.season.updateMany({
           where: {
             accountId: command.accountId,
@@ -963,6 +987,22 @@ export class PrismaTeamSeasonRosterRepository {
             "Expected roster revision is stale.",
           );
         }
+        if (
+          (await tx.lineupSlotSnapshot.count({
+            where: {
+              accountId: command.accountId,
+              rosterEntryId: command.rosterEntryId,
+              setupSnapshot: {
+                readyForGame: { is: { status: GameStatus.READY } },
+              },
+            },
+          })) > 0
+        ) {
+          throw new ManagementError(
+            "LIFECYCLE_CONFLICT",
+            "A ready game setup currently depends on this roster period.",
+          );
+        }
         const endsAt = toInstant(command.endsAt);
         if (entry.status !== RosterStatus.ACTIVE || endsAt <= entry.startsAt) {
           throw new ManagementError(
@@ -1043,6 +1083,22 @@ export class PrismaTeamSeasonRosterRepository {
           throw new ManagementError(
             "STALE_REVISION",
             "Expected roster revision is stale.",
+          );
+        }
+        if (
+          (await tx.lineupSlotSnapshot.count({
+            where: {
+              accountId: command.accountId,
+              rosterEntryId: command.rosterEntryId,
+              setupSnapshot: {
+                readyForGame: { is: { status: GameStatus.READY } },
+              },
+            },
+          })) > 0
+        ) {
+          throw new ManagementError(
+            "LIFECYCLE_CONFLICT",
+            "A ready game setup currently depends on this roster period.",
           );
         }
         const effectiveAt = toInstant(command.effectiveAt);

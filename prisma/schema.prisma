@@ -80,6 +80,16 @@ enum ThrowingHand {
   RIGHT
 }
 
+enum WeatherCondition {
+  CLEAR
+  PARTLY_CLOUDY
+  CLOUDY
+  LIGHT_RAIN
+  RAIN
+  WINDY
+  INDOOR
+}
+
 enum GameStatus {
   DRAFT
   READY
@@ -436,21 +446,26 @@ model RulesetVersion {
 }
 
 model Game {
-  id           String     @id @default(cuid())
-  accountId    String
-  seasonId     String
-  teamSeasonId String
-  status       GameStatus @default(DRAFT)
-  revision     Int        @default(0)
-  scheduledAt  DateTime?
-  location     String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  archivedAt   DateTime?
+  id                   String            @id @default(cuid())
+  accountId            String
+  seasonId             String
+  teamSeasonId         String
+  status               GameStatus        @default(DRAFT)
+  revision             Int               @default(0)
+  setupRevision        Int               @default(0)
+  readySetupSnapshotId String?
+  scheduledAt          DateTime?
+  location             String?
+  weatherCondition     WeatherCondition?
+  temperatureF         Int?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  archivedAt           DateTime?
 
   account               Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
   season                Season                     @relation(fields: [accountId, seasonId], references: [accountId, id], onDelete: Restrict)
   teamSeason            TeamSeason                 @relation(fields: [accountId, seasonId, teamSeasonId], references: [accountId, seasonId, id], onDelete: Restrict)
+  readySetupSnapshot    GameSetupSnapshot?         @relation("ReadyGameSetup", fields: [accountId, id, readySetupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
   teamSnapshots         GameTeamSnapshot[]
   setupSnapshots        GameSetupSnapshot[]
   playTransactions      PlayTransaction[]
@@ -460,6 +475,7 @@ model Game {
   capabilityGrants      CapabilityGrant[]          @relation("CapabilityGrantGame")
 
   @@unique([accountId, id])
+  @@unique([accountId, id, readySetupSnapshotId])
   @@index([accountId, seasonId, status])
   @@index([accountId, teamSeasonId, scheduledAt])
 }
@@ -490,18 +506,24 @@ model GameTeamSnapshot {
 }
 
 model GameSetupSnapshot {
-  id               String    @id @default(cuid())
-  accountId        String
-  gameId           String
-  setupRevision    Int
-  rulesetVersionId String
-  scheduledAt      DateTime?
-  location         String?
-  scheduledInnings Int
-  acceptedAt       DateTime  @default(now())
+  id                 String            @id @default(cuid())
+  accountId          String
+  gameId             String
+  setupRevision      Int
+  rulesetVersionId   String
+  scheduledAt        DateTime?
+  location           String?
+  weatherCondition   WeatherCondition?
+  temperatureF       Int?
+  scheduledInnings   Int
+  createdByActorId   String?
+  clientSubmissionId String?
+  payloadHash        String?
+  acceptedAt         DateTime          @default(now())
 
   account          Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
   game             Game                 @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  readyForGame     Game?                @relation("ReadyGameSetup")
   rulesetVersion   RulesetVersion       @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
   lineupSlots      LineupSlotSnapshot[]
   teamSnapshots    GameTeamSnapshot[]
@@ -511,6 +533,7 @@ model GameSetupSnapshot {
   @@unique([accountId, id])
   @@unique([gameId, setupRevision])
   @@unique([accountId, gameId, id])
+  @@unique([accountId, gameId, createdByActorId, clientSubmissionId], map: "GameSetupSnapshot_setup_submission_key")
   @@index([accountId, rulesetVersionId])
 }
 
