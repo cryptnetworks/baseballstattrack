@@ -386,7 +386,6 @@ model RosterEntry {
   teamSeason  TeamSeason           @relation(fields: [accountId, teamSeasonId], references: [accountId, id], onDelete: Restrict)
   lineupSlots LineupSlotSnapshot[]
 
-  @@unique([accountId, teamSeasonId, playerId])
   @@unique([accountId, id])
   @@index([accountId, teamSeasonId, status])
 }
