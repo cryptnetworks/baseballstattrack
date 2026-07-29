@@ -1,7 +1,7 @@
 import {
-  EVENT_SCHEMA_VERSION,
   GameEventError,
   REDUCER_VERSION,
+  SUPPORTED_EVENT_SCHEMA_VERSIONS,
   parseEventBody,
   stateHash,
   type AcceptedEvent,
@@ -581,7 +581,11 @@ function applyBody(state: GameState, body: EventBody): void {
                 forced: false,
                 responsiblePitcherId: body.payload.responsiblePitcherId,
                 ...(body.payload.to === "HOME"
-                  ? { runCounts: true, rbiEligible: false }
+                  ? {
+                      runCounts: true,
+                      rbiEligible: false,
+                      earnedRun: body.payload.earnedRun,
+                    }
                   : {}),
               },
         ]),
@@ -727,7 +731,11 @@ function applyBody(state: GameState, body: EventBody): void {
 }
 
 function validateEventIdentity(state: GameState, event: AcceptedEvent): void {
-  if (event.schemaVersion !== EVENT_SCHEMA_VERSION) {
+  if (
+    !SUPPORTED_EVENT_SCHEMA_VERSIONS.includes(
+      event.schemaVersion as (typeof SUPPORTED_EVENT_SCHEMA_VERSIONS)[number],
+    )
+  ) {
     throw new GameEventError(
       "UNSUPPORTED_SCHEMA_VERSION",
       "Unsupported event schema version.",
@@ -799,7 +807,10 @@ export function applyEvent(
   const next = structuredClone(current);
   applyBody(
     next,
-    parseEventBody({ eventType: event.eventType, payload: event.payload }),
+    parseEventBody(
+      { eventType: event.eventType, payload: event.payload },
+      event.schemaVersion,
+    ),
   );
   next.sourceRevision = event.acceptedRevision;
   next.lastSequence = event.sequence;
@@ -816,10 +827,14 @@ type CorrectionResolution = {
   suppressed: Set<string>;
   replacementsByTarget: Map<
     string,
-    Extract<
-      EventBody,
-      { eventType: "CorrectionApplied" }
-    >["payload"]["replacements"]
+    {
+      correctionEventId: string;
+      schemaVersion: AcceptedEvent["schemaVersion"];
+      replacements: Extract<
+        EventBody,
+        { eventType: "CorrectionApplied" }
+      >["payload"]["replacements"];
+    }
   >;
 };
 
@@ -850,10 +865,14 @@ function resolveCorrections(
   const targetOwner = new Map<string, string>();
   const replacementsByTarget = new Map<
     string,
-    Extract<
-      EventBody,
-      { eventType: "CorrectionApplied" }
-    >["payload"]["replacements"]
+    {
+      correctionEventId: string;
+      schemaVersion: AcceptedEvent["schemaVersion"];
+      replacements: Extract<
+        EventBody,
+        { eventType: "CorrectionApplied" }
+      >["payload"]["replacements"];
+    }
   >();
   const replacementIds = new Set<string>();
 
@@ -861,10 +880,13 @@ function resolveCorrections(
     if (event.eventType !== "CorrectionApplied" || suppressed.has(event.id)) {
       continue;
     }
-    const body = parseEventBody({
-      eventType: event.eventType,
-      payload: event.payload,
-    });
+    const body = parseEventBody(
+      {
+        eventType: event.eventType,
+        payload: event.payload,
+      },
+      event.schemaVersion,
+    );
     if (body.eventType !== "CorrectionApplied") continue;
     for (const targetId of body.payload.targetEventIds) {
       const target = byId.get(targetId);
@@ -925,12 +947,13 @@ function resolveCorrections(
         }
         replacementIds.add(replacement.id);
       }
-      replacementsByTarget.set(
-        insertionTarget,
-        [...body.payload.replacements].sort(
+      replacementsByTarget.set(insertionTarget, {
+        correctionEventId: event.id,
+        schemaVersion: event.schemaVersion,
+        replacements: [...body.payload.replacements].sort(
           (left, right) => left.order - right.order,
         ),
-      );
+      });
     }
   }
   return { suppressed, replacementsByTarget };
@@ -945,31 +968,75 @@ export function resolveEffectiveEvents(
     .filter((event) => !suppressed.has(event.id));
 }
 
-function replayEffective(
+export type EffectiveReplayStep = {
+  effectiveEventId: string;
+  sourceEventId: string;
+  targetEventId: string | null;
+  sequence: number;
+  schemaVersion: AcceptedEvent["schemaVersion"];
+  body: EventBody;
+  before: GameState;
+};
+
+function replayEffectiveWithTimeline(
   setup: AcceptedSetup,
   events: readonly AcceptedEvent[],
-): GameState {
+): { state: GameState; steps: EffectiveReplayStep[] } {
   const ordered = [...events].sort(
     (left, right) => left.sequence - right.sequence,
   );
   const { suppressed, replacementsByTarget } = resolveCorrections(ordered);
   const state = createInitialState(setup);
+  const steps: EffectiveReplayStep[] = [];
   for (const event of ordered) {
     validateNextEnvelope(state, event);
-    const replacements = replacementsByTarget.get(event.id) ?? [];
-    for (const replacement of replacements) {
+    const replacementSet = replacementsByTarget.get(event.id);
+    for (const replacement of replacementSet?.replacements ?? []) {
+      steps.push({
+        effectiveEventId: replacement.id,
+        sourceEventId: replacementSet!.correctionEventId,
+        targetEventId: replacement.targetEventId,
+        sequence: event.sequence,
+        schemaVersion: replacementSet!.schemaVersion,
+        body: replacement.body,
+        before: structuredClone(state),
+      });
       applyBody(state, replacement.body);
     }
     if (!suppressed.has(event.id)) {
-      applyBody(
-        state,
-        parseEventBody({ eventType: event.eventType, payload: event.payload }),
+      const body = parseEventBody(
+        { eventType: event.eventType, payload: event.payload },
+        event.schemaVersion,
       );
+      steps.push({
+        effectiveEventId: event.id,
+        sourceEventId: event.id,
+        targetEventId: null,
+        sequence: event.sequence,
+        schemaVersion: event.schemaVersion,
+        body,
+        before: structuredClone(state),
+      });
+      applyBody(state, body);
     }
     state.sourceRevision = event.acceptedRevision;
     state.lastSequence = event.sequence;
   }
-  return state;
+  return { state, steps };
+}
+
+function replayEffective(
+  setup: AcceptedSetup,
+  events: readonly AcceptedEvent[],
+): GameState {
+  return replayEffectiveWithTimeline(setup, events).state;
+}
+
+export function replayGameTimeline(
+  setup: AcceptedSetup,
+  events: readonly AcceptedEvent[],
+): { state: GameState; steps: EffectiveReplayStep[] } {
+  return replayEffectiveWithTimeline(setup, events);
 }
 
 export function deriveEventStates(

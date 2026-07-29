@@ -2,8 +2,11 @@ import { createHash } from "node:crypto";
 
 import { z } from "zod";
 
-export const EVENT_SCHEMA_VERSION = 1 as const;
-export const SUPPORTED_EVENT_SCHEMA_VERSIONS = [EVENT_SCHEMA_VERSION] as const;
+export const EVENT_SCHEMA_VERSION = 2 as const;
+export const SUPPORTED_EVENT_SCHEMA_VERSIONS = [
+  1,
+  EVENT_SCHEMA_VERSION,
+] as const;
 export const REDUCER_VERSION = 1 as const;
 
 const id = z.string().trim().min(1).max(128);
@@ -24,6 +27,7 @@ const position = z.enum([
 const base = z.enum(["FIRST", "SECOND", "THIRD"]);
 const runnerOrigin = z.enum(["BATTER", "FIRST", "SECOND", "THIRD"]);
 const runnerDestination = z.enum(["FIRST", "SECOND", "THIRD", "HOME", "OUT"]);
+const earnedRunClassification = z.enum(["EARNED", "UNEARNED", "PENDING"]);
 const movementCause = z.enum([
   "HIT",
   "FORCED_ADVANCE",
@@ -101,6 +105,7 @@ const runnerMovement = z
     responsiblePitcherId: id,
     runCounts: z.boolean().optional(),
     rbiEligible: z.boolean().optional(),
+    earnedRun: earnedRunClassification.optional(),
     out: z
       .object({
         outNumber: z.int().min(1).max(3),
@@ -127,7 +132,8 @@ const runnerMovement = z
       movement.to === "OUT" &&
       (movement.out === undefined ||
         movement.runCounts !== undefined ||
-        movement.rbiEligible !== undefined)
+        movement.rbiEligible !== undefined ||
+        movement.earnedRun !== undefined)
     ) {
       context.addIssue({
         code: "custom",
@@ -139,11 +145,22 @@ const runnerMovement = z
       movement.to !== "OUT" &&
       (movement.out !== undefined ||
         movement.runCounts !== undefined ||
-        movement.rbiEligible !== undefined)
+        movement.rbiEligible !== undefined ||
+        movement.earnedRun !== undefined)
     ) {
       context.addIssue({
         code: "custom",
         message: "Non-scoring safe movements cannot contain run/out judgments.",
+      });
+    }
+    if (
+      movement.to === "HOME" &&
+      movement.runCounts === false &&
+      movement.earnedRun !== undefined
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "A non-counting run cannot have an earned-run classification.",
       });
     }
   });
@@ -252,8 +269,21 @@ const stolenBase = z
         result: z.enum(["STOLEN_BASE", "CAUGHT_STEALING"]),
         responsiblePitcherId: id,
         fielders: z.array(id),
+        earnedRun: earnedRunClassification.optional(),
       })
-      .strict(),
+      .strict()
+      .superRefine((payload, context) => {
+        const scores =
+          payload.result === "STOLEN_BASE" && payload.to === "HOME";
+        if (!scores && payload.earnedRun !== undefined) {
+          context.addIssue({
+            code: "custom",
+            message:
+              "Earned-run classification is allowed only for a successful steal of home.",
+            path: ["earnedRun"],
+          });
+        }
+      }),
   })
   .strict();
 const defensiveSubstitution = z
@@ -409,6 +439,56 @@ export type GameSide = z.infer<typeof side>;
 export type BaseballPosition = z.infer<typeof position>;
 export type Base = z.infer<typeof base>;
 export type RunnerMovement = z.infer<typeof runnerMovement>;
+export type EarnedRunClassification = z.infer<typeof earnedRunClassification>;
+
+type SupportedEventSchemaVersion =
+  (typeof SUPPORTED_EVENT_SCHEMA_VERSIONS)[number];
+
+function scoringMovements(body: EventBody): RunnerMovement[] {
+  if (body.eventType === "PlateAppearanceRecorded") {
+    return body.payload.movements;
+  }
+  if (body.eventType === "RunnerAdvanceRecorded") {
+    return [body.payload];
+  }
+  if (body.eventType === "CorrectionApplied") {
+    return body.payload.replacements.flatMap(({ body: replacement }) =>
+      scoringMovements(replacement),
+    );
+  }
+  return [];
+}
+
+function validateVersionedRunClassifications(
+  body: EventBody,
+  schemaVersion: SupportedEventSchemaVersion,
+): void {
+  const classifications = [
+    ...scoringMovements(body)
+      .filter(
+        (movement) => movement.to === "HOME" && movement.runCounts === true,
+      )
+      .map((movement) => movement.earnedRun),
+    ...(body.eventType === "StolenBaseAttemptRecorded" &&
+    body.payload.result === "STOLEN_BASE" &&
+    body.payload.to === "HOME"
+      ? [body.payload.earnedRun]
+      : []),
+  ];
+  if (
+    (schemaVersion === EVENT_SCHEMA_VERSION &&
+      classifications.some((classification) => classification === undefined)) ||
+    (schemaVersion === 1 &&
+      classifications.some((classification) => classification !== undefined))
+  ) {
+    throw new GameEventError(
+      "INVALID_PAYLOAD",
+      schemaVersion === EVENT_SCHEMA_VERSION
+        ? "Event schema version 2 requires earned-run classification for every counting run."
+        : "Event schema version 1 cannot contain version 2 earned-run classification.",
+    );
+  }
+}
 
 export const eventEnvelopeSchema = z
   .object({
@@ -418,7 +498,7 @@ export const eventEnvelopeSchema = z
     setupSnapshotId: id,
     setupRevision: z.int().positive(),
     sequence: z.int().positive(),
-    schemaVersion: z.literal(EVENT_SCHEMA_VERSION),
+    schemaVersion: z.union([z.literal(1), z.literal(EVENT_SCHEMA_VERSION)]),
     rulesetVersionId: id,
     playTransactionId: id.nullable(),
     componentOrder: z.int().nonnegative().nullable(),
@@ -458,14 +538,18 @@ export const eventEnvelopeSchema = z
         path: ["componentOrder"],
       });
     }
-    const parsed = eventBodySchema.safeParse({
-      eventType: value.eventType,
-      payload: value.payload,
-    });
-    if (!parsed.success) {
+    try {
+      parseEventBody(
+        {
+          eventType: value.eventType,
+          payload: value.payload,
+        },
+        value.schemaVersion,
+      );
+    } catch {
       context.addIssue({
         code: "custom",
-        message: "event type and payload do not match schema version 1",
+        message: `event type and payload do not match schema version ${value.schemaVersion}`,
         path: ["payload"],
       });
     }
@@ -588,9 +672,15 @@ export function stateHash(state: GameState): string {
   return `sha256:v1:${digest}`;
 }
 
-export function parseEventBody(input: unknown): EventBody {
+export function parseEventBody(
+  input: unknown,
+  schemaVersion: SupportedEventSchemaVersion = EVENT_SCHEMA_VERSION,
+): EventBody {
   const result = eventBodySchema.safeParse(input);
-  if (result.success) return result.data;
+  if (result.success) {
+    validateVersionedRunClassifications(result.data, schemaVersion);
+    return result.data;
+  }
   const eventType =
     typeof input === "object" && input !== null && "eventType" in input
       ? (input as { eventType?: unknown }).eventType
@@ -614,7 +704,11 @@ export function parseEvent(input: unknown): AcceptedEvent {
     typeof input === "object" && input !== null && "schemaVersion" in input
       ? (input as { schemaVersion?: unknown }).schemaVersion
       : undefined;
-  if (version !== EVENT_SCHEMA_VERSION) {
+  if (
+    !SUPPORTED_EVENT_SCHEMA_VERSIONS.includes(
+      version as SupportedEventSchemaVersion,
+    )
+  ) {
     throw new GameEventError(
       "UNSUPPORTED_SCHEMA_VERSION",
       "Unsupported event schema version.",
@@ -629,6 +723,7 @@ export function parseEvent(input: unknown): AcceptedEvent {
             payload: (input as { payload?: unknown }).payload,
           }
         : input,
+      version as SupportedEventSchemaVersion,
     );
     throw new GameEventError("INVALID_PAYLOAD", "Invalid event envelope.");
   }
