@@ -1,6 +1,6 @@
 # Persistence and tenancy
 
-This document defines the M0 persistence, tenancy, migration, and projection contract for Baseball Stat Track. It is a decision baseline for M1 schema, replay, statistic derivation, fixtures, and authorization work. The detailed identity, membership, capability, session, recovery, invitation, and audit policy is canonical in [AUTHENTICATION_AND_AUTHORIZATION.md](AUTHENTICATION_AND_AUTHORIZATION.md); privacy/threat rules are in [PRIVACY_AND_THREAT_MODEL.md](PRIVACY_AND_THREAT_MODEL.md). It does not add production tables, Prisma models, migrations, API routes, row-level-security policies, workers, or UI.
+This document defines the M0 persistence, tenancy, migration, and projection contract for Baseball Stat Track. It is a decision baseline for M1 schema, replay, statistic derivation, fixtures, and authorization work. The detailed identity, membership, capability, session, recovery, invitation, and audit policy is canonical in [AUTHENTICATION_AND_AUTHORIZATION.md](AUTHENTICATION_AND_AUTHORIZATION.md); privacy/threat rules are in [PRIVACY_AND_THREAT_MODEL.md](PRIVACY_AND_THREAT_MODEL.md). Issue #9 implements the initial Prisma schema and migration described in [RELATIONAL_DOMAIN_SCHEMA.md](RELATIONAL_DOMAIN_SCHEMA.md); this document does not itself add API routes, row-level-security policies, workers, or UI.
 
 The primary rule is the same as the scoring contract: accepted source events and atomic play transactions are authoritative. Derived game state, box scores, player totals, team totals, and season reports are rebuildable projections.
 
@@ -80,7 +80,7 @@ Role notes:
 
 ## Core Persistence Boundaries
 
-These are conceptual records for M1 design. They are not final Prisma model names or columns.
+These are conceptual records for the M1 design. The initial Prisma mapping is in [RELATIONAL_DOMAIN_SCHEMA.md](RELATIONAL_DOMAIN_SCHEMA.md); later issues may extend it only when they preserve these invariants.
 
 | Record                            | Purpose                                                         | Ownership and Relationships                                                                               | Lifecycle and Mutability                                                                    | Integrity and Audit                                                                                     |
 | --------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
