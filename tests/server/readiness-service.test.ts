@@ -4,7 +4,7 @@ import { getApplicationReadiness } from "@/server/app/readiness-service";
 
 const configuredEnvironment = {
   DATABASE_URL: "postgresql://synthetic:synthetic@db:5432/synthetic",
-  REQUIRED_DATABASE_MIGRATION: "20260729170000_event_setup_reference",
+  REQUIRED_DATABASE_MIGRATION: "20260729200000_team_season_roster_management",
 };
 
 describe("getApplicationReadiness", () => {

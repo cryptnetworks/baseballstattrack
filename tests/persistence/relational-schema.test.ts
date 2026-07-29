@@ -51,6 +51,27 @@ describe("relational domain schema", () => {
     }
   });
 
+  it("models stable player identity and versioned roster periods", () => {
+    const playerFields = new Set(
+      model("Player").fields.map((field) => field.name),
+    );
+    const rosterFields = new Set(
+      model("RosterEntry").fields.map((field) => field.name),
+    );
+
+    for (const required of ["battingSide", "throwingHand", "revision"]) {
+      expect(playerFields).toContain(required);
+    }
+    for (const required of [
+      "primaryPosition",
+      "startsAt",
+      "endsAt",
+      "revision",
+    ]) {
+      expect(rosterFields).toContain(required);
+    }
+  });
+
   it("preserves event envelope and privacy-aware projection revisions", () => {
     const eventFields = new Set(
       model("SourceEvent").fields.map((field) => field.name),

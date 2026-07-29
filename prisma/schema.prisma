@@ -69,6 +69,17 @@ enum RosterStatus {
   ARCHIVED
 }
 
+enum BattingSide {
+  LEFT
+  RIGHT
+  SWITCH
+}
+
+enum ThrowingHand {
+  LEFT
+  RIGHT
+}
+
 enum GameStatus {
   DRAFT
   READY
@@ -294,6 +305,7 @@ model Team {
   displayName String
   color       String?
   status      TeamStatus @default(ACTIVE)
+  revision    Int        @default(0)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   archivedAt  DateTime?
@@ -305,6 +317,7 @@ model Team {
 
   @@unique([accountId, id])
   @@index([accountId, status])
+  @@index([accountId, displayName, id])
 }
 
 model Season {
@@ -314,6 +327,7 @@ model Season {
   startsOn    DateTime?    @db.Date
   endsOn      DateTime?    @db.Date
   status      SeasonStatus @default(DRAFT)
+  revision    Int          @default(0)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   archivedAt  DateTime?
@@ -327,6 +341,7 @@ model Season {
 
   @@unique([accountId, id])
   @@index([accountId, status])
+  @@index([accountId, displayName, id])
 }
 
 model TeamSeason {
@@ -337,6 +352,7 @@ model TeamSeason {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   archivedAt DateTime?
+  revision   Int       @default(0)
 
   account       Account            @relation(fields: [accountId], references: [id], onDelete: Restrict)
   team          Team               @relation(fields: [accountId, teamId], references: [accountId, id], onDelete: Restrict)
@@ -354,12 +370,15 @@ model TeamSeason {
 }
 
 model Player {
-  id          String    @id @default(cuid())
-  accountId   String
-  displayName String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  archivedAt  DateTime?
+  id           String        @id @default(cuid())
+  accountId    String
+  displayName  String
+  battingSide  BattingSide?
+  throwingHand ThrowingHand?
+  revision     Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  archivedAt   DateTime?
 
   account              Account               @relation(fields: [accountId], references: [id], onDelete: Restrict)
   rosterEntries        RosterEntry[]
@@ -368,18 +387,23 @@ model Player {
 
   @@unique([accountId, id])
   @@index([accountId, archivedAt])
+  @@index([accountId, displayName, id])
 }
 
 model RosterEntry {
-  id           String       @id @default(cuid())
-  accountId    String
-  playerId     String
-  teamSeasonId String
-  jerseyNumber String?
-  status       RosterStatus @default(ACTIVE)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  archivedAt   DateTime?
+  id              String            @id @default(cuid())
+  accountId       String
+  playerId        String
+  teamSeasonId    String
+  jerseyNumber    String?
+  primaryPosition BaseballPosition?
+  status          RosterStatus      @default(ACTIVE)
+  startsAt        DateTime          @default(now())
+  endsAt          DateTime?
+  revision        Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  archivedAt      DateTime?
 
   account     Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
   player      Player               @relation(fields: [accountId, playerId], references: [accountId, id], onDelete: Restrict)
@@ -388,6 +412,8 @@ model RosterEntry {
 
   @@unique([accountId, id])
   @@index([accountId, teamSeasonId, status])
+  @@index([accountId, teamSeasonId, startsAt, id])
+  @@index([accountId, playerId, startsAt, id])
 }
 
 model RulesetVersion {
