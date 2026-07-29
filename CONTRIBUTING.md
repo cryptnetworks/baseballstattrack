@@ -9,7 +9,7 @@
 
 ## Branches and pull requests
 
-Use short-lived branches with prefixes feat/, fix/, chore/, and docs/. Include the issue number in the branch name. Open a pull request into main and link the issue with Closes #N when the change fully resolves it.
+Use short-lived branches with prefixes feat/, fix/, chore/, and docs/. Include the issue number in the branch name. Open a pull request into main and link the issue with Closes #N when the merge itself fully resolves it.
 
 Every pull request should explain:
 
@@ -17,6 +17,10 @@ Every pull request should explain:
 - how it was verified;
 - migrations or operational changes;
 - known follow-up work.
+
+Defects follow [docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md](docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md). Use the bug issue form for ordinary defects that are safe to discuss. Never put suspected vulnerability or privacy-exposure details in an issue; use [SECURITY.md](SECURITY.md).
+
+A regression fix must include a durable automated test that fails before the fix and passes afterward. If automation is infeasible, the pull request must state why, give a concrete manual verification procedure, name an owner for future automation, and link a follow-up issue. A merged patch is not verification: defect-fix pull requests use `Refs #N`, not `Closes #N`, and the defect remains open until the merged commit is checked against the original reproduction and the evidence is recorded on the issue.
 
 ## Definition of done
 
