@@ -2,14 +2,24 @@ import { createHash } from "node:crypto";
 
 import {
   ActorKind,
+  AuditOutcome,
+  AuditScope,
   Prisma,
+  ProjectionScope,
+  ProjectionStatus,
   type PrismaClient,
   type SourceEvent,
 } from "@prisma/client";
 
+import type {
+  CorrectionActorContext,
+  CorrectionWorkflowResult,
+  SafeCorrectionAudit,
+} from "@/domain/corrections/correction-audit-replay";
 import {
   EVENT_SCHEMA_VERSION,
   GameEventError,
+  REDUCER_VERSION,
   canonicalJson,
   deriveEventStates,
   parseEvent,
@@ -20,13 +30,23 @@ import {
   type AcceptedSetup,
   type EventBody,
 } from "@/domain/events/event-log";
+import {
+  STATISTIC_DERIVATION_VERSION,
+  STATISTIC_RULES_VERSION,
+  deriveGameStatistics,
+} from "@/domain/statistics";
 
 export type ValidatedActorContext = {
   accountId: string;
   actorId: string;
   actorKind: "USER" | "SERVICE" | "SYSTEM";
   actorUserId: string | null;
-  capability: "game.score" | "game.correct" | "game.verify";
+  capability:
+    | "game.score"
+    | "game.correct"
+    | "game.reopen"
+    | "game.verify"
+    | "game.reverify";
   scope: { kind: "GAME"; gameId: string };
   authorizedAt: string;
 };
@@ -54,6 +74,11 @@ export type AcceptedGameHistory = {
   events: AcceptedEvent[];
 };
 
+export type CorrectionAcceptanceContext = {
+  correlationId: string;
+  membershipId: string | null;
+};
+
 const payloadDigest = (
   setupSnapshotId: string,
   expectedRevision: number,
@@ -65,6 +90,18 @@ const payloadDigest = (
 
 function toActorKind(kind: ValidatedActorContext["actorKind"]): ActorKind {
   return ActorKind[kind];
+}
+
+function verificationImpact(
+  history: readonly AcceptedEvent[],
+  statusBeforeCorrection: string,
+): SafeCorrectionAudit["verificationImpact"] {
+  if (statusBeforeCorrection === "IN_PROGRESS") {
+    return "UNCHANGED_UNVERIFIED";
+  }
+  return history.some(({ eventType }) => eventType === "GameVerified")
+    ? "INVALIDATED_REQUIRES_REVERIFICATION"
+    : "REQUIRES_VERIFICATION";
 }
 
 function mapSourceEvent(
@@ -269,6 +306,47 @@ export class PrismaGameEventRepository {
   }
 
   async accept(command: AcceptEventCommand): Promise<AcceptedEventResult> {
+    return this.acceptInternal(command, null);
+  }
+
+  async acceptCorrection(
+    command: AcceptEventCommand,
+    context: CorrectionAcceptanceContext,
+    actor: CorrectionActorContext,
+  ): Promise<CorrectionWorkflowResult> {
+    if (
+      command.body.eventType !== "CorrectionApplied" ||
+      actor.accountId !== command.accountId ||
+      actor.actorId !== command.actor.actorId ||
+      actor.actorKind !== command.actor.actorKind ||
+      actor.actorUserId !== command.actor.actorUserId ||
+      actor.scope.gameId !== command.gameId ||
+      actor.capability !== "game.correct"
+    ) {
+      throw new GameEventError(
+        "ACCOUNT_MISMATCH",
+        "Correction actor or command boundary is inconsistent.",
+      );
+    }
+    const accepted = await this.acceptInternal(command, {
+      ...context,
+      actor,
+    });
+    return this.loadCorrectionResult(
+      command.accountId,
+      command.gameId,
+      command.setupSnapshotId,
+      accepted.event.id,
+      context.correlationId,
+      accepted.idempotentReplay,
+    );
+  }
+
+  private async acceptInternal(
+    command: AcceptEventCommand,
+    correction:
+      (CorrectionAcceptanceContext & { actor: CorrectionActorContext }) | null,
+  ): Promise<AcceptedEventResult> {
     if (
       command.actor.accountId !== command.accountId ||
       command.actor.scope.kind !== "GAME" ||
@@ -290,14 +368,16 @@ export class PrismaGameEventRepository {
       );
     }
     const body = parseEventBody(command.body);
-    const requiredCapability =
+    const permittedCapability =
       body.eventType === "GameVerified"
-        ? "game.verify"
-        : body.eventType === "CorrectionApplied" ||
-            body.eventType === "GameReopened"
-          ? "game.correct"
-          : "game.score";
-    if (command.actor.capability !== requiredCapability) {
+        ? command.actor.capability === "game.verify" ||
+          command.actor.capability === "game.reverify"
+        : body.eventType === "CorrectionApplied"
+          ? command.actor.capability === "game.correct"
+          : body.eventType === "GameReopened"
+            ? command.actor.capability === "game.reopen"
+            : command.actor.capability === "game.score";
+    if (!permittedCapability) {
       throw new GameEventError(
         "INVALID_LIFECYCLE_TRANSITION",
         "Validated actor capability does not permit this event.",
@@ -360,6 +440,29 @@ export class PrismaGameEventRepository {
                 "Accepted transaction has no source event.",
               );
             }
+            if (correction) {
+              const priorAudit = await tx.securityAuditRecord.findFirst({
+                where: {
+                  accountId: command.accountId,
+                  action: "game.correction.apply",
+                  targetType: "Correction",
+                  targetId: event.id,
+                  outcome: AuditOutcome.SUCCEEDED,
+                },
+              });
+              if (!priorAudit) {
+                throw new GameEventError(
+                  "INTERNAL_INVARIANT_FAILURE",
+                  "Accepted correction has no durable audit evidence.",
+                );
+              }
+              if (priorAudit.correlationId !== correction.correlationId) {
+                throw new GameEventError(
+                  "DUPLICATE_IDEMPOTENCY_KEY",
+                  "Idempotency key was already used with another correlation.",
+                );
+              }
+            }
             return {
               event: mapSourceEvent(event, setup.setupRevision),
               idempotentReplay: true,
@@ -417,6 +520,18 @@ export class PrismaGameEventRepository {
           const current = replayGame(setup, history, {
             verifyEvidence: true,
           }).state;
+          if (
+            body.eventType === "GameVerified" &&
+            command.actor.capability !==
+              (history.some(({ eventType }) => eventType === "GameVerified")
+                ? "game.reverify"
+                : "game.verify")
+          ) {
+            throw new GameEventError(
+              "INVALID_LIFECYCLE_TRANSITION",
+              "Validated actor capability does not permit this verification.",
+            );
+          }
           if (
             current.sourceRevision !== game.revision ||
             current.status !== game.status
@@ -527,6 +642,51 @@ export class PrismaGameEventRepository {
               recordedAt,
             },
           });
+          await tx.projectionCheckpoint.updateMany({
+            where: {
+              accountId: command.accountId,
+              gameId: command.gameId,
+              scope: ProjectionScope.GAME,
+              status: ProjectionStatus.CURRENT,
+            },
+            data: { status: ProjectionStatus.STALE },
+          });
+          if (
+            body.eventType === "GameReopened" ||
+            body.eventType === "GameVerified"
+          ) {
+            await tx.securityAuditRecord.create({
+              data: {
+                scope: AuditScope.ACCOUNT,
+                accountId: command.accountId,
+                actorKind: toActorKind(command.actor.actorKind),
+                actorId: command.actor.actorId,
+                actorUserId: command.actor.actorUserId,
+                action:
+                  body.eventType === "GameReopened"
+                    ? "game.reopen"
+                    : command.actor.capability === "game.reverify"
+                      ? "game.reverify"
+                      : "game.verify",
+                capability: command.actor.capability,
+                targetType: "Game",
+                targetId: command.gameId,
+                outcome: AuditOutcome.SUCCEEDED,
+                reasonCode:
+                  body.eventType === "GameReopened"
+                    ? body.payload.reasonCode
+                    : null,
+                metadata: {
+                  sourceRevisionBefore: command.expectedRevision,
+                  sourceRevisionAfter: acceptedRevision,
+                  verificationStatus:
+                    body.eventType === "GameReopened"
+                      ? "INVALIDATED"
+                      : "VERIFIED",
+                },
+              },
+            });
+          }
           if (body.eventType === "CorrectionApplied") {
             const targets = await tx.sourceEvent.findMany({
               where: {
@@ -558,6 +718,96 @@ export class PrismaGameEventRepository {
                 policy: body.payload.policy,
               })),
             });
+            if (correction) {
+              const privacyRevision = await tx.privacyOverlay.aggregate({
+                where: { accountId: command.accountId },
+                _max: { effectiveOrder: true },
+              });
+              const privacyOverlayRevision =
+                privacyRevision._max.effectiveOrder ?? 0;
+              const projection = deriveGameStatistics({
+                setup,
+                events: [...history, event],
+                privacyOverlayRevision,
+              });
+              if (
+                projection.metadata.sourceRevision !== acceptedRevision ||
+                projection.metadata.lifecycleStatus !== after.status
+              ) {
+                throw new GameEventError(
+                  "INTERNAL_INVARIANT_FAILURE",
+                  "Correction projection disagrees with replay.",
+                );
+              }
+              const projectionIdentity = {
+                accountId: command.accountId,
+                gameId: command.gameId,
+                sourceRevision: acceptedRevision,
+                privacyOverlayRevision,
+                derivationVersion: STATISTIC_DERIVATION_VERSION,
+              };
+              const existingProjection =
+                await tx.projectionCheckpoint.findUnique({
+                  where: {
+                    accountId_gameId_sourceRevision_privacyOverlayRevision_derivationVersion:
+                      projectionIdentity,
+                  },
+                });
+              if (existingProjection) {
+                await tx.projectionCheckpoint.update({
+                  where: { id: existingProjection.id },
+                  data: {
+                    scope: ProjectionScope.GAME,
+                    seasonId: null,
+                    status: ProjectionStatus.CURRENT,
+                    failureCode: null,
+                  },
+                });
+              } else {
+                await tx.projectionCheckpoint.create({
+                  data: {
+                    ...projectionIdentity,
+                    seasonId: null,
+                    scope: ProjectionScope.GAME,
+                    status: ProjectionStatus.CURRENT,
+                  },
+                });
+              }
+              await tx.securityAuditRecord.create({
+                data: {
+                  scope: AuditScope.ACCOUNT,
+                  accountId: command.accountId,
+                  actorKind: toActorKind(command.actor.actorKind),
+                  actorId: command.actor.actorId,
+                  actorUserId: command.actor.actorUserId,
+                  action: "game.correction.apply",
+                  capability: "game.correct",
+                  targetType: "Correction",
+                  targetId: command.eventId,
+                  outcome: AuditOutcome.SUCCEEDED,
+                  reasonCode: body.payload.reasonCode,
+                  correlationId: correction.correlationId,
+                  metadata: {
+                    gameId: command.gameId,
+                    membershipId: correction.membershipId,
+                    targetEventIds: body.payload.targetEventIds,
+                    correctionPolicy: body.payload.policy,
+                    sourceRevisionBefore: command.expectedRevision,
+                    sourceRevisionAfter: acceptedRevision,
+                    verificationImpact: verificationImpact(
+                      history,
+                      current.status,
+                    ),
+                    rulesetVersionId: setup.rulesetVersionId,
+                    reducerVersion: REDUCER_VERSION,
+                    statisticDerivationVersion: STATISTIC_DERIVATION_VERSION,
+                    statisticRulesVersion: STATISTIC_RULES_VERSION,
+                    projectionFreshness: "CURRENT",
+                    generatedAt: acceptedAt.toISOString(),
+                  },
+                },
+              });
+            }
           }
           return { event, idempotentReplay: false };
         },
@@ -598,6 +848,30 @@ export class PrismaGameEventRepository {
                 "Accepted transaction has no source event.",
               );
             }
+            if (correction) {
+              const priorAudit =
+                await this.prisma.securityAuditRecord.findFirst({
+                  where: {
+                    accountId: command.accountId,
+                    action: "game.correction.apply",
+                    targetType: "Correction",
+                    targetId: event.id,
+                    outcome: AuditOutcome.SUCCEEDED,
+                  },
+                });
+              if (!priorAudit) {
+                throw new GameEventError(
+                  "INTERNAL_INVARIANT_FAILURE",
+                  "Accepted correction has no durable audit evidence.",
+                );
+              }
+              if (priorAudit.correlationId !== correction.correlationId) {
+                throw new GameEventError(
+                  "DUPLICATE_IDEMPOTENCY_KEY",
+                  "Idempotency key was already used with another correlation.",
+                );
+              }
+            }
             const setup = await this.prisma.gameSetupSnapshot.findUnique({
               where: {
                 accountId_gameId_id: {
@@ -637,5 +911,235 @@ export class PrismaGameEventRepository {
         "Event persistence failed.",
       );
     }
+  }
+
+  private async loadCorrectionResult(
+    accountId: string,
+    gameId: string,
+    setupSnapshotId: string,
+    correctionEventId: string,
+    correlationId: string,
+    idempotentReplay: boolean,
+  ): Promise<CorrectionWorkflowResult> {
+    return this.prisma.$transaction(async (tx) => {
+      const { setup, events } = await loadAcceptedHistory(
+        tx,
+        accountId,
+        gameId,
+        setupSnapshotId,
+      );
+      const correction = events.find(({ id }) => id === correctionEventId);
+      if (!correction || correction.eventType !== "CorrectionApplied") {
+        throw new GameEventError(
+          "CORRECTION_TARGET_MISSING",
+          "Accepted correction is unavailable.",
+        );
+      }
+      const body = parseEventBody(
+        {
+          eventType: correction.eventType,
+          payload: correction.payload,
+        },
+        correction.schemaVersion,
+      );
+      if (body.eventType !== "CorrectionApplied") {
+        throw new GameEventError(
+          "IMMUTABLE_HISTORY_VIOLATION",
+          "Accepted correction body is invalid.",
+        );
+      }
+      const game = await tx.game.findUnique({
+        where: { accountId_id: { accountId, id: gameId } },
+        select: { revision: true, status: true },
+      });
+      if (!game || game.revision !== correction.acceptedRevision) {
+        throw new GameEventError(
+          "STALE_SOURCE_REVISION",
+          "Correction result is no longer the current game version.",
+        );
+      }
+      const privacyRevision = await tx.privacyOverlay.aggregate({
+        where: { accountId },
+        _max: { effectiveOrder: true },
+      });
+      const privacyOverlayRevision = privacyRevision._max.effectiveOrder ?? 0;
+      const checkpoint = await tx.projectionCheckpoint.findFirst({
+        where: {
+          accountId,
+          gameId,
+          seasonId: null,
+          scope: ProjectionScope.GAME,
+          sourceRevision: game.revision,
+          privacyOverlayRevision,
+          derivationVersion: STATISTIC_DERIVATION_VERSION,
+          status: ProjectionStatus.CURRENT,
+        },
+      });
+      const correctionEventIds = events
+        .filter(({ eventType }) => eventType === "CorrectionApplied")
+        .map(({ id }) => id);
+      const auditRows = await tx.securityAuditRecord.findMany({
+        where: {
+          accountId,
+          action: "game.correction.apply",
+          targetType: "Correction",
+          targetId: { in: correctionEventIds },
+          outcome: AuditOutcome.SUCCEEDED,
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      });
+      const audit = auditRows.find(
+        (row) =>
+          row.targetId === correctionEventId &&
+          row.correlationId === correlationId,
+      );
+      if (!checkpoint || !audit) {
+        throw new GameEventError(
+          "INTERNAL_INVARIANT_FAILURE",
+          "Correction audit or current projection checkpoint is unavailable.",
+        );
+      }
+
+      const replay = replayGame(setup, events, { verifyEvidence: true });
+      const statistics = deriveGameStatistics({
+        setup,
+        events,
+        privacyOverlayRevision,
+      });
+      if (
+        replay.state.sourceRevision !== game.revision ||
+        replay.state.status !== game.status ||
+        statistics.metadata.sourceRevision !== game.revision
+      ) {
+        throw new GameEventError(
+          "IMMUTABLE_HISTORY_VIOLATION",
+          "Correction replay, statistics, and game checkpoint disagree.",
+        );
+      }
+
+      const safeAudit = (
+        row: (typeof auditRows)[number],
+      ): SafeCorrectionAudit => {
+        const auditedEvent = events.find(({ id }) => id === row.targetId);
+        if (!auditedEvent || auditedEvent.eventType !== "CorrectionApplied") {
+          throw new GameEventError(
+            "IMMUTABLE_HISTORY_VIOLATION",
+            "Correction audit target is unavailable.",
+          );
+        }
+        const auditedBody = parseEventBody(
+          {
+            eventType: auditedEvent.eventType,
+            payload: auditedEvent.payload,
+          },
+          auditedEvent.schemaVersion,
+        );
+        if (auditedBody.eventType !== "CorrectionApplied") {
+          throw new GameEventError(
+            "IMMUTABLE_HISTORY_VIOLATION",
+            "Correction audit target is invalid.",
+          );
+        }
+        const beforeHistory = events.filter(
+          ({ sequence }) => sequence < auditedEvent.sequence,
+        );
+        const before = replayGame(setup, beforeHistory, {
+          verifyEvidence: true,
+        });
+        const metadata =
+          row.metadata !== null &&
+          typeof row.metadata === "object" &&
+          !Array.isArray(row.metadata)
+            ? row.metadata
+            : {};
+        if (
+          row.correlationId === null ||
+          row.actorKind !== auditedEvent.actor.kind ||
+          row.actorId !== auditedEvent.actor.id ||
+          row.actorUserId !== auditedEvent.actor.userId ||
+          (row.actorKind === ActorKind.USER &&
+            typeof metadata.membershipId !== "string")
+        ) {
+          throw new GameEventError(
+            "IMMUTABLE_HISTORY_VIOLATION",
+            "Correction audit attribution is incomplete or inconsistent.",
+          );
+        }
+        return {
+          id: row.id,
+          accountId,
+          actor: {
+            kind: row.actorKind,
+            id: row.actorId,
+            userId: row.actorUserId,
+            membershipId:
+              typeof metadata.membershipId === "string"
+                ? metadata.membershipId
+                : null,
+          },
+          action: "game.correction.apply",
+          capability: "game.correct",
+          target: {
+            type: "Correction",
+            correctionEventId: auditedEvent.id,
+            gameId,
+            targetEventIds: [...auditedBody.payload.targetEventIds],
+          },
+          reasonCode: auditedBody.payload.reasonCode,
+          outcome: "SUCCEEDED",
+          occurredAt: row.createdAt.toISOString(),
+          correlationId: row.correlationId,
+          sourceRevision: {
+            before: auditedEvent.expectedRevision,
+            after: auditedEvent.acceptedRevision,
+          },
+          verificationImpact: verificationImpact(
+            beforeHistory,
+            before.state.status,
+          ),
+        };
+      };
+      const auditHistory = auditRows.map(safeAudit);
+      return {
+        correction: correction as CorrectionWorkflowResult["correction"],
+        idempotentReplay,
+        replay: {
+          lifecycleStatus: replay.state.status,
+          score: { ...replay.state.score },
+          effectiveEventCount: replay.metadata.effectiveEventCount,
+        },
+        statistics: {
+          finalScore: { ...statistics.finalScore },
+          batting: statistics.batting.map(({ playerId, counters }) => ({
+            playerId,
+            plateAppearances: counters.plateAppearances,
+            hits: counters.hits,
+            walks: counters.walks,
+          })),
+          pitching: statistics.pitching.map(({ playerId, counters }) => ({
+            playerId,
+            battersFaced: counters.battersFaced,
+            hitsAllowed: counters.hitsAllowed,
+            walks: counters.walks,
+          })),
+        },
+        version: {
+          sourceRevision: game.revision,
+          correctionRevision: correction.acceptedRevision,
+          setupRevision: setup.setupRevision,
+          eventSchemaVersion: correction.schemaVersion,
+          reducerVersion: REDUCER_VERSION,
+          statisticDerivationVersion: STATISTIC_DERIVATION_VERSION,
+          statisticRulesVersion: STATISTIC_RULES_VERSION,
+          rulesetVersionId: setup.rulesetVersionId,
+          verificationStatus:
+            replay.state.status === "VERIFIED" ? "VERIFIED" : "UNVERIFIED",
+          freshness: "CURRENT",
+          generatedAt: correction.acceptedAt,
+        },
+        audit: safeAudit(audit),
+        auditHistory,
+      };
+    });
   }
 }

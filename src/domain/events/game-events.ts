@@ -337,7 +337,7 @@ const replaceableEventBodySchema = z.discriminatedUnion("eventType", [
   pitchingChange,
 ]);
 
-const correctionApplied = z
+export const correctionAppliedEventSchema = z
   .object({
     eventType: z.literal("CorrectionApplied"),
     payload: z
@@ -430,7 +430,7 @@ export const eventBodySchema = z.discriminatedUnion("eventType", [
   defensiveSubstitution,
   defensiveAlignment,
   pitchingChange,
-  correctionApplied,
+  correctionAppliedEventSchema,
 ]);
 
 export type EventBody = z.infer<typeof eventBodySchema>;
