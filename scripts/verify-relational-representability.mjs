@@ -11,24 +11,34 @@ if (!databaseUrl) {
 const client = new pg.Client({ connectionString: databaseUrl });
 await client.connect();
 
-const rejectWrite = async (savepoint, statement, expectedCodes) => {
-  await client.query(`SAVEPOINT "${savepoint}"`);
-  let error;
-
-  try {
-    await client.query(statement);
-  } catch (caught) {
-    error = caught;
+const rejectWrite = async (name, statement, expectedCodes) => {
+  assert.match(name, /^[a-z_]+$/);
+  for (const code of expectedCodes) {
+    assert.match(code, /^[0-9A-Z]{5}$/);
   }
 
-  await client.query(`ROLLBACK TO SAVEPOINT "${savepoint}"`);
-  await client.query(`RELEASE SAVEPOINT "${savepoint}"`);
+  const expectedStates = expectedCodes.map((code) => `'${code}'`).join(", ");
+  const blockTag = `$verify_${name}$`;
 
-  assert.ok(error, `${savepoint} unexpectedly succeeded`);
-  assert.ok(
-    expectedCodes.includes(error.code),
-    `${savepoint} failed with unexpected PostgreSQL code ${error.code}`,
-  );
+  await client.query(`
+    DO ${blockTag}
+    DECLARE
+      rejected_state TEXT;
+    BEGIN
+      BEGIN
+        ${statement};
+      EXCEPTION WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS rejected_state = RETURNED_SQLSTATE;
+        IF rejected_state = ANY (ARRAY[${expectedStates}]) THEN
+          RETURN;
+        END IF;
+        RAISE;
+      END;
+
+      RAISE EXCEPTION '${name} unexpectedly succeeded' USING ERRCODE = 'P0002';
+    END;
+    ${blockTag};
+  `);
 };
 
 try {
