@@ -153,6 +153,8 @@ activemq-data/
 
 # Environments
 .env
+.env.*
+!.env.example
 .envrc
 .venv
 env/
@@ -229,5 +231,4 @@ coverage/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.env*.local
 tsconfig.tsbuildinfo
