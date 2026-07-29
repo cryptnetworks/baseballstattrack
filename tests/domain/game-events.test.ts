@@ -108,7 +108,9 @@ function movement(
     cause: from === "BATTER" ? "BATTER_RESULT" : "OPTIONAL_ADVANCE",
     forced: false,
     responsiblePitcherId,
-    ...(to === "HOME" ? { runCounts: true, rbiEligible: true } : {}),
+    ...(to === "HOME"
+      ? { runCounts: true, rbiEligible: true, earnedRun: "EARNED" as const }
+      : {}),
     ...(to === "OUT"
       ? { out: { outNumber: 1, force: false, fielders: [] } }
       : {}),
@@ -212,6 +214,39 @@ describe("versioned event contracts and initial state", () => {
       parseEventBody({
         eventType: "GameSuspended",
         payload: { reasonCode: "weather", notes: "unbounded" },
+      }),
+    ).toThrowError(expect.objectContaining({ code: "INVALID_PAYLOAD" }));
+  });
+
+  it("keeps version 1 replayable and requires earned-run judgment in version 2", () => {
+    const currentStart = buildEvent(setup, [], startBody);
+    expect(parseEvent({ ...currentStart, schemaVersion: 1 })).toMatchObject({
+      schemaVersion: 1,
+      eventType: "GameStarted",
+    });
+
+    const scoring = buildEvent(
+      setup,
+      [currentStart],
+      plate("away-batter-1", "HOME_RUN", [
+        movement("away-batter-1", "BATTER", "HOME"),
+      ]),
+    );
+    const payload = scoring.payload as Extract<
+      EventBody,
+      { eventType: "PlateAppearanceRecorded" }
+    >["payload"];
+    expect(() =>
+      parseEvent({
+        ...scoring,
+        payload: {
+          ...payload,
+          movements: payload.movements.map((runnerMovement) => {
+            const withoutEarnedRun = { ...runnerMovement };
+            delete withoutEarnedRun.earnedRun;
+            return withoutEarnedRun;
+          }),
+        },
       }),
     ).toThrowError(expect.objectContaining({ code: "INVALID_PAYLOAD" }));
   });

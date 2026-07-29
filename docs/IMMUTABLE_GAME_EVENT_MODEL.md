@@ -4,7 +4,7 @@ Issue #10 implements the authoritative, Account-scoped scoring-transition bounda
 
 ## Envelope, ordering, and versions
 
-Every version 1 accepted event contains:
+Every accepted event contains:
 
 - stable event, Account, game, setup-snapshot, play-transaction, client-submission, and actor identifiers;
 - accepted setup revision and baseball ruleset version;
@@ -16,7 +16,7 @@ Every version 1 accepted event contains:
 
 Sequence and source revision—not either timestamp—determine order. Sequence starts at one and each accepted transaction advances both sequence and source revision by one. The database prevents ties. Serializable acceptance and a `Game.revision` compare-and-swap ensure that one of two writers for the same expected revision wins.
 
-`EVENT_SCHEMA_VERSION` is currently 1. Version 1 has a dedicated strict parser. Unknown versions and event types fail closed, and type/payload mismatches are rejected. A future version must add an explicit parser/upcast branch that preserves the stored payload; historical rows are never rewritten in place. Baseball interpretation remains separately pinned by `rulesetVersionId`.
+`EVENT_SCHEMA_VERSION` is currently 2. Versions 1 and 2 have strict validation branches. Version 2 adds the explicit earned/unearned/pending judgment required for every counting run, including a successful steal of home; it does not rewrite version 1 rows. Version 1 remains replayable, but exact statistic derivation fails visibly when a v1 scoring run lacks that judgment. Unknown versions and event types fail closed, and type/payload mismatches are rejected. Future versions must preserve stored payloads through explicit parser/upcast branches. Baseball interpretation remains separately pinned by `rulesetVersionId`. The narrow issue #11 compatibility decision and behavior are documented in [STATISTIC_DERIVATION.md](STATISTIC_DERIVATION.md).
 
 ## Typed vocabulary and privacy
 
@@ -106,4 +106,4 @@ Focused domain tests cover strict payload/privacy validation, setup validation, 
 
 Disposable PostgreSQL tests cover clean migration, schema/catalog/representability checks, atomic acceptance/replay, exact and changed idempotency, concurrent revision writers, append-only rejection, persisted correction edges, strict corrected replay, concurrent exact retry, and failed-transaction retry.
 
-Issue #11 consumes effective events/state to derive versioned statistics without changing this source boundary. Issue #12 adds broad representative game fixtures. UI, HTTP mapping, authentication middleware, projection workers, reports, exports, sharing, administrative repair, and uncommon ruleset extensions remain deferred.
+Issue #11 consumes effective events/state to derive versioned statistics and adds only the v2 earned-run source judgment needed for exact ERA. Issue #12 adds broad representative game fixtures. UI, HTTP mapping, authentication middleware, projection workers, reports, exports, sharing, administrative repair, and uncommon ruleset extensions remain deferred.
