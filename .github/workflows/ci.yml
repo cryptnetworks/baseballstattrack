@@ -23,6 +23,24 @@ jobs:
     name: verify
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: baseballstattrack_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d baseballstattrack_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/baseballstattrack_ci?schema=public
 
     steps:
       - name: Checkout
@@ -36,6 +54,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Validate migration chain
+        run: npm run db:migrate:deploy && npm run db:migrate:status && npm run db:migrate:verify
 
       - name: Run canonical quality verification
         run: npm run verify

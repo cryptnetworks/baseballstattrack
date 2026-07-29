@@ -1,0 +1,82 @@
+import { Prisma } from "@prisma/client";
+import { describe, expect, it } from "vitest";
+
+const model = (name: string) => {
+  const found = Prisma.dmmf.datamodel.models.find(
+    (candidate) => candidate.name === name,
+  );
+
+  expect(found, `missing Prisma model ${name}`).toBeDefined();
+  return found!;
+};
+
+describe("relational domain schema", () => {
+  it("models the normalized account-owned baseball boundaries", () => {
+    for (const name of [
+      "Account",
+      "Team",
+      "Season",
+      "TeamSeason",
+      "Player",
+      "RosterEntry",
+      "Game",
+      "GameSetupSnapshot",
+      "GameTeamSnapshot",
+      "LineupSlotSnapshot",
+      "PlayTransaction",
+      "SourceEvent",
+      "EventCorrection",
+      "ProjectionCheckpoint",
+      "PrivacyOverlay",
+    ]) {
+      expect(model(name).name).toBe(name);
+    }
+  });
+
+  it("keeps prohibited MVP player fields out of persistence", () => {
+    const playerFields = model("Player").fields.map((field) =>
+      field.name.toLowerCase(),
+    );
+
+    for (const prohibited of [
+      "dateofbirth",
+      "birthyear",
+      "ageband",
+      "email",
+      "phone",
+      "notes",
+      "contact",
+    ]) {
+      expect(playerFields).not.toContain(prohibited);
+    }
+  });
+
+  it("preserves event envelope and privacy-aware projection revisions", () => {
+    const eventFields = new Set(
+      model("SourceEvent").fields.map((field) => field.name),
+    );
+
+    for (const required of [
+      "accountId",
+      "gameId",
+      "sequence",
+      "eventType",
+      "schemaVersion",
+      "rulesetVersionId",
+      "clientSubmissionId",
+      "expectedRevision",
+      "acceptedRevision",
+      "actorId",
+      "recordedAt",
+      "payload",
+    ]) {
+      expect(eventFields).toContain(required);
+    }
+
+    expect(
+      model("ProjectionCheckpoint").fields.some(
+        (field) => field.name === "privacyOverlayRevision",
+      ),
+    ).toBe(true);
+  });
+});
