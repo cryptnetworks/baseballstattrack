@@ -78,15 +78,15 @@ try {
       ('fixture-player-account-b', 'fixture-account-b', 'Synthetic Account B Player', CURRENT_TIMESTAMP);
 
     INSERT INTO "RosterEntry"
-      ("id", "accountId", "playerId", "teamSeasonId", "jerseyNumber", "status", "updatedAt", "archivedAt")
+      ("id", "accountId", "playerId", "teamSeasonId", "jerseyNumber", "status", "startsAt", "endsAt", "updatedAt", "archivedAt")
     VALUES
-      ('fixture-roster-shared-old', 'fixture-account-a', 'fixture-player-shared', 'fixture-team-season-home-2026', '7', 'ARCHIVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-      ('fixture-roster-shared-current', 'fixture-account-a', 'fixture-player-shared', 'fixture-team-season-home-2026', '17', 'ACTIVE', CURRENT_TIMESTAMP, NULL),
-      ('fixture-roster-shared-next-team', 'fixture-account-a', 'fixture-player-shared', 'fixture-team-season-next-2027', '27', 'ACTIVE', CURRENT_TIMESTAMP, NULL),
-      ('fixture-roster-pitcher', 'fixture-account-a', 'fixture-player-pitcher', 'fixture-team-season-home-2026', '22', 'ACTIVE', CURRENT_TIMESTAMP, NULL),
-      ('fixture-roster-substitute', 'fixture-account-a', 'fixture-player-substitute', 'fixture-team-season-home-2026', '31', 'ACTIVE', CURRENT_TIMESTAMP, NULL),
-      ('fixture-roster-visitor', 'fixture-account-a', 'fixture-player-visitor', 'fixture-team-season-next-2026', '4', 'ACTIVE', CURRENT_TIMESTAMP, NULL),
-      ('fixture-roster-visitor-pitcher', 'fixture-account-a', 'fixture-player-visitor-pitcher', 'fixture-team-season-next-2026', '9', 'ACTIVE', CURRENT_TIMESTAMP, NULL);
+      ('fixture-roster-shared-old', 'fixture-account-a', 'fixture-player-shared', 'fixture-team-season-home-2026', '7', 'ARCHIVED', '2025-01-01T00:00:00Z', '2026-01-01T00:00:00Z', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+      ('fixture-roster-shared-current', 'fixture-account-a', 'fixture-player-shared', 'fixture-team-season-home-2026', '17', 'ACTIVE', '2026-01-01T00:00:00Z', NULL, CURRENT_TIMESTAMP, NULL),
+      ('fixture-roster-shared-next-team', 'fixture-account-a', 'fixture-player-shared', 'fixture-team-season-next-2027', '27', 'ACTIVE', '2027-01-01T00:00:00Z', NULL, CURRENT_TIMESTAMP, NULL),
+      ('fixture-roster-pitcher', 'fixture-account-a', 'fixture-player-pitcher', 'fixture-team-season-home-2026', '22', 'ACTIVE', '2026-01-01T00:00:00Z', NULL, CURRENT_TIMESTAMP, NULL),
+      ('fixture-roster-substitute', 'fixture-account-a', 'fixture-player-substitute', 'fixture-team-season-home-2026', '31', 'ACTIVE', '2026-01-01T00:00:00Z', NULL, CURRENT_TIMESTAMP, NULL),
+      ('fixture-roster-visitor', 'fixture-account-a', 'fixture-player-visitor', 'fixture-team-season-next-2026', '4', 'ACTIVE', '2026-01-01T00:00:00Z', NULL, CURRENT_TIMESTAMP, NULL),
+      ('fixture-roster-visitor-pitcher', 'fixture-account-a', 'fixture-player-visitor-pitcher', 'fixture-team-season-next-2026', '9', 'ACTIVE', '2026-01-01T00:00:00Z', NULL, CURRENT_TIMESTAMP, NULL);
 
     INSERT INTO "RulesetVersion"
       ("id", "accountId", "name", "version", "configuration")

@@ -64,7 +64,7 @@ ARG VCS_REF=unknown
 ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=3000 \
-    REQUIRED_DATABASE_MIGRATION=20260729170000_event_setup_reference
+    REQUIRED_DATABASE_MIGRATION=20260729200000_team_season_roster_management
 
 LABEL org.opencontainers.image.title="Baseball Stat Track" \
       org.opencontainers.image.description="Production-compatible Baseball Stat Track application image" \
