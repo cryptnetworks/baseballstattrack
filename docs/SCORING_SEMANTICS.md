@@ -326,6 +326,8 @@ Any accepted correction invalidates rebuildable projections from the earliest af
 
 ## Statistics Boundaries
 
+The implemented issue #11 formulas, exact numeric representation, event-schema v2 earned-run judgment, correction behavior, supported season boundary, and explicit unsupported cases are documented in [STATISTIC_DERIVATION.md](STATISTIC_DERIVATION.md). This implementation note narrows representability gaps without changing the source-authority rules below.
+
 Recorded source facts:
 
 - Plate appearance outcome and scorer judgment.
