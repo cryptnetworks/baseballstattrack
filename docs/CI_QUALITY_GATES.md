@@ -33,17 +33,17 @@ verify
 
 The workflow runs for pull requests targeting `main` and pushes to `main`. It uses a single combined job so contributors and branch protection share the exact canonical command. Workflow concurrency cancels obsolete runs for the same pull request or branch; it never cancels a different pull request's run.
 
-The job uses Ubuntu, Node 24, npm's dependency cache keyed from the lockfile, `npm ci`, and `npm run verify`. The cache only accelerates download; `npm ci` remains authoritative and fails on a package-lock mismatch. The job has a 15-minute timeout and named checkout, setup, install, and verification steps so failures are visible in GitHub Actions logs. No required step uses `continue-on-error`, `|| true`, or a failure-masking pipe.
+The job uses Ubuntu, Node 24, npm's dependency cache keyed from the lockfile, `npm ci`, a disposable PostgreSQL 17 service, the complete migration chain, and `npm run verify`. The cache only accelerates download; `npm ci` remains authoritative and fails on a package-lock mismatch. The migration step runs `npm run db:migrate:deploy` followed by `npm run db:migrate:status` against the empty CI database, so invalid SQL and unapplied migrations fail before application verification. The job has a 15-minute timeout and named checkout, setup, install, migration, and verification steps so failures are visible in GitHub Actions logs. No required step uses `continue-on-error`, `|| true`, or a failure-masking pipe.
 
 Node 24 and npm 11 or newer are the supported runtime baseline. The `actions/setup-node` Node 24 distribution supplies a compatible npm release; local contributors should use the versions in `package.json`'s `engines` field.
 
 ## Environment and secret safety
 
-CI has read-only `contents` permission and receives no deployment, database, identity-provider, or application secrets. Fork pull requests run the same verification without secrets. `NEXT_TELEMETRY_DISABLED=1` disables framework telemetry; it is not a credential or application setting.
+CI has read-only `contents` permission and receives no deployment, identity-provider, production database, or application secrets. Its PostgreSQL credentials are fixed, workflow-local values for the isolated disposable service. Fork pull requests run the same verification without repository secrets. `NEXT_TELEMETRY_DISABLED=1` disables framework telemetry; it is not a credential or application setting.
 
-The application build currently does not create Prisma or Supabase clients. `prisma validate` validates the checked-in schema and does not connect to the configured datasource, run a migration, seed data, or print a database URL. The Prisma configuration's local fallback is syntactic configuration only for this command; CI does not set `DATABASE_URL` or `DIRECT_URL`, and no production URL is available to the workflow.
+The application build currently does not create Prisma or Supabase clients. `prisma validate` validates the checked-in schema without changing data. CI sets `DATABASE_URL` only to its disposable service so `prisma migrate deploy` can execute the checked-in chain; no production URL is available to the workflow, and CI never seeds application data.
 
-Future CI changes must keep PR verification fail-closed: do not add production secrets, migrations, seeds, destructive database access, or deployment steps. Preview and test environments must remain isolated as required by `PERSISTENCE_AND_TENANCY.md`.
+Future CI changes must keep PR verification fail-closed: do not add production secrets, production database access, seeds, destructive access outside the disposable CI database, or deployment steps. Preview and test environments must remain isolated as required by `PERSISTENCE_AND_TENANCY.md`.
 
 ## Dependency-audit policy
 
@@ -67,4 +67,4 @@ If a run is superseded by a newer commit, GitHub cancels it by design. Re-run a 
 
 When GitHub plan/settings permit it, protect `main` with required pull requests, an approving review, resolved conversations, up-to-date branches, and the exact `verify` check. Current plan limitations are recorded in `.github/branch-protection.md`; this repository does not claim that protection is already configured.
 
-Deferred improvements include integration-test infrastructure, clean-database migration-chain checks, dependency provenance policy, action commit-SHA pinning if repository policy requires it, performance budgets, accessibility checks, and release/deployment gates.
+Deferred improvements include broader database integration tests, dependency provenance policy, action commit-SHA pinning if repository policy requires it, performance budgets, accessibility checks, and release/deployment gates.

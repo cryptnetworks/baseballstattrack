@@ -8,6 +8,12 @@ CREATE TYPE "AccountStatus" AS ENUM ('ACTIVE', 'ARCHIVED', 'SUSPENDED', 'PENDING
 CREATE TYPE "MembershipStatus" AS ENUM ('INVITED', 'ACTIVE', 'DISABLED', 'REMOVED');
 
 -- CreateEnum
+CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'DISABLED', 'DELETED', 'MERGED', 'RECOVERED');
+
+-- CreateEnum
+CREATE TYPE "InvitationStatus" AS ENUM ('PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED', 'SUPERSEDED');
+
+-- CreateEnum
 CREATE TYPE "MembershipRole" AS ENUM ('OWNER', 'ADMINISTRATOR', 'COACH_MANAGER', 'SCOREKEEPER', 'VIEWER');
 
 -- CreateEnum
@@ -47,6 +53,12 @@ CREATE TYPE "ProjectionStatus" AS ENUM ('PENDING', 'BUILDING', 'CURRENT', 'FAILE
 CREATE TYPE "AuditOutcome" AS ENUM ('SUCCEEDED', 'DENIED', 'FAILED');
 
 -- CreateEnum
+CREATE TYPE "AuditScope" AS ENUM ('ACCOUNT', 'SYSTEM');
+
+-- CreateEnum
+CREATE TYPE "CorrectionPolicy" AS ENUM ('REPLACE_PLAY', 'REPLACE_EVENT_RANGE', 'REPLACE_JUDGMENT', 'REVERSE_EVENTS');
+
+-- CreateEnum
 CREATE TYPE "PrivacyDisplayField" AS ENUM ('PLAYER_DISPLAY_NAME');
 
 -- CreateTable
@@ -65,7 +77,9 @@ CREATE TABLE "Account" (
 -- CreateTable
 CREATE TABLE "AppUser" (
     "id" TEXT NOT NULL,
+    "provider" TEXT NOT NULL,
     "providerSubject" TEXT NOT NULL,
+    "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "detachedAt" TIMESTAMP(3),
@@ -86,6 +100,25 @@ CREATE TABLE "AccountMembership" (
     "removedAt" TIMESTAMP(3),
 
     CONSTRAINT "AccountMembership_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "MembershipInvitation" (
+    "id" TEXT NOT NULL,
+    "accountId" TEXT NOT NULL,
+    "intendedUserId" TEXT,
+    "invitedByUserId" TEXT NOT NULL,
+    "deliveryContact" TEXT,
+    "tokenVerifier" TEXT NOT NULL,
+    "authoritySnapshot" JSONB NOT NULL,
+    "status" "InvitationStatus" NOT NULL DEFAULT 'PENDING',
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "terminalAt" TIMESTAMP(3),
+    "acceptedMembershipId" TEXT,
+    "supersedesId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "MembershipInvitation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -225,6 +258,7 @@ CREATE TABLE "GameTeamSnapshot" (
     "id" TEXT NOT NULL,
     "accountId" TEXT NOT NULL,
     "gameId" TEXT NOT NULL,
+    "setupSnapshotId" TEXT NOT NULL,
     "side" "GameSide" NOT NULL,
     "teamId" TEXT,
     "teamSeasonId" TEXT,
@@ -242,6 +276,9 @@ CREATE TABLE "GameSetupSnapshot" (
     "gameId" TEXT NOT NULL,
     "setupRevision" INTEGER NOT NULL,
     "rulesetVersionId" TEXT NOT NULL,
+    "scheduledAt" TIMESTAMP(3),
+    "location" TEXT,
+    "scheduledInnings" INTEGER NOT NULL,
     "acceptedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "GameSetupSnapshot_pkey" PRIMARY KEY ("id")
@@ -258,7 +295,7 @@ CREATE TABLE "LineupSlotSnapshot" (
     "rosterEntryId" TEXT,
     "displayName" TEXT NOT NULL,
     "jerseyNumber" TEXT,
-    "battingOrder" INTEGER NOT NULL,
+    "battingOrder" INTEGER,
     "defensivePosition" "BaseballPosition",
     "isStartingPitcher" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -275,6 +312,8 @@ CREATE TABLE "PlayTransaction" (
     "expectedRevision" INTEGER NOT NULL,
     "clientSubmissionId" TEXT NOT NULL,
     "payloadHash" TEXT NOT NULL,
+    "preStateHash" TEXT NOT NULL,
+    "postStateHash" TEXT NOT NULL,
     "actorKind" "ActorKind" NOT NULL,
     "actorId" TEXT NOT NULL,
     "actorUserId" TEXT,
@@ -291,9 +330,14 @@ CREATE TABLE "SourceEvent" (
     "playTransactionId" TEXT,
     "sequence" INTEGER NOT NULL,
     "componentOrder" INTEGER,
+    "parentEventId" TEXT,
     "eventType" TEXT NOT NULL,
     "schemaVersion" INTEGER NOT NULL,
     "rulesetVersionId" TEXT NOT NULL,
+    "clientSubmissionId" TEXT NOT NULL,
+    "expectedRevision" INTEGER NOT NULL,
+    "acceptedRevision" INTEGER NOT NULL,
+    "payloadHash" TEXT NOT NULL,
     "payload" JSONB NOT NULL,
     "preStateHash" TEXT,
     "postStateHash" TEXT,
@@ -306,15 +350,17 @@ CREATE TABLE "SourceEvent" (
 );
 
 -- CreateTable
-CREATE TABLE "EventSupersession" (
+CREATE TABLE "EventCorrection" (
     "id" TEXT NOT NULL,
     "accountId" TEXT NOT NULL,
     "gameId" TEXT NOT NULL,
-    "supersededEventId" TEXT NOT NULL,
-    "replacementEventId" TEXT NOT NULL,
+    "correctionEventId" TEXT NOT NULL,
+    "targetEventId" TEXT NOT NULL,
+    "replacementEventId" TEXT,
+    "policy" "CorrectionPolicy" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "EventSupersession_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "EventCorrection_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -338,7 +384,8 @@ CREATE TABLE "ProjectionCheckpoint" (
 -- CreateTable
 CREATE TABLE "SecurityAuditRecord" (
     "id" TEXT NOT NULL,
-    "accountId" TEXT NOT NULL,
+    "scope" "AuditScope" NOT NULL,
+    "accountId" TEXT,
     "actorKind" "ActorKind" NOT NULL,
     "actorId" TEXT NOT NULL,
     "actorUserId" TEXT,
@@ -387,16 +434,28 @@ CREATE TABLE "PrivacyOverlayField" (
 CREATE UNIQUE INDEX "Account_slug_key" ON "Account"("slug");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "AppUser_providerSubject_key" ON "AppUser"("providerSubject");
+CREATE UNIQUE INDEX "AppUser_provider_providerSubject_key" ON "AppUser"("provider", "providerSubject");
 
 -- CreateIndex
 CREATE INDEX "AccountMembership_userId_status_idx" ON "AccountMembership"("userId", "status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "AccountMembership_accountId_userId_key" ON "AccountMembership"("accountId", "userId");
+CREATE UNIQUE INDEX "AccountMembership_accountId_id_key" ON "AccountMembership"("accountId", "id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "AccountMembership_accountId_id_key" ON "AccountMembership"("accountId", "id");
+CREATE UNIQUE INDEX "MembershipInvitation_tokenVerifier_key" ON "MembershipInvitation"("tokenVerifier");
+
+-- CreateIndex
+CREATE INDEX "MembershipInvitation_accountId_status_expiresAt_idx" ON "MembershipInvitation"("accountId", "status", "expiresAt");
+
+-- CreateIndex
+CREATE INDEX "MembershipInvitation_intendedUserId_status_idx" ON "MembershipInvitation"("intendedUserId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MembershipInvitation_accountId_id_key" ON "MembershipInvitation"("accountId", "id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MembershipInvitation_accountId_acceptedMembershipId_key" ON "MembershipInvitation"("accountId", "acceptedMembershipId");
 
 -- CreateIndex
 CREATE INDEX "MembershipRoleAssignment_accountId_membershipId_revokedAt_idx" ON "MembershipRoleAssignment"("accountId", "membershipId", "revokedAt");
@@ -409,9 +468,6 @@ CREATE UNIQUE INDEX "MembershipRoleAssignment_accountId_id_key" ON "MembershipRo
 
 -- CreateIndex
 CREATE INDEX "CapabilityGrant_accountId_membershipId_revokedAt_idx" ON "CapabilityGrant"("accountId", "membershipId", "revokedAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "CapabilityGrant_accountId_membershipId_capability_scope_tea_key" ON "CapabilityGrant"("accountId", "membershipId", "capability", "scope", "teamId", "seasonId", "gameId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "CapabilityGrant_accountId_id_key" ON "CapabilityGrant"("accountId", "id");
@@ -442,6 +498,9 @@ CREATE UNIQUE INDEX "TeamSeason_accountId_id_key" ON "TeamSeason"("accountId", "
 
 -- CreateIndex
 CREATE UNIQUE INDEX "TeamSeason_accountId_seasonId_id_key" ON "TeamSeason"("accountId", "seasonId", "id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TeamSeason_accountId_teamId_id_key" ON "TeamSeason"("accountId", "teamId", "id");
 
 -- CreateIndex
 CREATE INDEX "Player_accountId_archivedAt_idx" ON "Player"("accountId", "archivedAt");
@@ -486,10 +545,10 @@ CREATE INDEX "GameTeamSnapshot_accountId_teamSeasonId_idx" ON "GameTeamSnapshot"
 CREATE UNIQUE INDEX "GameTeamSnapshot_accountId_id_key" ON "GameTeamSnapshot"("accountId", "id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "GameTeamSnapshot_accountId_gameId_id_key" ON "GameTeamSnapshot"("accountId", "gameId", "id");
+CREATE UNIQUE INDEX "GameTeamSnapshot_accountId_gameId_setupSnapshotId_id_key" ON "GameTeamSnapshot"("accountId", "gameId", "setupSnapshotId", "id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "GameTeamSnapshot_gameId_side_key" ON "GameTeamSnapshot"("gameId", "side");
+CREATE UNIQUE INDEX "GameTeamSnapshot_setupSnapshotId_side_key" ON "GameTeamSnapshot"("setupSnapshotId", "side");
 
 -- CreateIndex
 CREATE INDEX "GameSetupSnapshot_accountId_rulesetVersionId_idx" ON "GameSetupSnapshot"("accountId", "rulesetVersionId");
@@ -537,6 +596,9 @@ CREATE INDEX "SourceEvent_accountId_gameId_recordedAt_idx" ON "SourceEvent"("acc
 CREATE INDEX "SourceEvent_accountId_rulesetVersionId_idx" ON "SourceEvent"("accountId", "rulesetVersionId");
 
 -- CreateIndex
+CREATE INDEX "SourceEvent_accountId_gameId_actorId_clientSubmissionId_idx" ON "SourceEvent"("accountId", "gameId", "actorId", "clientSubmissionId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "SourceEvent_accountId_id_key" ON "SourceEvent"("accountId", "id");
 
 -- CreateIndex
@@ -549,13 +611,13 @@ CREATE UNIQUE INDEX "SourceEvent_gameId_sequence_key" ON "SourceEvent"("gameId",
 CREATE UNIQUE INDEX "SourceEvent_playTransactionId_componentOrder_key" ON "SourceEvent"("playTransactionId", "componentOrder");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "EventSupersession_accountId_id_key" ON "EventSupersession"("accountId", "id");
+CREATE INDEX "EventCorrection_accountId_gameId_targetEventId_idx" ON "EventCorrection"("accountId", "gameId", "targetEventId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "EventSupersession_accountId_gameId_supersededEventId_key" ON "EventSupersession"("accountId", "gameId", "supersededEventId");
+CREATE UNIQUE INDEX "EventCorrection_accountId_id_key" ON "EventCorrection"("accountId", "id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "EventSupersession_accountId_gameId_replacementEventId_super_key" ON "EventSupersession"("accountId", "gameId", "replacementEventId", "supersededEventId");
+CREATE UNIQUE INDEX "EventCorrection_accountId_gameId_correctionEventId_targetEv_key" ON "EventCorrection"("accountId", "gameId", "correctionEventId", "targetEventId");
 
 -- CreateIndex
 CREATE INDEX "ProjectionCheckpoint_accountId_scope_status_idx" ON "ProjectionCheckpoint"("accountId", "scope", "status");
@@ -564,10 +626,10 @@ CREATE INDEX "ProjectionCheckpoint_accountId_scope_status_idx" ON "ProjectionChe
 CREATE UNIQUE INDEX "ProjectionCheckpoint_accountId_id_key" ON "ProjectionCheckpoint"("accountId", "id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProjectionCheckpoint_accountId_gameId_sourceRevision_deriva_key" ON "ProjectionCheckpoint"("accountId", "gameId", "sourceRevision", "derivationVersion");
+CREATE UNIQUE INDEX "ProjectionCheckpoint_accountId_gameId_sourceRevision_privac_key" ON "ProjectionCheckpoint"("accountId", "gameId", "sourceRevision", "privacyOverlayRevision", "derivationVersion");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProjectionCheckpoint_accountId_seasonId_sourceRevision_deri_key" ON "ProjectionCheckpoint"("accountId", "seasonId", "sourceRevision", "derivationVersion");
+CREATE UNIQUE INDEX "ProjectionCheckpoint_accountId_seasonId_sourceRevision_priv_key" ON "ProjectionCheckpoint"("accountId", "seasonId", "sourceRevision", "privacyOverlayRevision", "derivationVersion");
 
 -- CreateIndex
 CREATE INDEX "SecurityAuditRecord_accountId_createdAt_idx" ON "SecurityAuditRecord"("accountId", "createdAt");
@@ -577,9 +639,6 @@ CREATE INDEX "SecurityAuditRecord_accountId_targetType_targetId_idx" ON "Securit
 
 -- CreateIndex
 CREATE INDEX "SecurityAuditRecord_correlationId_idx" ON "SecurityAuditRecord"("correlationId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "SecurityAuditRecord_accountId_id_key" ON "SecurityAuditRecord"("accountId", "id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "PrivacyOverlay_accountId_id_key" ON "PrivacyOverlay"("accountId", "id");
@@ -604,6 +663,21 @@ ALTER TABLE "AccountMembership" ADD CONSTRAINT "AccountMembership_accountId_fkey
 
 -- AddForeignKey
 ALTER TABLE "AccountMembership" ADD CONSTRAINT "AccountMembership_userId_fkey" FOREIGN KEY ("userId") REFERENCES "AppUser"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MembershipInvitation" ADD CONSTRAINT "MembershipInvitation_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MembershipInvitation" ADD CONSTRAINT "MembershipInvitation_intendedUserId_fkey" FOREIGN KEY ("intendedUserId") REFERENCES "AppUser"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MembershipInvitation" ADD CONSTRAINT "MembershipInvitation_invitedByUserId_fkey" FOREIGN KEY ("invitedByUserId") REFERENCES "AppUser"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MembershipInvitation" ADD CONSTRAINT "MembershipInvitation_accountId_acceptedMembershipId_fkey" FOREIGN KEY ("accountId", "acceptedMembershipId") REFERENCES "AccountMembership"("accountId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MembershipInvitation" ADD CONSTRAINT "MembershipInvitation_accountId_supersedesId_fkey" FOREIGN KEY ("accountId", "supersedesId") REFERENCES "MembershipInvitation"("accountId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "MembershipRoleAssignment" ADD CONSTRAINT "MembershipRoleAssignment_accountId_membershipId_fkey" FOREIGN KEY ("accountId", "membershipId") REFERENCES "AccountMembership"("accountId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -675,10 +749,10 @@ ALTER TABLE "GameTeamSnapshot" ADD CONSTRAINT "GameTeamSnapshot_accountId_fkey" 
 ALTER TABLE "GameTeamSnapshot" ADD CONSTRAINT "GameTeamSnapshot_accountId_gameId_fkey" FOREIGN KEY ("accountId", "gameId") REFERENCES "Game"("accountId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "GameTeamSnapshot" ADD CONSTRAINT "GameTeamSnapshot_accountId_teamId_fkey" FOREIGN KEY ("accountId", "teamId") REFERENCES "Team"("accountId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "GameTeamSnapshot" ADD CONSTRAINT "GameTeamSnapshot_accountId_gameId_setupSnapshotId_fkey" FOREIGN KEY ("accountId", "gameId", "setupSnapshotId") REFERENCES "GameSetupSnapshot"("accountId", "gameId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "GameTeamSnapshot" ADD CONSTRAINT "GameTeamSnapshot_accountId_teamSeasonId_fkey" FOREIGN KEY ("accountId", "teamSeasonId") REFERENCES "TeamSeason"("accountId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "GameTeamSnapshot" ADD CONSTRAINT "GameTeamSnapshot_accountId_teamId_teamSeasonId_fkey" FOREIGN KEY ("accountId", "teamId", "teamSeasonId") REFERENCES "TeamSeason"("accountId", "teamId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "GameSetupSnapshot" ADD CONSTRAINT "GameSetupSnapshot_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -696,7 +770,7 @@ ALTER TABLE "LineupSlotSnapshot" ADD CONSTRAINT "LineupSlotSnapshot_accountId_fk
 ALTER TABLE "LineupSlotSnapshot" ADD CONSTRAINT "LineupSlotSnapshot_accountId_gameId_setupSnapshotId_fkey" FOREIGN KEY ("accountId", "gameId", "setupSnapshotId") REFERENCES "GameSetupSnapshot"("accountId", "gameId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "LineupSlotSnapshot" ADD CONSTRAINT "LineupSlotSnapshot_accountId_gameId_gameTeamSnapshotId_fkey" FOREIGN KEY ("accountId", "gameId", "gameTeamSnapshotId") REFERENCES "GameTeamSnapshot"("accountId", "gameId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "LineupSlotSnapshot" ADD CONSTRAINT "LineupSlotSnapshot_accountId_gameId_setupSnapshotId_gameTe_fkey" FOREIGN KEY ("accountId", "gameId", "setupSnapshotId", "gameTeamSnapshotId") REFERENCES "GameTeamSnapshot"("accountId", "gameId", "setupSnapshotId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "LineupSlotSnapshot" ADD CONSTRAINT "LineupSlotSnapshot_accountId_playerId_fkey" FOREIGN KEY ("accountId", "playerId") REFERENCES "Player"("accountId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -729,13 +803,19 @@ ALTER TABLE "SourceEvent" ADD CONSTRAINT "SourceEvent_accountId_rulesetVersionId
 ALTER TABLE "SourceEvent" ADD CONSTRAINT "SourceEvent_actorUserId_fkey" FOREIGN KEY ("actorUserId") REFERENCES "AppUser"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EventSupersession" ADD CONSTRAINT "EventSupersession_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "SourceEvent" ADD CONSTRAINT "SourceEvent_accountId_gameId_parentEventId_fkey" FOREIGN KEY ("accountId", "gameId", "parentEventId") REFERENCES "SourceEvent"("accountId", "gameId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EventSupersession" ADD CONSTRAINT "EventSupersession_accountId_gameId_supersededEventId_fkey" FOREIGN KEY ("accountId", "gameId", "supersededEventId") REFERENCES "SourceEvent"("accountId", "gameId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "EventCorrection" ADD CONSTRAINT "EventCorrection_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EventSupersession" ADD CONSTRAINT "EventSupersession_accountId_gameId_replacementEventId_fkey" FOREIGN KEY ("accountId", "gameId", "replacementEventId") REFERENCES "SourceEvent"("accountId", "gameId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "EventCorrection" ADD CONSTRAINT "EventCorrection_accountId_gameId_correctionEventId_fkey" FOREIGN KEY ("accountId", "gameId", "correctionEventId") REFERENCES "SourceEvent"("accountId", "gameId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EventCorrection" ADD CONSTRAINT "EventCorrection_accountId_gameId_targetEventId_fkey" FOREIGN KEY ("accountId", "gameId", "targetEventId") REFERENCES "SourceEvent"("accountId", "gameId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EventCorrection" ADD CONSTRAINT "EventCorrection_accountId_gameId_replacementEventId_fkey" FOREIGN KEY ("accountId", "gameId", "replacementEventId") REFERENCES "SourceEvent"("accountId", "gameId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ProjectionCheckpoint" ADD CONSTRAINT "ProjectionCheckpoint_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -771,27 +851,38 @@ ALTER TABLE "PrivacyOverlayField" ADD CONSTRAINT "PrivacyOverlayField_accountId_
 ALTER TABLE "PrivacyOverlayField" ADD CONSTRAINT "PrivacyOverlayField_accountId_lineupSlotSnapshotId_fkey" FOREIGN KEY ("accountId", "lineupSlotSnapshotId") REFERENCES "LineupSlotSnapshot"("accountId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- Prisma cannot express partial uniqueness or cross-column shape checks. These
--- database constraints keep tenant scope and append-only records correct even
--- when a future caller bypasses the application service layer.
+-- constraints keep tenant scope and append-only records correct even when a
+-- future caller bypasses the application service layer.
 ALTER TABLE "Season" ADD CONSTRAINT "Season_date_range_check"
   CHECK ("endsOn" IS NULL OR "startsOn" IS NULL OR "endsOn" >= "startsOn");
-
 ALTER TABLE "Game" ADD CONSTRAINT "Game_revision_nonnegative_check"
   CHECK ("revision" >= 0);
-
+ALTER TABLE "GameSetupSnapshot" ADD CONSTRAINT "GameSetupSnapshot_innings_check"
+  CHECK ("scheduledInnings" > 0);
 ALTER TABLE "PlayTransaction" ADD CONSTRAINT "PlayTransaction_revision_check"
-  CHECK ("acceptedRevision" > 0 AND "expectedRevision" >= 0);
-
+  CHECK ("acceptedRevision" > 0 AND "expectedRevision" >= 0 AND "acceptedRevision" = "expectedRevision" + 1);
 ALTER TABLE "SourceEvent" ADD CONSTRAINT "SourceEvent_shape_check"
   CHECK (
-    "sequence" > 0 AND "schemaVersion" > 0 AND
+    "sequence" > 0 AND "schemaVersion" > 0 AND "expectedRevision" >= 0 AND
+    "acceptedRevision" > 0 AND "acceptedRevision" = "expectedRevision" + 1 AND
     (("playTransactionId" IS NULL AND "componentOrder" IS NULL) OR
       ("playTransactionId" IS NOT NULL AND "componentOrder" >= 0))
   );
-
-ALTER TABLE "EventSupersession" ADD CONSTRAINT "EventSupersession_distinct_events_check"
-  CHECK ("supersededEventId" <> "replacementEventId");
-
+ALTER TABLE "MembershipInvitation" ADD CONSTRAINT "MembershipInvitation_shape_check"
+  CHECK (
+    (("intendedUserId" IS NOT NULL)::integer + ("deliveryContact" IS NOT NULL)::integer = 1) AND
+    ("supersedesId" IS NULL OR "supersedesId" <> "id") AND
+    (("status" = 'PENDING' AND "terminalAt" IS NULL AND "acceptedMembershipId" IS NULL) OR
+      ("status" = 'ACCEPTED' AND "terminalAt" IS NOT NULL AND "acceptedMembershipId" IS NOT NULL) OR
+      ("status" IN ('EXPIRED', 'REVOKED', 'SUPERSEDED') AND "terminalAt" IS NOT NULL AND "acceptedMembershipId" IS NULL))
+  );
+ALTER TABLE "EventCorrection" ADD CONSTRAINT "EventCorrection_shape_check"
+  CHECK (
+    "correctionEventId" <> "targetEventId" AND
+    ("replacementEventId" IS NULL OR "replacementEventId" <> "targetEventId") AND
+    (("policy" = 'REVERSE_EVENTS' AND "replacementEventId" IS NULL) OR
+      ("policy" <> 'REVERSE_EVENTS' AND "replacementEventId" IS NOT NULL))
+  );
 ALTER TABLE "MembershipRoleAssignment" ADD CONSTRAINT "MembershipRoleAssignment_scope_check"
   CHECK (
     ("scope" = 'ACCOUNT' AND "teamId" IS NULL AND "seasonId" IS NULL AND "gameId" IS NULL) OR
@@ -799,7 +890,6 @@ ALTER TABLE "MembershipRoleAssignment" ADD CONSTRAINT "MembershipRoleAssignment_
     ("scope" = 'SEASON' AND "teamId" IS NULL AND "seasonId" IS NOT NULL AND "gameId" IS NULL) OR
     ("scope" = 'GAME' AND "teamId" IS NULL AND "seasonId" IS NULL AND "gameId" IS NOT NULL)
   );
-
 ALTER TABLE "CapabilityGrant" ADD CONSTRAINT "CapabilityGrant_scope_check"
   CHECK (
     ("scope" = 'ACCOUNT' AND "teamId" IS NULL AND "seasonId" IS NULL AND "gameId" IS NULL) OR
@@ -807,38 +897,52 @@ ALTER TABLE "CapabilityGrant" ADD CONSTRAINT "CapabilityGrant_scope_check"
     ("scope" = 'SEASON' AND "teamId" IS NULL AND "seasonId" IS NOT NULL AND "gameId" IS NULL) OR
     ("scope" = 'GAME' AND "teamId" IS NULL AND "seasonId" IS NULL AND "gameId" IS NOT NULL)
   );
-
 ALTER TABLE "GameTeamSnapshot" ADD CONSTRAINT "GameTeamSnapshot_account_team_check"
   CHECK (
     ("isAccountTeam" AND "teamId" IS NOT NULL AND "teamSeasonId" IS NOT NULL) OR
     (NOT "isAccountTeam" AND "teamId" IS NULL AND "teamSeasonId" IS NULL)
   );
-
+ALTER TABLE "LineupSlotSnapshot" ADD CONSTRAINT "LineupSlotSnapshot_batting_order_check"
+  CHECK ("battingOrder" IS NULL OR "battingOrder" > 0);
 ALTER TABLE "ProjectionCheckpoint" ADD CONSTRAINT "ProjectionCheckpoint_scope_check"
   CHECK (
-    ("scope" = 'GAME' AND "gameId" IS NOT NULL AND "seasonId" IS NULL) OR
-    ("scope" = 'SEASON' AND "gameId" IS NULL AND "seasonId" IS NOT NULL)
+    "sourceRevision" >= 0 AND "privacyOverlayRevision" >= 0 AND "derivationVersion" > 0 AND
+    (("scope" = 'GAME' AND "gameId" IS NOT NULL AND "seasonId" IS NULL) OR
+      ("scope" = 'SEASON' AND "gameId" IS NULL AND "seasonId" IS NOT NULL))
   );
-
+ALTER TABLE "SecurityAuditRecord" ADD CONSTRAINT "SecurityAuditRecord_scope_check"
+  CHECK (("scope" = 'ACCOUNT' AND "accountId" IS NOT NULL) OR ("scope" = 'SYSTEM' AND "accountId" IS NULL));
 ALTER TABLE "PrivacyOverlayField" ADD CONSTRAINT "PrivacyOverlayField_target_check"
   CHECK (("playerId" IS NOT NULL)::integer + ("lineupSlotSnapshotId" IS NOT NULL)::integer = 1);
 
+CREATE UNIQUE INDEX "AccountMembership_active_user_key"
+  ON "AccountMembership"("accountId", "userId") WHERE "status" = 'ACTIVE';
+CREATE UNIQUE INDEX "MembershipInvitation_pending_user_key"
+  ON "MembershipInvitation"("accountId", "intendedUserId")
+  WHERE "status" = 'PENDING' AND "intendedUserId" IS NOT NULL;
+CREATE UNIQUE INDEX "MembershipInvitation_pending_contact_key"
+  ON "MembershipInvitation"("accountId", "deliveryContact")
+  WHERE "status" = 'PENDING' AND "deliveryContact" IS NOT NULL;
 CREATE UNIQUE INDEX "Team_active_account_display_name_key"
   ON "Team"("accountId", "displayName") WHERE "status" = 'ACTIVE';
-CREATE UNIQUE INDEX "RosterEntry_active_team_season_jersey_number_key"
-  ON "RosterEntry"("teamSeasonId", "jerseyNumber")
-  WHERE "status" = 'ACTIVE' AND "jerseyNumber" IS NOT NULL;
 CREATE UNIQUE INDEX "MembershipRoleAssignment_active_scope_key"
   ON "MembershipRoleAssignment"("accountId", "membershipId", "role", "scope", COALESCE("teamId", ''), COALESCE("seasonId", ''), COALESCE("gameId", ''))
   WHERE "revokedAt" IS NULL;
 CREATE UNIQUE INDEX "CapabilityGrant_active_scope_key"
   ON "CapabilityGrant"("accountId", "membershipId", "capability", "scope", COALESCE("teamId", ''), COALESCE("seasonId", ''), COALESCE("gameId", ''))
   WHERE "revokedAt" IS NULL;
+CREATE UNIQUE INDEX "GameTeamSnapshot_one_account_team_key"
+  ON "GameTeamSnapshot"("setupSnapshotId") WHERE "isAccountTeam";
+CREATE UNIQUE INDEX "LineupSlotSnapshot_starting_pitcher_key"
+  ON "LineupSlotSnapshot"("setupSnapshotId", "gameTeamSnapshotId") WHERE "isStartingPitcher";
+CREATE UNIQUE INDEX "SourceEvent_standalone_idempotency_key"
+  ON "SourceEvent"("accountId", "gameId", "actorId", "clientSubmissionId")
+  WHERE "playTransactionId" IS NULL;
 CREATE UNIQUE INDEX "ProjectionCheckpoint_game_revision_key"
-  ON "ProjectionCheckpoint"("accountId", "gameId", "sourceRevision", "derivationVersion")
+  ON "ProjectionCheckpoint"("accountId", "gameId", "sourceRevision", "privacyOverlayRevision", "derivationVersion")
   WHERE "scope" = 'GAME';
 CREATE UNIQUE INDEX "ProjectionCheckpoint_season_revision_key"
-  ON "ProjectionCheckpoint"("accountId", "seasonId", "sourceRevision", "derivationVersion")
+  ON "ProjectionCheckpoint"("accountId", "seasonId", "sourceRevision", "privacyOverlayRevision", "derivationVersion")
   WHERE "scope" = 'SEASON';
 CREATE UNIQUE INDEX "PrivacyOverlayField_player_field_key"
   ON "PrivacyOverlayField"("privacyOverlayId", "playerId", "field") WHERE "playerId" IS NOT NULL;
@@ -851,6 +955,30 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE FUNCTION "protect_invitation_authority"() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW."accountId" <> OLD."accountId"
+    OR NEW."intendedUserId" IS DISTINCT FROM OLD."intendedUserId"
+    OR NEW."invitedByUserId" <> OLD."invitedByUserId"
+    OR NEW."deliveryContact" IS DISTINCT FROM OLD."deliveryContact"
+    OR NEW."tokenVerifier" <> OLD."tokenVerifier"
+    OR NEW."authoritySnapshot" <> OLD."authoritySnapshot"
+    OR NEW."expiresAt" <> OLD."expiresAt"
+  THEN
+    RAISE EXCEPTION 'MembershipInvitation authority fields are immutable';
+  END IF;
+  IF OLD."status" <> 'PENDING'
+    AND (NEW."status", NEW."terminalAt", NEW."acceptedMembershipId")
+      IS DISTINCT FROM (OLD."status", OLD."terminalAt", OLD."acceptedMembershipId")
+  THEN
+    RAISE EXCEPTION 'MembershipInvitation terminal state is immutable';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "MembershipInvitation_authority_immutable" BEFORE UPDATE ON "MembershipInvitation"
+  FOR EACH ROW EXECUTE FUNCTION "protect_invitation_authority"();
 CREATE TRIGGER "GameTeamSnapshot_append_only" BEFORE UPDATE OR DELETE ON "GameTeamSnapshot"
   FOR EACH ROW EXECUTE FUNCTION "prevent_append_only_mutation"();
 CREATE TRIGGER "GameSetupSnapshot_append_only" BEFORE UPDATE OR DELETE ON "GameSetupSnapshot"
@@ -861,7 +989,7 @@ CREATE TRIGGER "PlayTransaction_append_only" BEFORE UPDATE OR DELETE ON "PlayTra
   FOR EACH ROW EXECUTE FUNCTION "prevent_append_only_mutation"();
 CREATE TRIGGER "SourceEvent_append_only" BEFORE UPDATE OR DELETE ON "SourceEvent"
   FOR EACH ROW EXECUTE FUNCTION "prevent_append_only_mutation"();
-CREATE TRIGGER "EventSupersession_append_only" BEFORE UPDATE OR DELETE ON "EventSupersession"
+CREATE TRIGGER "EventCorrection_append_only" BEFORE UPDATE OR DELETE ON "EventCorrection"
   FOR EACH ROW EXECUTE FUNCTION "prevent_append_only_mutation"();
 CREATE TRIGGER "SecurityAuditRecord_append_only" BEFORE UPDATE OR DELETE ON "SecurityAuditRecord"
   FOR EACH ROW EXECUTE FUNCTION "prevent_append_only_mutation"();

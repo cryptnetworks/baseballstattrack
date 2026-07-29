@@ -20,6 +20,22 @@ enum MembershipStatus {
   REMOVED
 }
 
+enum UserStatus {
+  ACTIVE
+  DISABLED
+  DELETED
+  MERGED
+  RECOVERED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+  SUPERSEDED
+}
+
 enum MembershipRole {
   OWNER
   ADMINISTRATOR
@@ -114,6 +130,18 @@ enum AuditOutcome {
   FAILED
 }
 
+enum AuditScope {
+  ACCOUNT
+  SYSTEM
+}
+
+enum CorrectionPolicy {
+  REPLACE_PLAY
+  REPLACE_EVENT_RANGE
+  REPLACE_JUDGMENT
+  REVERSE_EVENTS
+}
+
 enum PrivacyDisplayField {
   PLAYER_DISPLAY_NAME
 }
@@ -127,59 +155,94 @@ model Account {
   updatedAt   DateTime      @updatedAt
   archivedAt  DateTime?
 
-  memberships          AccountMembership[]
-  teams                Team[]
-  seasons              Season[]
-  teamSeasons          TeamSeason[]
-  players              Player[]
-  rosterEntries        RosterEntry[]
-  rulesetVersions      RulesetVersion[]
-  games                Game[]
-  gameTeams            GameTeamSnapshot[]
-  setupSnapshots       GameSetupSnapshot[]
-  lineupSlots          LineupSlotSnapshot[]
-  playTransactions     PlayTransaction[]
-  sourceEvents         SourceEvent[]
-  eventSupersessions   EventSupersession[]
+  memberships           AccountMembership[]
+  invitations           MembershipInvitation[]
+  teams                 Team[]
+  seasons               Season[]
+  teamSeasons           TeamSeason[]
+  players               Player[]
+  rosterEntries         RosterEntry[]
+  rulesetVersions       RulesetVersion[]
+  games                 Game[]
+  gameTeams             GameTeamSnapshot[]
+  setupSnapshots        GameSetupSnapshot[]
+  lineupSlots           LineupSlotSnapshot[]
+  playTransactions      PlayTransaction[]
+  sourceEvents          SourceEvent[]
+  eventCorrections      EventCorrection[]
   projectionCheckpoints ProjectionCheckpoint[]
-  securityAuditRecords SecurityAuditRecord[]
-  privacyOverlays      PrivacyOverlay[]
-  privacyOverlayFields PrivacyOverlayField[]
+  securityAuditRecords  SecurityAuditRecord[]
+  privacyOverlays       PrivacyOverlay[]
+  privacyOverlayFields  PrivacyOverlayField[]
 }
 
 model AppUser {
-  id              String              @id @default(cuid())
-  providerSubject String              @unique
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id              String     @id @default(cuid())
+  provider        String
+  providerSubject String
+  status          UserStatus @default(ACTIVE)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
   detachedAt      DateTime?
 
-  memberships       AccountMembership[]
-  recordedPlays     PlayTransaction[]  @relation("PlayTransactionActor")
-  recordedEvents    SourceEvent[]      @relation("SourceEventActor")
-  auditRecords      SecurityAuditRecord[] @relation("AuditActor")
-  privacyOverlays   PrivacyOverlay[]   @relation("PrivacyOverlayActor")
+  memberships         AccountMembership[]
+  invitationsReceived MembershipInvitation[] @relation("InvitationRecipient")
+  invitationsSent     MembershipInvitation[] @relation("InvitationInviter")
+  recordedPlays       PlayTransaction[]      @relation("PlayTransactionActor")
+  recordedEvents      SourceEvent[]          @relation("SourceEventActor")
+  auditRecords        SecurityAuditRecord[]  @relation("AuditActor")
+  privacyOverlays     PrivacyOverlay[]       @relation("PrivacyOverlayActor")
+
+  @@unique([provider, providerSubject])
 }
 
 model AccountMembership {
-  id        String           @id @default(cuid())
-  accountId String
-  userId    String
-  status    MembershipStatus @default(INVITED)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id          String           @id @default(cuid())
+  accountId   String
+  userId      String
+  status      MembershipStatus @default(INVITED)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   activatedAt DateTime?
   disabledAt  DateTime?
   removedAt   DateTime?
 
-  account          Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  user             AppUser                    @relation(fields: [userId], references: [id], onDelete: Restrict)
-  roleAssignments  MembershipRoleAssignment[]
-  capabilityGrants CapabilityGrant[]
+  account            Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  user               AppUser                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  roleAssignments    MembershipRoleAssignment[]
+  capabilityGrants   CapabilityGrant[]
+  acceptedInvitation MembershipInvitation?
 
-  @@unique([accountId, userId])
   @@unique([accountId, id])
   @@index([userId, status])
+}
+
+model MembershipInvitation {
+  id                   String           @id @default(cuid())
+  accountId            String
+  intendedUserId       String?
+  invitedByUserId      String
+  deliveryContact      String?
+  tokenVerifier        String           @unique
+  authoritySnapshot    Json
+  status               InvitationStatus @default(PENDING)
+  expiresAt            DateTime
+  terminalAt           DateTime?
+  acceptedMembershipId String?
+  supersedesId         String?
+  createdAt            DateTime         @default(now())
+
+  account            Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  intendedUser       AppUser?               @relation("InvitationRecipient", fields: [intendedUserId], references: [id], onDelete: Restrict)
+  invitedByUser      AppUser                @relation("InvitationInviter", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+  acceptedMembership AccountMembership?     @relation(fields: [accountId, acceptedMembershipId], references: [accountId, id], onDelete: Restrict)
+  supersedes         MembershipInvitation?  @relation("InvitationSupersession", fields: [accountId, supersedesId], references: [accountId, id], onDelete: Restrict)
+  supersededBy       MembershipInvitation[] @relation("InvitationSupersession")
+
+  @@unique([accountId, id])
+  @@unique([accountId, acceptedMembershipId])
+  @@index([accountId, status, expiresAt])
+  @@index([intendedUserId, status])
 }
 
 model MembershipRoleAssignment {
@@ -221,7 +284,6 @@ model CapabilityGrant {
   season     Season?           @relation("CapabilityGrantSeason", fields: [accountId, seasonId], references: [accountId, id], onDelete: Restrict)
   game       Game?             @relation("CapabilityGrantGame", fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
 
-  @@unique([accountId, membershipId, capability, scope, teamId, seasonId, gameId])
   @@unique([accountId, id])
   @@index([accountId, membershipId, revokedAt])
 }
@@ -236,11 +298,10 @@ model Team {
   updatedAt   DateTime   @updatedAt
   archivedAt  DateTime?
 
-  account                Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  teamSeasons            TeamSeason[]
-  roleAssignments        MembershipRoleAssignment[] @relation("RoleAssignmentTeam")
-  capabilityGrants       CapabilityGrant[]          @relation("CapabilityGrantTeam")
-  gameTeamSnapshots      GameTeamSnapshot[]
+  account          Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  teamSeasons      TeamSeason[]
+  roleAssignments  MembershipRoleAssignment[] @relation("RoleAssignmentTeam")
+  capabilityGrants CapabilityGrant[]          @relation("CapabilityGrantTeam")
 
   @@unique([accountId, id])
   @@index([accountId, status])
@@ -257,11 +318,11 @@ model Season {
   updatedAt   DateTime     @updatedAt
   archivedAt  DateTime?
 
-  account             Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  teamSeasons         TeamSeason[]
-  games               Game[]
-  roleAssignments     MembershipRoleAssignment[] @relation("RoleAssignmentSeason")
-  capabilityGrants    CapabilityGrant[]          @relation("CapabilityGrantSeason")
+  account               Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  teamSeasons           TeamSeason[]
+  games                 Game[]
+  roleAssignments       MembershipRoleAssignment[] @relation("RoleAssignmentSeason")
+  capabilityGrants      CapabilityGrant[]          @relation("CapabilityGrantSeason")
   projectionCheckpoints ProjectionCheckpoint[]
 
   @@unique([accountId, id])
@@ -269,17 +330,17 @@ model Season {
 }
 
 model TeamSeason {
-  id        String   @id @default(cuid())
-  accountId String
-  teamId    String
-  seasonId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(cuid())
+  accountId  String
+  teamId     String
+  seasonId   String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   archivedAt DateTime?
 
-  account       Account       @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  team          Team          @relation(fields: [accountId, teamId], references: [accountId, id], onDelete: Restrict)
-  season        Season        @relation(fields: [accountId, seasonId], references: [accountId, id], onDelete: Restrict)
+  account       Account            @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  team          Team               @relation(fields: [accountId, teamId], references: [accountId, id], onDelete: Restrict)
+  season        Season             @relation(fields: [accountId, seasonId], references: [accountId, id], onDelete: Restrict)
   rosterEntries RosterEntry[]
   games         Game[]
   gameTeams     GameTeamSnapshot[]
@@ -287,16 +348,17 @@ model TeamSeason {
   @@unique([accountId, teamId, seasonId])
   @@unique([accountId, id])
   @@unique([accountId, seasonId, id])
+  @@unique([accountId, teamId, id])
   @@index([accountId, teamId])
   @@index([accountId, seasonId])
 }
 
 model Player {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   accountId   String
   displayName String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   archivedAt  DateTime?
 
   account              Account               @relation(fields: [accountId], references: [id], onDelete: Restrict)
@@ -319,9 +381,9 @@ model RosterEntry {
   updatedAt    DateTime     @updatedAt
   archivedAt   DateTime?
 
-  account    Account    @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  player     Player     @relation(fields: [accountId, playerId], references: [accountId, id], onDelete: Restrict)
-  teamSeason TeamSeason @relation(fields: [accountId, teamSeasonId], references: [accountId, id], onDelete: Restrict)
+  account     Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  player      Player               @relation(fields: [accountId, playerId], references: [accountId, id], onDelete: Restrict)
+  teamSeason  TeamSeason           @relation(fields: [accountId, teamSeasonId], references: [accountId, id], onDelete: Restrict)
   lineupSlots LineupSlotSnapshot[]
 
   @@unique([accountId, teamSeasonId, playerId])
@@ -330,18 +392,18 @@ model RosterEntry {
 }
 
 model RulesetVersion {
-  id              String        @id @default(cuid())
-  accountId       String
-  name            String
-  version         Int
-  configuration   Json
-  status          RulesetStatus @default(ACTIVE)
-  createdAt       DateTime      @default(now())
-  archivedAt      DateTime?
+  id            String        @id @default(cuid())
+  accountId     String
+  name          String
+  version       Int
+  configuration Json
+  status        RulesetStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  archivedAt    DateTime?
 
-  account          Account             @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  setupSnapshots   GameSetupSnapshot[]
-  sourceEvents     SourceEvent[]
+  account        Account             @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  setupSnapshots GameSetupSnapshot[]
+  sourceEvents   SourceEvent[]
 
   @@unique([accountId, name, version])
   @@unique([accountId, id])
@@ -378,41 +440,46 @@ model Game {
 }
 
 model GameTeamSnapshot {
-  id           String   @id @default(cuid())
-  accountId    String
-  gameId       String
-  side         GameSide
-  teamId       String?
-  teamSeasonId String?
-  displayName  String
-  isAccountTeam Boolean
-  createdAt    DateTime @default(now())
+  id              String   @id @default(cuid())
+  accountId       String
+  gameId          String
+  setupSnapshotId String
+  side            GameSide
+  teamId          String?
+  teamSeasonId    String?
+  displayName     String
+  isAccountTeam   Boolean
+  createdAt       DateTime @default(now())
 
-  account         Account               @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  game            Game                  @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
-  team            Team?                 @relation(fields: [accountId, teamId], references: [accountId, id], onDelete: Restrict)
-  teamSeason      TeamSeason?           @relation(fields: [accountId, teamSeasonId], references: [accountId, id], onDelete: Restrict)
-  lineupSlots     LineupSlotSnapshot[]
+  account       Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  game          Game                 @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  setupSnapshot GameSetupSnapshot    @relation(fields: [accountId, gameId, setupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
+  teamSeason    TeamSeason?          @relation(fields: [accountId, teamId, teamSeasonId], references: [accountId, teamId, id], onDelete: Restrict)
+  lineupSlots   LineupSlotSnapshot[]
 
   @@unique([accountId, id])
-  @@unique([accountId, gameId, id])
-  @@unique([gameId, side])
+  @@unique([accountId, gameId, setupSnapshotId, id])
+  @@unique([setupSnapshotId, side])
   @@index([accountId, teamId])
   @@index([accountId, teamSeasonId])
 }
 
 model GameSetupSnapshot {
-  id                String   @id @default(cuid())
-  accountId         String
-  gameId            String
-  setupRevision     Int
-  rulesetVersionId  String
-  acceptedAt        DateTime @default(now())
+  id               String    @id @default(cuid())
+  accountId        String
+  gameId           String
+  setupRevision    Int
+  rulesetVersionId String
+  scheduledAt      DateTime?
+  location         String?
+  scheduledInnings Int
+  acceptedAt       DateTime  @default(now())
 
-  account        Account             @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  game           Game                @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
-  rulesetVersion RulesetVersion      @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
+  account        Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  game           Game                 @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  rulesetVersion RulesetVersion       @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
   lineupSlots    LineupSlotSnapshot[]
+  teamSnapshots  GameTeamSnapshot[]
 
   @@unique([accountId, id])
   @@unique([gameId, setupRevision])
@@ -430,16 +497,16 @@ model LineupSlotSnapshot {
   rosterEntryId      String?
   displayName        String
   jerseyNumber       String?
-  battingOrder       Int
+  battingOrder       Int?
   defensivePosition  BaseballPosition?
   isStartingPitcher  Boolean           @default(false)
   createdAt          DateTime          @default(now())
 
-  account          Account             @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  setupSnapshot    GameSetupSnapshot   @relation(fields: [accountId, gameId, setupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
-  gameTeamSnapshot GameTeamSnapshot    @relation(fields: [accountId, gameId, gameTeamSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
-  player           Player?             @relation(fields: [accountId, playerId], references: [accountId, id], onDelete: Restrict)
-  rosterEntry      RosterEntry?        @relation(fields: [accountId, rosterEntryId], references: [accountId, id], onDelete: Restrict)
+  account          Account               @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  setupSnapshot    GameSetupSnapshot     @relation(fields: [accountId, gameId, setupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
+  gameTeamSnapshot GameTeamSnapshot      @relation(fields: [accountId, gameId, setupSnapshotId, gameTeamSnapshotId], references: [accountId, gameId, setupSnapshotId, id], onDelete: Restrict)
+  player           Player?               @relation(fields: [accountId, playerId], references: [accountId, id], onDelete: Restrict)
+  rosterEntry      RosterEntry?          @relation(fields: [accountId, rosterEntryId], references: [accountId, id], onDelete: Restrict)
   privacyOverlays  PrivacyOverlayField[]
 
   @@unique([accountId, id])
@@ -449,21 +516,23 @@ model LineupSlotSnapshot {
 }
 
 model PlayTransaction {
-  id                  String   @id @default(cuid())
-  accountId           String
-  gameId              String
-  acceptedRevision    Int
-  expectedRevision    Int
-  clientSubmissionId  String
-  payloadHash         String
-  actorKind           ActorKind
-  actorId             String
-  actorUserId         String?
-  acceptedAt          DateTime @default(now())
+  id                 String    @id @default(cuid())
+  accountId          String
+  gameId             String
+  acceptedRevision   Int
+  expectedRevision   Int
+  clientSubmissionId String
+  payloadHash        String
+  preStateHash       String
+  postStateHash      String
+  actorKind          ActorKind
+  actorId            String
+  actorUserId        String?
+  acceptedAt         DateTime  @default(now())
 
-  account      Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  game         Game         @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
-  actorUser    AppUser?     @relation("PlayTransactionActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  account      Account       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  game         Game          @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  actorUser    AppUser?      @relation("PlayTransactionActor", fields: [actorUserId], references: [id], onDelete: Restrict)
   sourceEvents SourceEvent[]
 
   @@unique([accountId, id])
@@ -474,30 +543,38 @@ model PlayTransaction {
 }
 
 model SourceEvent {
-  id                String   @id @default(cuid())
-  accountId         String
-  gameId            String
-  playTransactionId String?
-  sequence          Int
-  componentOrder    Int?
-  eventType         String
-  schemaVersion     Int
-  rulesetVersionId  String
-  payload           Json
-  preStateHash      String?
-  postStateHash     String?
-  actorKind         ActorKind
-  actorId           String
-  actorUserId       String?
-  recordedAt        DateTime @default(now())
+  id                 String    @id @default(cuid())
+  accountId          String
+  gameId             String
+  playTransactionId  String?
+  sequence           Int
+  componentOrder     Int?
+  parentEventId      String?
+  eventType          String
+  schemaVersion      Int
+  rulesetVersionId   String
+  clientSubmissionId String
+  expectedRevision   Int
+  acceptedRevision   Int
+  payloadHash        String
+  payload            Json
+  preStateHash       String?
+  postStateHash      String?
+  actorKind          ActorKind
+  actorId            String
+  actorUserId        String?
+  recordedAt         DateTime  @default(now())
 
-  account          Account            @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  game             Game               @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
-  playTransaction  PlayTransaction?   @relation(fields: [accountId, gameId, playTransactionId], references: [accountId, gameId, id], onDelete: Restrict)
-  rulesetVersion   RulesetVersion     @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
-  actorUser        AppUser?           @relation("SourceEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
-  supersedes       EventSupersession[] @relation("ReplacementEvent")
-  supersededBy     EventSupersession[] @relation("SupersededEvent")
+  account                Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  game                   Game              @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  playTransaction        PlayTransaction?  @relation(fields: [accountId, gameId, playTransactionId], references: [accountId, gameId, id], onDelete: Restrict)
+  rulesetVersion         RulesetVersion    @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
+  actorUser              AppUser?          @relation("SourceEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  parentEvent            SourceEvent?      @relation("EventParent", fields: [accountId, gameId, parentEventId], references: [accountId, gameId, id], onDelete: Restrict)
+  childEvents            SourceEvent[]     @relation("EventParent")
+  correctionsAuthored    EventCorrection[] @relation("CorrectionEvent")
+  correctionTargets      EventCorrection[] @relation("CorrectionTarget")
+  correctionReplacements EventCorrection[] @relation("CorrectionReplacement")
 
   @@unique([accountId, id])
   @@unique([accountId, gameId, id])
@@ -505,52 +582,57 @@ model SourceEvent {
   @@unique([playTransactionId, componentOrder])
   @@index([accountId, gameId, recordedAt])
   @@index([accountId, rulesetVersionId])
+  @@index([accountId, gameId, actorId, clientSubmissionId])
 }
 
-model EventSupersession {
-  id                String   @id @default(cuid())
-  accountId         String
-  gameId            String
-  supersededEventId String
-  replacementEventId String
-  createdAt         DateTime @default(now())
+model EventCorrection {
+  id                 String           @id @default(cuid())
+  accountId          String
+  gameId             String
+  correctionEventId  String
+  targetEventId      String
+  replacementEventId String?
+  policy             CorrectionPolicy
+  createdAt          DateTime         @default(now())
 
-  account          Account     @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  supersededEvent  SourceEvent @relation("SupersededEvent", fields: [accountId, gameId, supersededEventId], references: [accountId, gameId, id], onDelete: Restrict)
-  replacementEvent SourceEvent @relation("ReplacementEvent", fields: [accountId, gameId, replacementEventId], references: [accountId, gameId, id], onDelete: Restrict)
+  account          Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  correctionEvent  SourceEvent  @relation("CorrectionEvent", fields: [accountId, gameId, correctionEventId], references: [accountId, gameId, id], onDelete: Restrict)
+  targetEvent      SourceEvent  @relation("CorrectionTarget", fields: [accountId, gameId, targetEventId], references: [accountId, gameId, id], onDelete: Restrict)
+  replacementEvent SourceEvent? @relation("CorrectionReplacement", fields: [accountId, gameId, replacementEventId], references: [accountId, gameId, id], onDelete: Restrict)
 
   @@unique([accountId, id])
-  @@unique([accountId, gameId, supersededEventId])
-  @@unique([accountId, gameId, replacementEventId, supersededEventId])
+  @@unique([accountId, gameId, correctionEventId, targetEventId])
+  @@index([accountId, gameId, targetEventId])
 }
 
 model ProjectionCheckpoint {
-  id                    String           @id @default(cuid())
-  accountId             String
-  scope                 ProjectionScope
-  gameId                String?
-  seasonId              String?
-  sourceRevision        Int
-  privacyOverlayRevision Int             @default(0)
-  derivationVersion     Int
-  status                ProjectionStatus @default(PENDING)
-  failureCode           String?
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+  id                     String           @id @default(cuid())
+  accountId              String
+  scope                  ProjectionScope
+  gameId                 String?
+  seasonId               String?
+  sourceRevision         Int
+  privacyOverlayRevision Int              @default(0)
+  derivationVersion      Int
+  status                 ProjectionStatus @default(PENDING)
+  failureCode            String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
   game    Game?   @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
   season  Season? @relation(fields: [accountId, seasonId], references: [accountId, id], onDelete: Restrict)
 
   @@unique([accountId, id])
-  @@unique([accountId, gameId, sourceRevision, derivationVersion])
-  @@unique([accountId, seasonId, sourceRevision, derivationVersion])
+  @@unique([accountId, gameId, sourceRevision, privacyOverlayRevision, derivationVersion])
+  @@unique([accountId, seasonId, sourceRevision, privacyOverlayRevision, derivationVersion])
   @@index([accountId, scope, status])
 }
 
 model SecurityAuditRecord {
   id            String       @id @default(cuid())
-  accountId     String
+  scope         AuditScope
+  accountId     String?
   actorKind     ActorKind
   actorId       String
   actorUserId   String?
@@ -564,27 +646,26 @@ model SecurityAuditRecord {
   metadata      Json?
   createdAt     DateTime     @default(now())
 
-  account   Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  account   Account? @relation(fields: [accountId], references: [id], onDelete: Restrict)
   actorUser AppUser? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
 
-  @@unique([accountId, id])
   @@index([accountId, createdAt])
   @@index([accountId, targetType, targetId])
   @@index([correlationId])
 }
 
 model PrivacyOverlay {
-  id             String               @id @default(cuid())
+  id             String   @id @default(cuid())
   accountId      String
   effectiveOrder Int
   reasonCode     String
   actorId        String
   actorUserId    String?
   correlationId  String?
-  createdAt      DateTime             @default(now())
+  createdAt      DateTime @default(now())
 
-  account Account               @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  actorUser AppUser?            @relation("PrivacyOverlayActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  account   Account               @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  actorUser AppUser?              @relation("PrivacyOverlayActor", fields: [actorUserId], references: [id], onDelete: Restrict)
   fields    PrivacyOverlayField[]
 
   @@unique([accountId, id])
@@ -592,14 +673,14 @@ model PrivacyOverlay {
 }
 
 model PrivacyOverlayField {
-  id                  String              @id @default(cuid())
-  accountId           String
-  privacyOverlayId    String
-  playerId            String?
+  id                   String              @id @default(cuid())
+  accountId            String
+  privacyOverlayId     String
+  playerId             String?
   lineupSlotSnapshotId String?
-  field               PrivacyDisplayField
-  replacementValue    String
-  createdAt           DateTime            @default(now())
+  field                PrivacyDisplayField
+  replacementValue     String
+  createdAt            DateTime            @default(now())
 
   account            Account             @relation(fields: [accountId], references: [id], onDelete: Restrict)
   privacyOverlay     PrivacyOverlay      @relation(fields: [accountId, privacyOverlayId], references: [accountId, id], onDelete: Restrict)
