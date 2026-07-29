@@ -65,6 +65,8 @@ Support configurable league rulesets, portable historical data, and carefully de
 
 Exit criteria: multiple documented rulesets can coexist without reinterpreting historical games, imports remain auditable, and cross-team access is explicit and least-privilege.
 
-Primary issues: #4, #26, #101, #106–#107.
+Primary issues: #4, #26, #101, #106–#107, #122–#127.
+
+The low-maintenance fantasy baseball option is defined by [#122](https://github.com/cryptnetworks/baseballstattrack/issues/122): weekly lineup decisions, automatic scoring, scheduled transactions, and low-noise notifications.
 
 Native GitHub milestone creation and assignment for M5–M8 is tracked in issue #96. Until those milestones are materialized, the title prefixes, Target metadata, roadmap, and Projects Target field are the planning source of truth.
