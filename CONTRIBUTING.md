@@ -38,8 +38,12 @@ A change is complete when acceptance criteria are met, tests cover important beh
 - Production build: `npm run build`
 - Production dependency audit: `npm run audit:prod`
 - Database migration: `npm run db:migrate`
+- Container configuration: `npm run container:config`
+- Container build and smoke test: `npm run container:verify`
 
 Use [docs/CI_QUALITY_GATES.md](docs/CI_QUALITY_GATES.md) for the canonical `npm run verify` chain, CI behavior, and local failure triage.
+
+Changes to the Dockerfile, Compose configuration, runtime startup, readiness, or migration workflow must also pass `npm run container:verify`. Use [docs/CONTAINER_OPERATIONS.md](docs/CONTAINER_OPERATIONS.md) as the canonical container and operations contract.
 
 ## Decisions
 

@@ -34,6 +34,8 @@ Supported runtime and deployment baseline:
 - Production build: `npm run build`
 - Database migration: `npm run db:migrate`
 - Defect-policy validation: `npm run policy:validate`
+- Container build: `npm run container:build`
+- Container smoke test: `npm run container:verify`
 
 ## Repository Conventions
 
@@ -56,5 +58,6 @@ Before a PR is ready for review, run:
 - `npm run db:validate`
 - `npm run build`
 - `npm run verify`
+- `npm run container:verify` for container or runtime changes
 
 Confirm no secrets, production data, accidental generated files, or unrelated scope are included.

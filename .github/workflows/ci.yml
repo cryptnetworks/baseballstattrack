@@ -22,7 +22,7 @@ jobs:
   verify:
     name: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:17-alpine
@@ -60,3 +60,6 @@ jobs:
 
       - name: Run canonical quality verification
         run: npm run verify
+
+      - name: Build and smoke-test containers
+        run: npm run container:verify

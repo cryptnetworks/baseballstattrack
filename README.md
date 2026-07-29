@@ -47,6 +47,17 @@ Open `http://localhost:3000` for the application shell or `http://localhost:3000
 
 Copy `.env.example` to `.env.local` before connecting Supabase or running migrations. The example contains local placeholders only and no secrets.
 
+For a Docker-only production-compatible path, build the images, start PostgreSQL, run migrations explicitly, and start the app:
+
+```sh
+docker compose build app migrate
+docker compose up -d --wait db
+docker compose run --rm migrate
+docker compose up -d --wait app
+```
+
+Container architecture, development usage, readiness, migration, reset, security, and troubleshooting are defined in [docs/CONTAINER_OPERATIONS.md](docs/CONTAINER_OPERATIONS.md).
+
 ## Commands
 
 - Format: `npm run format`
@@ -60,6 +71,8 @@ Copy `.env.example` to `.env.local` before connecting Supabase or running migrat
 - Production dependency audit: `npm run audit:prod`
 - Database migration: `npm run db:migrate` after `DATABASE_URL` and `DIRECT_URL` are configured
 - Production build: `npm run build`
+- Container configuration: `npm run container:config`
+- Container build and smoke test: `npm run container:verify`
 - Full verification: `npm run verify`
 
 The canonical local/CI quality contract, required `verify` branch-protection check, and failure triage guidance are in [docs/CI_QUALITY_GATES.md](docs/CI_QUALITY_GATES.md).
