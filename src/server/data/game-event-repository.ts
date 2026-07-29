@@ -49,6 +49,11 @@ export type AcceptedEventResult = {
   idempotentReplay: boolean;
 };
 
+export type AcceptedGameHistory = {
+  setup: AcceptedSetup;
+  events: AcceptedEvent[];
+};
+
 const payloadDigest = (
   setupSnapshotId: string,
   expectedRevision: number,
@@ -167,73 +172,98 @@ async function loadSetup(
   };
 }
 
+async function loadAcceptedHistory(
+  tx: Prisma.TransactionClient,
+  accountId: string,
+  gameId: string,
+  setupSnapshotId: string,
+): Promise<AcceptedGameHistory> {
+  const setup = await loadSetup(tx, accountId, gameId, setupSnapshotId);
+  const [rows, correctionRows] = await Promise.all([
+    tx.sourceEvent.findMany({
+      where: { accountId, gameId, setupSnapshotId },
+      orderBy: { sequence: "asc" },
+      include: { playTransaction: { select: { acceptedAt: true } } },
+    }),
+    tx.eventCorrection.findMany({
+      where: { accountId, gameId },
+      orderBy: [{ correctionEventId: "asc" }, { targetEventId: "asc" }],
+    }),
+  ]);
+  const events = rows.map((row) => mapSourceEvent(row, setup.setupRevision));
+  const correctionEvents = events.filter(
+    ({ eventType }) => eventType === "CorrectionApplied",
+  );
+  for (const event of correctionEvents) {
+    const body = parseEventBody({
+      eventType: event.eventType,
+      payload: event.payload,
+    });
+    if (body.eventType !== "CorrectionApplied") continue;
+    const persisted = correctionRows.filter(
+      ({ correctionEventId }) => correctionEventId === event.id,
+    );
+    if (
+      persisted.length !== body.payload.targetEventIds.length ||
+      persisted.some(
+        ({ policy, replacementEventId, replacementPayloadId, targetEventId }) =>
+          policy !== body.payload.policy ||
+          replacementEventId !== null ||
+          replacementPayloadId !==
+            (body.payload.replacements.find(
+              (replacement) => replacement.targetEventId === targetEventId,
+            )?.id ?? null) ||
+          !body.payload.targetEventIds.includes(targetEventId),
+      )
+    ) {
+      throw new GameEventError(
+        "IMMUTABLE_HISTORY_VIOLATION",
+        "Persisted correction relationships do not match the event.",
+      );
+    }
+  }
+  if (
+    correctionRows.some(
+      ({ correctionEventId }) =>
+        !correctionEvents.some(({ id }) => id === correctionEventId),
+    )
+  ) {
+    throw new GameEventError(
+      "IMMUTABLE_HISTORY_VIOLATION",
+      "Persisted correction relationship has no source event.",
+    );
+  }
+  return { setup, events };
+}
+
 export class PrismaGameEventRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  async loadAcceptedHistory(
+    accountId: string,
+    gameId: string,
+    setupSnapshotId: string,
+  ): Promise<AcceptedGameHistory> {
+    return this.prisma.$transaction(async (tx) => {
+      const history = await loadAcceptedHistory(
+        tx,
+        accountId,
+        gameId,
+        setupSnapshotId,
+      );
+      replayGame(history.setup, history.events, { verifyEvidence: true });
+      return history;
+    });
+  }
+
   async replay(accountId: string, gameId: string, setupSnapshotId: string) {
     return this.prisma.$transaction(async (tx) => {
-      const setup = await loadSetup(tx, accountId, gameId, setupSnapshotId);
-      const [rows, correctionRows] = await Promise.all([
-        tx.sourceEvent.findMany({
-          where: { accountId, gameId, setupSnapshotId },
-          orderBy: { sequence: "asc" },
-          include: { playTransaction: { select: { acceptedAt: true } } },
-        }),
-        tx.eventCorrection.findMany({
-          where: { accountId, gameId },
-          orderBy: [{ correctionEventId: "asc" }, { targetEventId: "asc" }],
-        }),
-      ]);
-      const events = rows.map((row) =>
-        mapSourceEvent(row, setup.setupRevision),
+      const { setup, events } = await loadAcceptedHistory(
+        tx,
+        accountId,
+        gameId,
+        setupSnapshotId,
       );
-      const correctionEvents = events.filter(
-        ({ eventType }) => eventType === "CorrectionApplied",
-      );
-      for (const event of correctionEvents) {
-        const body = parseEventBody({
-          eventType: event.eventType,
-          payload: event.payload,
-        });
-        if (body.eventType !== "CorrectionApplied") continue;
-        const persisted = correctionRows.filter(
-          ({ correctionEventId }) => correctionEventId === event.id,
-        );
-        if (
-          persisted.length !== body.payload.targetEventIds.length ||
-          persisted.some(
-            ({
-              policy,
-              replacementEventId,
-              replacementPayloadId,
-              targetEventId,
-            }) =>
-              policy !== body.payload.policy ||
-              replacementEventId !== null ||
-              replacementPayloadId !==
-                (body.payload.replacements.find(
-                  (replacement) => replacement.targetEventId === targetEventId,
-                )?.id ?? null) ||
-              !body.payload.targetEventIds.includes(targetEventId),
-          )
-        ) {
-          throw new GameEventError(
-            "IMMUTABLE_HISTORY_VIOLATION",
-            "Persisted correction relationships do not match the event.",
-          );
-        }
-      }
-      if (
-        correctionRows.some(
-          ({ correctionEventId }) =>
-            !correctionEvents.some(({ id }) => id === correctionEventId),
-        )
-      ) {
-        throw new GameEventError(
-          "IMMUTABLE_HISTORY_VIOLATION",
-          "Persisted correction relationship has no source event.",
-        );
-      }
       return replayGame(setup, events, { verifyEvidence: true });
     });
   }
