@@ -17,9 +17,10 @@ npm run verify
 2. `npm run lint` — ESLint.
 3. `npm run typecheck` — Next.js route type generation and TypeScript checking.
 4. `npm run test` — one non-watch Vitest run.
-5. `npm run db:validate` — Prisma schema validation only.
-6. `npm run build` — production Next.js build.
-7. `npm run audit:prod` — high-or-critical production dependency audit.
+5. `npm run policy:validate` — defect-policy issue-form YAML, required process files, safety invariants, and internal links.
+6. `npm run db:validate` — Prisma schema validation only.
+7. `npm run build` — production Next.js build.
+8. `npm run audit:prod` — high-or-critical production dependency audit.
 
 The independently runnable commands above are the local reproduction commands for a failed CI step. `npm run format:write` is intentionally separate because it changes files. `npm run db:migrate`, seeding, and any destructive database command are not part of verification.
 
@@ -57,6 +58,7 @@ Run the named failing command locally after `npm ci`. Common cases:
 
 - Formatting: run `npm run format:write`, inspect the change, then rerun `npm run format`.
 - Lint, typecheck, or tests: fix the reported file/test and rerun that command before `npm run verify`.
+- Defect-policy validation: inspect the named issue form, security route, process invariant, or internal documentation link; do not weaken a safety assertion merely to pass the check.
 - Prisma validation: inspect `prisma/schema.prisma` and `prisma.config.ts`; do not run migrations merely to satisfy CI.
 - Migration/representability: reproduce only against an isolated disposable PostgreSQL database; inspect the named constraint or synthetic invariant before changing a migration.
 - Build: reproduce with `npm run build` without adding credentials. Investigate only documented build-time environment requirements.

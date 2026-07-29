@@ -33,6 +33,7 @@ Supported runtime and deployment baseline:
 - Full verification: `npm run verify`
 - Production build: `npm run build`
 - Database migration: `npm run db:migrate`
+- Defect-policy validation: `npm run policy:validate`
 
 ## Repository Conventions
 
@@ -51,6 +52,7 @@ Before a PR is ready for review, run:
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test`
+- `npm run policy:validate`
 - `npm run db:validate`
 - `npm run build`
 - `npm run verify`
