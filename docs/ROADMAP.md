@@ -39,7 +39,9 @@ Turn the versioned statistics API, Discord bot, webhooks, calendar synchronizati
 
 Exit criteria: at least one external consumer uses a documented read contract; credentials, quotas, privacy, retries, deprecation, and support workflows are operational.
 
-Primary issues: #73, #91–#99.
+Primary issues: #73, #91–#99, #108–#121.
+
+Discord control-plane delivery is tracked by [#108](https://github.com/cryptnetworks/baseballstattrack/issues/108) and its child issues covering settings, installation, web UI, routing, cadence, delivery, permissions, previews, health, testing, and deployment.
 
 ## M6 — Advanced analytics
 
