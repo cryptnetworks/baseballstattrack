@@ -11,6 +11,7 @@ import {
   seedPersistenceScoringFixture,
   type PersistenceScoringIds,
 } from "../fixtures/persistence-scoring-fixture";
+import { trustedActorForTest } from "../fixtures/trusted-actor";
 
 const databaseUrl = process.env.DATABASE_URL;
 const integration = databaseUrl ? describe : describe.skip;
@@ -37,16 +38,17 @@ integration("team, season, and roster management persistence", () => {
       | { kind: "ACCOUNT" }
       | { kind: "TEAM"; teamId: string }
       | { kind: "SEASON"; seasonId: string } = { kind: "ACCOUNT" },
-  ) => ({
-    accountId: ids.account,
-    actorId: `${runPrefix}-management-service`,
-    actorKind: "SERVICE" as const,
-    actorUserId: null,
-    membershipId: null,
-    capability,
-    scope,
-    authorizedAt: "2026-07-29T18:00:00.000Z",
-  });
+  ) =>
+    trustedActorForTest({
+      accountId: ids.account,
+      actorId: `${runPrefix}-management-service`,
+      actorKind: "SERVICE" as const,
+      actorUserId: null,
+      membershipId: null,
+      capability,
+      scope,
+      authorizedAt: "2026-07-29T18:00:00.000Z",
+    });
 
   beforeAll(async () => {
     ids = await seedPersistenceScoringFixture(prisma, runPrefix);
@@ -396,7 +398,7 @@ integration("team, season, and roster management persistence", () => {
         { accountId: ids.account, limit: 10 },
         { ...actor("roster.view"), accountId: "another-account" },
       ),
-    ).rejects.toMatchObject({ code: "ACCOUNT_MISMATCH" });
+    ).rejects.toMatchObject({ code: "AUTHORIZATION_REQUIRED" });
 
     const team = await service.createTeam(
       {

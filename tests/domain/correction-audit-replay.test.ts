@@ -7,6 +7,7 @@ import {
 } from "@/domain/corrections";
 import { CorrectionAuditReplayService } from "@/server/app/correction-audit-replay-service";
 import type { PrismaGameEventRepository } from "@/server/data/game-event-repository";
+import { trustedActorForTest } from "../fixtures/trusted-actor";
 
 const command = {
   action: "APPLY_CORRECTION",
@@ -67,8 +68,11 @@ describe("correction command boundary", () => {
 
     await expect(
       service.applyCorrection(command, {
-        ...actor,
-        scope: { kind: "GAME", gameId: "another-game" },
+        ...trustedActorForTest(actor),
+        target: {
+          ...trustedActorForTest(actor).target,
+          gameId: "another-game",
+        },
       }),
     ).rejects.toMatchObject({ code: "AUTHORIZATION_REQUIRED" });
     expect(acceptCorrection).not.toHaveBeenCalled();
