@@ -7,6 +7,7 @@ import {
   type AcceptedEvent,
   type AcceptedSetup,
   type Base,
+  type BaseballPosition,
   type EventBody,
   type GameSide,
   type GameState,
@@ -673,12 +674,6 @@ function applyBody(state: GameState, body: EventBody): void {
     }
     case "DefensiveSubstitutionMade": {
       requireLive(state);
-      if (body.payload.side !== fieldingSide(state)) {
-        throw new GameEventError(
-          "INVALID_LINEUP",
-          "Substitution must affect the fielding side.",
-        );
-      }
       const lineup = state.lineups[body.payload.side];
       const outgoing = lineup.find(
         (entry) =>
@@ -693,9 +688,27 @@ function applyBody(state: GameState, body: EventBody): void {
         incoming.active ||
         outgoing.playerId === state.activePitcher[body.payload.side] ||
         body.payload.position === "PITCHER" ||
-        state.participatedPlayers[body.payload.side].includes(incoming.playerId)
+        state.participatedPlayers[body.payload.side].includes(
+          incoming.playerId,
+        ) ||
+        (state.defense[body.payload.side][body.payload.position] !==
+          undefined &&
+          state.defense[body.payload.side][body.payload.position] !==
+            outgoing.playerId)
       ) {
         throw new GameEventError("INVALID_LINEUP", "Invalid substitution.");
+      }
+      const occupiedBase = (
+        Object.entries(state.bases) as [Base, string | null][]
+      ).find(([, playerId]) => playerId === outgoing.playerId)?.[0];
+      const responsiblePitcherId = occupiedBase
+        ? state.runnerPitcherResponsibility[outgoing.playerId]
+        : undefined;
+      if (occupiedBase && !responsiblePitcherId) {
+        throw new GameEventError(
+          "INVALID_PITCHER",
+          "Substituted runner is missing pitcher responsibility.",
+        );
       }
       removeDefensivePlayer(state, body.payload.side, outgoing.playerId);
       outgoing.active = false;
@@ -706,6 +719,14 @@ function applyBody(state: GameState, body: EventBody): void {
       state.participatedPlayers[body.payload.side].push(incoming.playerId);
       state.defense[body.payload.side][body.payload.position] =
         incoming.playerId;
+      if (occupiedBase) {
+        state.bases[occupiedBase] = incoming.playerId;
+        delete state.runnerPitcherResponsibility[outgoing.playerId];
+        if (responsiblePitcherId) {
+          state.runnerPitcherResponsibility[incoming.playerId] =
+            responsiblePitcherId;
+        }
+      }
       return;
     }
     case "DefensiveAlignmentChanged": {
@@ -735,27 +756,41 @@ function applyBody(state: GameState, body: EventBody): void {
           "Invalid defensive alignment.",
         );
       }
+      const nextDefense = { ...state.defense[body.payload.side] };
       for (const playerId of players) {
-        removeDefensivePlayer(state, body.payload.side, playerId);
+        for (const [assignedPosition, assignedPlayerId] of Object.entries(
+          nextDefense,
+        )) {
+          if (assignedPlayerId === playerId) {
+            delete nextDefense[assignedPosition as BaseballPosition];
+          }
+        }
       }
       for (const assignment of body.payload.assignments) {
-        state.defense[body.payload.side][assignment.position] =
-          assignment.playerId;
-        const entry = state.lineups[body.payload.side].find(
-          ({ playerId }) => playerId === assignment.playerId,
-        )!;
-        entry.position = assignment.position;
+        if (nextDefense[assignment.position]) {
+          throw new GameEventError(
+            "INVALID_LINEUP",
+            "Defensive alignment cannot displace an unselected player.",
+          );
+        }
+        nextDefense[assignment.position] = assignment.playerId;
       }
-      const assigned = Object.values(state.defense[body.payload.side]);
+      const assigned = Object.values(nextDefense);
       if (
         new Set(assigned).size !== assigned.length ||
-        state.defense[body.payload.side].PITCHER !==
-          state.activePitcher[body.payload.side]
+        nextDefense.PITCHER !== state.activePitcher[body.payload.side]
       ) {
         throw new GameEventError(
           "INVALID_LINEUP",
           "Defensive alignment duplicates a player.",
         );
+      }
+      state.defense[body.payload.side] = nextDefense;
+      for (const assignment of body.payload.assignments) {
+        const entry = state.lineups[body.payload.side].find(
+          ({ playerId }) => playerId === assignment.playerId,
+        )!;
+        entry.position = assignment.position;
       }
       return;
     }
@@ -764,14 +799,29 @@ function applyBody(state: GameState, body: EventBody): void {
       const occupiedRunners = Object.values(state.bases).filter(
         (runnerId): runnerId is string => runnerId !== null,
       );
+      const lineup = state.lineups[body.payload.side];
+      const outgoing = lineup.find(
+        ({ playerId }) => playerId === body.payload.outgoingPitcherId,
+      );
+      const incoming = lineup.find(
+        ({ playerId }) => playerId === body.payload.incomingPitcherId,
+      );
+      const incomingPreviousPosition = incoming?.position ?? null;
       if (
         body.payload.side !== fieldingSide(state) ||
         state.activePitcher[body.payload.side] !==
           body.payload.outgoingPitcherId ||
-        !state.lineups[body.payload.side].some(
-          (entry) =>
-            entry.active && entry.playerId === body.payload.incomingPitcherId,
-        ) ||
+        !outgoing?.active ||
+        !incoming ||
+        incoming.playerId === outgoing.playerId ||
+        (!incoming.active &&
+          state.participatedPlayers[body.payload.side].includes(
+            incoming.playerId,
+          )) ||
+        (incoming.active &&
+          incomingPreviousPosition === null &&
+          outgoing.battingOrder !== null &&
+          incoming.battingOrder !== null) ||
         [...body.payload.inheritedRunnerIds].sort().join("\0") !==
           [...occupiedRunners].sort().join("\0")
       ) {
@@ -782,16 +832,27 @@ function applyBody(state: GameState, body: EventBody): void {
         body.payload.side,
         body.payload.outgoingPitcherId,
       );
+      removeDefensivePlayer(
+        state,
+        body.payload.side,
+        body.payload.incomingPitcherId,
+      );
+      if (incoming.active && incomingPreviousPosition) {
+        outgoing.position = incomingPreviousPosition;
+        state.defense[body.payload.side][incomingPreviousPosition] =
+          outgoing.playerId;
+      } else {
+        outgoing.active = false;
+        outgoing.position = null;
+      }
+      if (!incoming.active) {
+        incoming.active = true;
+        incoming.battingOrder = outgoing.battingOrder;
+        state.participatedPlayers[body.payload.side].push(incoming.playerId);
+      }
+      incoming.position = "PITCHER";
       state.activePitcher[body.payload.side] = body.payload.incomingPitcherId;
       state.defense[body.payload.side].PITCHER = body.payload.incomingPitcherId;
-      for (const entry of state.lineups[body.payload.side]) {
-        if (entry.playerId === body.payload.outgoingPitcherId) {
-          entry.position = null;
-        }
-        if (entry.playerId === body.payload.incomingPitcherId) {
-          entry.position = "PITCHER";
-        }
-      }
       return;
     }
     case "CorrectionApplied":
@@ -900,6 +961,15 @@ export function applyEvent(
       "Stored post-state evidence does not match replay.",
     );
   }
+  return next;
+}
+
+export function previewEventBody(
+  current: GameState,
+  bodyInput: EventBody,
+): GameState {
+  const next = structuredClone(current);
+  applyBody(next, parseEventBody(structuredClone(bodyInput)));
   return next;
 }
 

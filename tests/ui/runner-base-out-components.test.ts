@@ -6,6 +6,7 @@ import {
   BaseState,
   RunnerBaseOutPanel,
 } from "@/components/scoring/runner-base-out-panel";
+import { LiveLineupChangesPanel } from "@/components/scoring/live-lineup-changes-panel";
 import { PlateAppearancePanel } from "@/components/scoring/plate-appearance-panel";
 import {
   ScoringFixtureBuilder,
@@ -106,5 +107,38 @@ describe("runner base-out components", () => {
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain("Last accepted: game started");
     expect(html).toContain('href="#runner-only-actions"');
+  });
+
+  it("renders an accessible confirmed-change flow with lineup and pitching context", () => {
+    const builder = new ScoringFixtureBuilder();
+    builder.start();
+    const state = builder.state();
+    const playerNames = Object.fromEntries(
+      [...state.lineups.HOME, ...state.lineups.AWAY].map(({ playerId }) => [
+        playerId,
+        playerId.replaceAll("-", " "),
+      ]),
+    );
+    const html = renderToStaticMarkup(
+      createElement(LiveLineupChangesPanel, {
+        accountId: state.accountId,
+        gameId: state.gameId,
+        setupSnapshotId: state.setupSnapshotId,
+        state,
+        playerNames,
+        initialClientSubmissionId: "lineup-submission-ui",
+      }),
+    );
+    expect(html).toContain("Lineup and pitching changes");
+    expect(html).toContain("Batter / runner");
+    expect(html).toContain("Defensive replacement");
+    expect(html).toContain("Position swap");
+    expect(html).toContain("Pitching change");
+    expect(html).toContain("Authoritative before");
+    expect(html).toContain("Resulting lineup and defense");
+    expect(html).toContain("Confirm the leaving player");
+    expect(html).toContain("min-h-12");
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain(`revision ${state.sourceRevision}`);
   });
 });

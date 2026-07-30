@@ -28,6 +28,18 @@ export const initialPlateAppearanceActionResult: PlateAppearanceActionResult = {
   status: "IDLE",
   message: "",
 };
+export type LineupChangeActionResult = RunnerPlayActionResult;
+export const initialLineupChangeActionResult: LineupChangeActionResult = {
+  status: "IDLE",
+  message: "",
+};
+
+type ScoringSubmissionEventType =
+  | "DefensiveAlignmentChanged"
+  | "DefensiveSubstitutionMade"
+  | "PitchingChangeMade"
+  | "PlateAppearanceRecorded"
+  | "RunnerPlayRecorded";
 
 const id = z.string().trim().min(1).max(128);
 const submissionSchema = z
@@ -92,7 +104,10 @@ function safeFailure(
 
 async function acceptScoringSubmission(
   formData: FormData,
-  requiredEventType: "PlateAppearanceRecorded" | "RunnerPlayRecorded",
+  allowedEventTypes: readonly [
+    ScoringSubmissionEventType,
+    ...ScoringSubmissionEventType[],
+  ],
 ) {
   const input = submissionSchema.parse({
     accountId: formData.get("accountId"),
@@ -107,10 +122,12 @@ async function acceptScoringSubmission(
     throw new AuthorizationError("ACCOUNT_UNAVAILABLE");
   }
   const body = parseEventBody(JSON.parse(input.body));
-  if (body.eventType !== requiredEventType) {
+  if (
+    !allowedEventTypes.includes(body.eventType as ScoringSubmissionEventType)
+  ) {
     throw new GameEventError(
       "INVALID_PAYLOAD",
-      `Only ${requiredEventType} may be submitted here.`,
+      "This scoring surface cannot submit that event type.",
     );
   }
   const requestHeaders = await headers();
@@ -149,10 +166,9 @@ export async function recordRunnerPlayAction(
   formData: FormData,
 ): Promise<RunnerPlayActionResult> {
   try {
-    const accepted = await acceptScoringSubmission(
-      formData,
+    const accepted = await acceptScoringSubmission(formData, [
       "RunnerPlayRecorded",
-    );
+    ]);
     return {
       status: "SUCCESS",
       message: accepted.idempotentReplay
@@ -177,15 +193,43 @@ export async function recordPlateAppearanceAction(
   formData: FormData,
 ): Promise<PlateAppearanceActionResult> {
   try {
-    const accepted = await acceptScoringSubmission(
-      formData,
+    const accepted = await acceptScoringSubmission(formData, [
       "PlateAppearanceRecorded",
-    );
+    ]);
     return {
       status: "SUCCESS",
       message: accepted.idempotentReplay
         ? "Plate appearance was already recorded; authoritative state reloaded."
         : "Plate appearance recorded atomically.",
+      acceptedRevision: accepted.event.acceptedRevision,
+    };
+  } catch (error) {
+    if (
+      error instanceof GameEventError &&
+      error.code === "STALE_SOURCE_REVISION"
+    ) {
+      const gameId = id.safeParse(formData.get("gameId"));
+      if (gameId.success) revalidatePath(`/games/score/${gameId.data}`);
+    }
+    return safeFailure(error);
+  }
+}
+
+export async function recordLineupChangeAction(
+  _previous: LineupChangeActionResult,
+  formData: FormData,
+): Promise<LineupChangeActionResult> {
+  try {
+    const accepted = await acceptScoringSubmission(formData, [
+      "DefensiveSubstitutionMade",
+      "DefensiveAlignmentChanged",
+      "PitchingChangeMade",
+    ]);
+    return {
+      status: "SUCCESS",
+      message: accepted.idempotentReplay
+        ? "Lineup change was already recorded; authoritative state reloaded."
+        : "Lineup change recorded at the current game state.",
       acceptedRevision: accepted.event.acceptedRevision,
     };
   } catch (error) {

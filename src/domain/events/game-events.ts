@@ -8,7 +8,7 @@ export const SUPPORTED_EVENT_SCHEMA_VERSIONS = [
   2,
   EVENT_SCHEMA_VERSION,
 ] as const;
-export const REDUCER_VERSION = 3 as const;
+export const REDUCER_VERSION = 4 as const;
 
 const id = z.string().trim().min(1).max(128);
 const side = z.enum(["HOME", "AWAY"]);
