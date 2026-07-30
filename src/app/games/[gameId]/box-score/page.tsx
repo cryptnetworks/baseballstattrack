@@ -355,7 +355,11 @@ export default async function GameBoxScorePage({ params }: PageProps) {
 
   return (
     <ApplicationShell>
-      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 print:max-w-none print:p-0">
+      <main
+        className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 print:max-w-none print:p-0"
+        id="main-content"
+        tabIndex={-1}
+      >
         <div className="flex flex-wrap items-start justify-between gap-4 print:block">
           <div>
             <p className="text-sm font-semibold text-[var(--accent-strong)]">

@@ -120,6 +120,7 @@ export function PlateAppearancePanel({
   );
   const statusRef = useRef<HTMLDivElement>(null);
   const detailsRef = useRef<HTMLFieldSetElement>(null);
+  const outcomeGroupRef = useRef<HTMLFieldSetElement>(null);
   const preview = useMemo(
     () => (draft ? previewPlateAppearance(state, draft) : null),
     [draft, state],
@@ -147,6 +148,10 @@ export function PlateAppearancePanel({
     },
     [state],
   );
+  const discardProposal = () => {
+    setDraft(null);
+    requestAnimationFrame(() => outcomeGroupRef.current?.focus());
+  };
 
   useEffect(() => {
     if (result.status !== "IDLE") statusRef.current?.focus();
@@ -256,7 +261,7 @@ export function PlateAppearancePanel({
         </p>
       </div>
 
-      <fieldset className="mt-5">
+      <fieldset className="mt-5" ref={outcomeGroupRef} tabIndex={-1}>
         <legend className="font-semibold">Common outcomes</legend>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Keyboard shortcuts are shown in parentheses.
@@ -265,6 +270,7 @@ export function PlateAppearancePanel({
           {PLATE_OUTCOMES.filter(({ common }) => common).map((outcome) => (
             <button
               aria-keyshortcuts={outcome.key}
+              aria-pressed={draft?.outcome === outcome.value}
               className={`min-h-14 rounded-xl border px-3 text-left font-semibold ${
                 draft?.outcome === outcome.value
                   ? "border-[var(--accent)] bg-emerald-50 text-[var(--accent-strong)]"
@@ -288,6 +294,7 @@ export function PlateAppearancePanel({
             {PLATE_OUTCOMES.filter(({ common }) => !common).map((outcome) => (
               <button
                 aria-keyshortcuts={outcome.key}
+                aria-pressed={draft?.outcome === outcome.value}
                 className="min-h-12 rounded-lg border border-[var(--line)] bg-white px-3 text-left font-medium"
                 disabled={locked}
                 key={outcome.value}
@@ -341,8 +348,8 @@ export function PlateAppearancePanel({
                 </h3>
               </div>
               <button
-                className="min-h-11 rounded-lg border border-[var(--line)] px-3 text-sm font-medium"
-                onClick={() => setDraft(null)}
+                className="min-h-11 rounded-lg border border-red-300 bg-white px-3 text-sm font-medium text-red-800"
+                onClick={discardProposal}
                 type="button"
               >
                 Discard proposal

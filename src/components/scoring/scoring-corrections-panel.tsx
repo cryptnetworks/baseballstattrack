@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import Link from "next/link";
@@ -171,6 +171,10 @@ export function ScoringCorrectionsPanel(props: Props) {
     reopenGameForCorrectionAction,
     initialReopenGameActionResult,
   );
+  const previewErrorRef = useRef<HTMLParagraphElement>(null);
+  const previewPanelRef = useRef<HTMLDivElement>(null);
+  const applyErrorRef = useRef<HTMLParagraphElement>(null);
+  const reopenErrorRef = useRef<HTMLParagraphElement>(null);
   const lifecycleAllowsCorrection = [
     "IN_PROGRESS",
     "COMPLETED",
@@ -178,6 +182,13 @@ export function ScoringCorrectionsPanel(props: Props) {
   ].includes(props.gameStatus);
 
   useEffect(() => {
+    if (previewState.status === "ERROR") previewErrorRef.current?.focus();
+    if (previewState.status === "PREVIEW") previewPanelRef.current?.focus();
+  }, [previewState]);
+
+  useEffect(() => {
+    if (applyState.status === "ERROR") applyErrorRef.current?.focus();
+    if (reopenState.status === "ERROR") reopenErrorRef.current?.focus();
     if (applyState.status === "SUCCESS" || reopenState.status === "SUCCESS") {
       router.refresh();
     }
@@ -261,7 +272,9 @@ export function ScoringCorrectionsPanel(props: Props) {
           {reopenState.message ? (
             <p
               className="mt-3 text-sm"
+              ref={reopenErrorRef}
               role={reopenState.status === "ERROR" ? "alert" : "status"}
+              tabIndex={-1}
             >
               {reopenState.message}
             </p>
@@ -385,10 +398,10 @@ export function ScoringCorrectionsPanel(props: Props) {
             A valid preview does not grant authorization or accept the change.
           </p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-2 font-medium">
+            <label className="grid min-w-0 gap-2 font-medium">
               Recent event
               <select
-                className="min-h-11 rounded-lg border border-[var(--line)] bg-white px-3"
+                className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--line)] bg-white px-3"
                 name="targetEventId"
                 onChange={(event) => {
                   setTargetEventId(event.target.value);
@@ -405,10 +418,10 @@ export function ScoringCorrectionsPanel(props: Props) {
                 ))}
               </select>
             </label>
-            <label className="grid gap-2 font-medium">
+            <label className="grid min-w-0 gap-2 font-medium">
               Correction action
               <select
-                className="min-h-11 rounded-lg border border-[var(--line)] bg-white px-3"
+                className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--line)] bg-white px-3"
                 name="action"
                 onChange={(event) => setCorrectionAction(event.target.value)}
                 value={correctionAction}
@@ -425,10 +438,10 @@ export function ScoringCorrectionsPanel(props: Props) {
             </label>
             {correctionAction === "REPLACE_PLATE_JUDGMENT" ? (
               <>
-                <label className="grid gap-2 font-medium">
+                <label className="grid min-w-0 gap-2 font-medium">
                   Replacement outcome
                   <select
-                    className="min-h-11 rounded-lg border border-[var(--line)] bg-white px-3"
+                    className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--line)] bg-white px-3"
                     name="replacementOutcome"
                     required
                   >
@@ -439,10 +452,10 @@ export function ScoringCorrectionsPanel(props: Props) {
                     ))}
                   </select>
                 </label>
-                <label className="grid gap-2 font-medium">
+                <label className="grid min-w-0 gap-2 font-medium">
                   Responsible fielder (required for reached on error)
                   <select
-                    className="min-h-11 rounded-lg border border-[var(--line)] bg-white px-3"
+                    className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--line)] bg-white px-3"
                     name="errorFielderId"
                   >
                     <option value="">Not applicable</option>
@@ -455,10 +468,10 @@ export function ScoringCorrectionsPanel(props: Props) {
                 </label>
               </>
             ) : null}
-            <label className="grid gap-2 font-medium sm:col-span-2">
+            <label className="grid min-w-0 gap-2 font-medium sm:col-span-2">
               Reason
               <select
-                className="min-h-11 rounded-lg border border-[var(--line)] bg-white px-3"
+                className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--line)] bg-white px-3"
                 name="reasonCode"
                 required
               >
@@ -477,7 +490,12 @@ export function ScoringCorrectionsPanel(props: Props) {
             </SubmitButton>
           </div>
           {previewState.status === "ERROR" ? (
-            <p className="mt-4 text-sm text-red-700" role="alert">
+            <p
+              className="mt-4 text-sm text-red-700"
+              ref={previewErrorRef}
+              role="alert"
+              tabIndex={-1}
+            >
               {previewState.message}
             </p>
           ) : null}
@@ -485,7 +503,7 @@ export function ScoringCorrectionsPanel(props: Props) {
       ) : null}
 
       {previewState.status === "PREVIEW" ? (
-        <div>
+        <div ref={previewPanelRef} tabIndex={-1}>
           <PreviewChanges
             playerNames={props.playerNames}
             preview={previewState.preview}
@@ -575,7 +593,9 @@ export function ScoringCorrectionsPanel(props: Props) {
                     ? "text-red-700"
                     : "text-emerald-800"
                 }`}
+                ref={applyErrorRef}
                 role={applyState.status === "ERROR" ? "alert" : "status"}
+                tabIndex={-1}
               >
                 {applyState.message}
                 {applyState.status === "SUCCESS" &&

@@ -57,7 +57,11 @@ export default async function GameSetupPage({ params }: PageProps) {
   if (!primary || context.rulesets.length === 0) {
     return (
       <ApplicationShell>
-        <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <main
+          className="mx-auto max-w-3xl px-4 py-10 sm:px-6"
+          id="main-content"
+          tabIndex={-1}
+        >
           <h1 className="text-3xl font-semibold">Setup unavailable</h1>
           <p className="mt-3 text-[var(--muted)]" role="alert">
             This game needs an active managed team-season and ruleset before
@@ -206,7 +210,11 @@ export default async function GameSetupPage({ params }: PageProps) {
 
   return (
     <ApplicationShell>
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      <main
+        className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6"
+        id="main-content"
+        tabIndex={-1}
+      >
         <Link
           className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--accent-strong)] underline-offset-4 hover:underline"
           href="/games/setup"

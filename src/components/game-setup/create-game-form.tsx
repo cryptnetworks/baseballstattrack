@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { createDraftGameAction } from "@/app/games/setup/actions";
 import {
@@ -28,9 +28,14 @@ export function CreateGameForm({
     createDraftGameAction,
     initialCreateGameResult,
   );
+  const errorSummary = useRef<HTMLDivElement>(null);
   const [teamSeasonId, setTeamSeasonId] = useState(teamSeasons[0]?.id ?? "");
   const seasonId =
     teamSeasons.find(({ id }) => id === teamSeasonId)?.seasonId ?? "";
+
+  useEffect(() => {
+    if (state.status === "ERROR") errorSummary.current?.focus();
+  }, [state]);
 
   return (
     <form action={action} className="mt-6 space-y-5">
@@ -39,6 +44,7 @@ export function CreateGameForm({
       {state.status === "ERROR" ? (
         <div
           className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-950"
+          ref={errorSummary}
           role="alert"
           tabIndex={-1}
         >
