@@ -16,6 +16,7 @@ import {
 } from "@/domain/statistics";
 
 export type BoxScorePresentation = {
+  season: { id: string; displayName: string };
   teams: Record<GameSide, { id: string; displayName: string }>;
   players: Array<{
     playerId: string;
@@ -66,6 +67,7 @@ export type GameBoxScore = {
     | "CANCELLED";
   scoreKind: "CURRENT" | "FINAL" | "TERMINATED";
   correctionStatus: "NONE" | "CORRECTED_HISTORY";
+  season: { id: string; displayName: string };
   score: Record<GameSide, number>;
   teams: Record<
     GameSide,
@@ -411,6 +413,7 @@ export function buildGameBoxScore(input: {
     reportState: state,
     scoreKind: scoreKind(state),
     correctionStatus: correctionEvents.length ? "CORRECTED_HISTORY" : "NONE",
+    season: { ...input.presentation.season },
     score: { ...statistics.finalScore },
     teams: { AWAY: team("AWAY"), HOME: team("HOME") },
     innings: statistics.inningLines,

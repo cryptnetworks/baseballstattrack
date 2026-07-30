@@ -24,6 +24,7 @@ function presentation(
   replacements: Readonly<Record<string, string>> = {},
 ): BoxScorePresentation {
   return {
+    season: { id: "season-1", displayName: "2026 season" },
     teams: {
       AWAY: { id: "away-team", displayName: "Visitors" },
       HOME: { id: "home-team", displayName: "Hosts" },

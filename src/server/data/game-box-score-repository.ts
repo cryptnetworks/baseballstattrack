@@ -29,7 +29,11 @@ export class PrismaGameBoxScoreRepository {
     return this.prisma.$transaction(async (tx) => {
       const game = await tx.game.findUnique({
         where: { accountId_id: { accountId, id: gameId } },
-        select: { revision: true, readySetupSnapshotId: true },
+        select: {
+          revision: true,
+          readySetupSnapshotId: true,
+          season: { select: { id: true, displayName: true } },
+        },
       });
       if (!game || game.readySetupSnapshotId !== setupSnapshotId) {
         throw new GameBoxScoreError(
@@ -115,6 +119,7 @@ export class PrismaGameBoxScoreRepository {
         sourceRevision: game.revision,
         privacyOverlayRevision,
         presentation: {
+          season: game.season,
           teams,
           players: setup.lineupSlots.map((slot) => {
             const side = sideBySnapshot.get(slot.gameTeamSnapshotId);

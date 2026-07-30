@@ -112,11 +112,29 @@ function Leaderboard({
 function Dashboard({ dashboard }: { dashboard: SeasonDashboard }) {
   const officialGames =
     dashboard.record.wins + dashboard.record.losses + dashboard.record.ties;
+  const printQuery = new URLSearchParams({
+    teamId: dashboard.version.teamId,
+    seasonId: dashboard.version.seasonId,
+    ...(dashboard.selection.dateFrom
+      ? { dateFrom: dashboard.selection.dateFrom }
+      : {}),
+    ...(dashboard.selection.dateTo
+      ? { dateTo: dashboard.selection.dateTo }
+      : {}),
+  });
   return (
     <>
+      <div className="mt-6 flex justify-end">
+        <Link
+          className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] bg-white px-4 font-medium"
+          href={`/reports/season/print?${printQuery.toString()}`}
+        >
+          Printable season report
+        </Link>
+      </div>
       <section
         aria-labelledby="season-summary-heading"
-        className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
         <h2 className="sr-only" id="season-summary-heading">
           Season summary
