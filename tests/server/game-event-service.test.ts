@@ -27,6 +27,17 @@ const startActor = () =>
     authorizedAt: "2026-07-29T23:59:59.000Z",
   });
 
+const scoreActor = () =>
+  trustedActorForTest({
+    accountId: "account-a",
+    actorId: "score-service",
+    actorKind: "SERVICE",
+    actorUserId: null,
+    capability: "game.score",
+    scope: { kind: "GAME", gameId: "game-a" },
+    authorizedAt: "2026-07-29T23:59:59.000Z",
+  });
+
 describe("trusted game event application boundary", () => {
   it("keeps the synthetic actor adapter disabled outside tests", () => {
     vi.stubEnv("NODE_ENV", "production");
@@ -107,5 +118,39 @@ describe("trusted game event application boundary", () => {
       ),
     ).rejects.toMatchObject({ code: "AUTHORIZATION_REQUIRED" });
     expect(accept).not.toHaveBeenCalled();
+  });
+
+  it("accepts a typed atomic plate appearance through game.score", async () => {
+    const accept = vi.fn().mockResolvedValue({ idempotentReplay: false });
+    const service = new GameEventService({
+      accept,
+    } as unknown as PrismaGameEventRepository);
+    const body = {
+      eventType: "PlateAppearanceRecorded",
+      payload: {
+        batterId: "away-batter",
+        pitcherId: "home-pitcher",
+        outcome: "SINGLE",
+        battedBall: "LINE_DRIVE",
+        movements: [
+          {
+            runnerId: "away-batter",
+            from: "BATTER",
+            to: "FIRST",
+            cause: "HIT",
+            forced: false,
+            responsiblePitcherId: "home-pitcher",
+          },
+        ],
+        fieldingCredits: [],
+      },
+    };
+    await service.accept({ ...input, body }, scoreActor());
+    expect(accept).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body,
+        actor: expect.objectContaining({ capability: "game.score" }),
+      }),
+    );
   });
 });
