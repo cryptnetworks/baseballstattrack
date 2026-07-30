@@ -7,6 +7,7 @@ import {
   Prisma,
   ProjectionScope,
   ProjectionStatus,
+  type EventCorrection,
   type PrismaClient,
   type SourceEvent,
 } from "@prisma/client";
@@ -75,6 +76,22 @@ export type AcceptedGameHistory = {
   events: AcceptedEvent[];
 };
 
+export type AcceptedGameHistorySource = {
+  gameId: string;
+  setupSnapshotId: string;
+};
+
+type SetupSnapshotRow = Prisma.GameSetupSnapshotGetPayload<{
+  include: {
+    teamSnapshots: true;
+    lineupSlots: true;
+  };
+}>;
+
+type SourceEventRow = SourceEvent & {
+  playTransaction: { acceptedAt: Date } | null;
+};
+
 export type CorrectionAcceptanceContext = {
   correlationId: string;
   membershipId: string | null;
@@ -106,7 +123,7 @@ function verificationImpact(
 }
 
 function mapSourceEvent(
-  row: SourceEvent & { playTransaction: { acceptedAt: Date } | null },
+  row: SourceEventRow,
   setupRevision: number,
 ): AcceptedEvent {
   return parseEvent({
@@ -139,30 +156,11 @@ function mapSourceEvent(
   });
 }
 
-async function loadSetup(
-  tx: Prisma.TransactionClient,
+function mapSetupSnapshot(
+  snapshot: SetupSnapshotRow,
   accountId: string,
   gameId: string,
-  setupSnapshotId: string,
-): Promise<AcceptedSetup> {
-  const snapshot = await tx.gameSetupSnapshot.findUnique({
-    where: {
-      accountId_gameId_id: { accountId, gameId, id: setupSnapshotId },
-    },
-    include: {
-      teamSnapshots: { orderBy: [{ side: "asc" }, { id: "asc" }] },
-      lineupSlots: {
-        orderBy: [{ battingOrder: "asc" }, { id: "asc" }],
-      },
-    },
-  });
-  if (!snapshot) {
-    throw new GameEventError(
-      "SETUP_NOT_READY",
-      "Accepted setup is unavailable.",
-    );
-  }
-
+): AcceptedSetup {
   const side = (name: "HOME" | "AWAY") => {
     const team = snapshot.teamSnapshots.find(
       (candidate) => candidate.side === name,
@@ -197,7 +195,6 @@ async function loadSetup(
       })),
     };
   };
-
   return {
     id: snapshot.id,
     accountId,
@@ -210,25 +207,10 @@ async function loadSetup(
   };
 }
 
-async function loadAcceptedHistory(
-  tx: Prisma.TransactionClient,
-  accountId: string,
-  gameId: string,
-  setupSnapshotId: string,
-): Promise<AcceptedGameHistory> {
-  const setup = await loadSetup(tx, accountId, gameId, setupSnapshotId);
-  const [rows, correctionRows] = await Promise.all([
-    tx.sourceEvent.findMany({
-      where: { accountId, gameId, setupSnapshotId },
-      orderBy: { sequence: "asc" },
-      include: { playTransaction: { select: { acceptedAt: true } } },
-    }),
-    tx.eventCorrection.findMany({
-      where: { accountId, gameId },
-      orderBy: [{ correctionEventId: "asc" }, { targetEventId: "asc" }],
-    }),
-  ]);
-  const events = rows.map((row) => mapSourceEvent(row, setup.setupRevision));
+function assertCorrectionRelationships(
+  events: readonly AcceptedEvent[],
+  correctionRows: readonly EventCorrection[],
+): void {
   const correctionEvents = events.filter(
     ({ eventType }) => eventType === "CorrectionApplied",
   );
@@ -271,6 +253,55 @@ async function loadAcceptedHistory(
       "Persisted correction relationship has no source event.",
     );
   }
+}
+
+async function loadSetup(
+  tx: Prisma.TransactionClient,
+  accountId: string,
+  gameId: string,
+  setupSnapshotId: string,
+): Promise<AcceptedSetup> {
+  const snapshot = await tx.gameSetupSnapshot.findUnique({
+    where: {
+      accountId_gameId_id: { accountId, gameId, id: setupSnapshotId },
+    },
+    include: {
+      teamSnapshots: { orderBy: [{ side: "asc" }, { id: "asc" }] },
+      lineupSlots: {
+        orderBy: [{ battingOrder: "asc" }, { id: "asc" }],
+      },
+    },
+  });
+  if (!snapshot) {
+    throw new GameEventError(
+      "SETUP_NOT_READY",
+      "Accepted setup is unavailable.",
+    );
+  }
+
+  return mapSetupSnapshot(snapshot, accountId, gameId);
+}
+
+async function loadAcceptedHistory(
+  tx: Prisma.TransactionClient,
+  accountId: string,
+  gameId: string,
+  setupSnapshotId: string,
+): Promise<AcceptedGameHistory> {
+  const setup = await loadSetup(tx, accountId, gameId, setupSnapshotId);
+  const [rows, correctionRows] = await Promise.all([
+    tx.sourceEvent.findMany({
+      where: { accountId, gameId, setupSnapshotId },
+      orderBy: { sequence: "asc" },
+      include: { playTransaction: { select: { acceptedAt: true } } },
+    }),
+    tx.eventCorrection.findMany({
+      where: { accountId, gameId },
+      orderBy: [{ correctionEventId: "asc" }, { targetEventId: "asc" }],
+    }),
+  ]);
+  const events = rows.map((row) => mapSourceEvent(row, setup.setupRevision));
+  assertCorrectionRelationships(events, correctionRows);
   return { setup, events };
 }
 
@@ -291,6 +322,105 @@ export class PrismaGameEventRepository {
       );
       replayGame(history.setup, history.events, { verifyEvidence: true });
       return history;
+    });
+  }
+
+  async loadAcceptedHistories(
+    accountId: string,
+    sources: readonly AcceptedGameHistorySource[],
+  ): Promise<
+    Array<AcceptedGameHistorySource & { history: AcceptedGameHistory }>
+  > {
+    if (sources.length === 0) return [];
+    const unique = new Set(
+      sources.map(
+        ({ gameId, setupSnapshotId }) => `${gameId}:${setupSnapshotId}`,
+      ),
+    );
+    if (unique.size !== sources.length) {
+      throw new GameEventError(
+        "DUPLICATE_ACCEPTED_EVENT",
+        "Batch history sources must be unique.",
+      );
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const gameIds = sources.map(({ gameId }) => gameId);
+      const setupIds = sources.map(({ setupSnapshotId }) => setupSnapshotId);
+      const sourcePairs = sources.map(({ gameId, setupSnapshotId }) => ({
+        gameId,
+        setupSnapshotId,
+      }));
+      const [snapshots, rows, correctionRows] = await Promise.all([
+        tx.gameSetupSnapshot.findMany({
+          where: {
+            accountId,
+            id: { in: setupIds },
+            OR: sources.map(({ gameId, setupSnapshotId }) => ({
+              gameId,
+              id: setupSnapshotId,
+            })),
+          },
+          include: {
+            teamSnapshots: { orderBy: [{ side: "asc" }, { id: "asc" }] },
+            lineupSlots: {
+              orderBy: [{ battingOrder: "asc" }, { id: "asc" }],
+            },
+          },
+        }),
+        tx.sourceEvent.findMany({
+          where: {
+            accountId,
+            gameId: { in: gameIds },
+            setupSnapshotId: { in: setupIds },
+            OR: sourcePairs,
+          },
+          orderBy: [{ gameId: "asc" }, { sequence: "asc" }],
+          include: { playTransaction: { select: { acceptedAt: true } } },
+        }),
+        tx.eventCorrection.findMany({
+          where: { accountId, gameId: { in: gameIds } },
+          orderBy: [
+            { gameId: "asc" },
+            { correctionEventId: "asc" },
+            { targetEventId: "asc" },
+          ],
+        }),
+      ]);
+      if (snapshots.length !== sources.length) {
+        throw new GameEventError(
+          "SETUP_NOT_READY",
+          "One or more accepted setups are unavailable.",
+        );
+      }
+      return sources.map((source) => {
+        const snapshot = snapshots.find(
+          ({ id, gameId }) =>
+            id === source.setupSnapshotId && gameId === source.gameId,
+        );
+        if (!snapshot) {
+          throw new GameEventError(
+            "SETUP_NOT_READY",
+            "Accepted setup is unavailable.",
+          );
+        }
+        const setup = mapSetupSnapshot(snapshot, accountId, source.gameId);
+        const events = rows
+          .filter(
+            ({ gameId, setupSnapshotId }) =>
+              gameId === source.gameId &&
+              setupSnapshotId === source.setupSnapshotId,
+          )
+          .map((row) => mapSourceEvent(row, setup.setupRevision));
+        assertCorrectionRelationships(
+          events,
+          correctionRows.filter(({ gameId }) => gameId === source.gameId),
+        );
+        replayGame(setup, events, { verifyEvidence: true });
+        return {
+          ...source,
+          history: { setup, events },
+        };
+      });
     });
   }
 
