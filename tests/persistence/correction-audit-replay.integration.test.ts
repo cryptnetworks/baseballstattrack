@@ -66,7 +66,12 @@ integration("correction audit and replay workflow", () => {
   });
 
   it("runs setup through score, verify, reopen, correction, replay, audit, and reverify", async () => {
-    await accept(0, "start", { eventType: "GameStarted", payload: {} });
+    await accept(
+      0,
+      "start",
+      { eventType: "GameStarted", payload: {} },
+      "game.start",
+    );
     const original = await accept(1, "single", {
       eventType: "PlateAppearanceRecorded",
       payload: {

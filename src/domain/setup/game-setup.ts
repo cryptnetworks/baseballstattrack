@@ -256,6 +256,14 @@ export const rosterCandidatePageSchema = z
   })
   .strict();
 
+export const gameSetupCreationContextQuerySchema = z
+  .object({ accountId: stableId })
+  .strict();
+
+export const gameSetupWorkflowContextQuerySchema = z
+  .object({ accountId: stableId, gameId: stableId })
+  .strict();
+
 export type GameSetupErrorCode =
   | "INVALID_INPUT"
   | "AUTHORIZATION_REQUIRED"
@@ -376,3 +384,9 @@ export type SaveSetupRevisionCommand = z.infer<
 export type MarkSetupReadyCommand = z.infer<typeof markSetupReadyCommandSchema>;
 export type LoadCurrentSetupQuery = z.infer<typeof loadCurrentSetupQuerySchema>;
 export type RosterCandidatePage = z.infer<typeof rosterCandidatePageSchema>;
+export type GameSetupCreationContextQuery = z.infer<
+  typeof gameSetupCreationContextQuerySchema
+>;
+export type GameSetupWorkflowContextQuery = z.infer<
+  typeof gameSetupWorkflowContextQuerySchema
+>;

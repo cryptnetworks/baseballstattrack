@@ -29,5 +29,5 @@ export async function selectAccount(formData: FormData): Promise<never> {
     accountId,
     selectedAccountCookie.options,
   );
-  redirect("/accounts");
+  redirect("/games/setup");
 }

@@ -55,7 +55,10 @@ integration("representative scoring persistence pipeline", () => {
     playTransactionId: `${runPrefix}-play-${suffix}`,
     clientSubmissionId: `${runPrefix}-submission-${suffix}`,
     recordedAt: `2026-01-01T00:00:0${revision}.000Z`,
-    actor: actor(),
+    actor:
+      body.eventType === "GameStarted"
+        ? { ...actor(), capability: "game.start" }
+        : actor(),
     body,
   });
 

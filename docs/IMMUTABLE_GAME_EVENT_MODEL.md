@@ -75,7 +75,10 @@ Live corrections preserve `IN_PROGRESS`. A completed correction enters `CORRECTE
 
 `PrismaGameEventRepository.accept` requires explicit Account, game, setup snapshot, expected revision, stable IDs, submitted recording time, typed body, and a previously validated actor context containing Account, game scope, stable identity, capability, and authorization-check time. The caller must perform real current-database authorization; the repository does not invent membership.
 
-Capabilities are fail-closed at the boundary: scoring/lifecycle uses `game.score`, correction/reopen uses `game.correct`, and verification uses `game.verify`.
+Capabilities are fail-closed at the boundary: `GameStarted` requires
+`game.start`; in-progress scoring and ordinary lifecycle events use
+`game.score`; correction/reopen uses `game.correct`; and verification uses
+`game.verify`.
 
 Acceptance runs at PostgreSQL `SERIALIZABLE` isolation:
 

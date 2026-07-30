@@ -16,13 +16,13 @@ const input = {
   body: { eventType: "GameStarted", payload: {} },
 };
 
-const scoringActor = () =>
+const startActor = () =>
   trustedActorForTest({
     accountId: "account-a",
     actorId: "score-service",
     actorKind: "SERVICE",
     actorUserId: null,
-    capability: "game.score",
+    capability: "game.start",
     scope: { kind: "GAME", gameId: "game-a" },
     authorizedAt: "2026-07-29T23:59:59.000Z",
   });
@@ -31,7 +31,7 @@ describe("trusted game event application boundary", () => {
   it("keeps the synthetic actor adapter disabled outside tests", () => {
     vi.stubEnv("NODE_ENV", "production");
     try {
-      expect(scoringActor).toThrow(
+      expect(startActor).toThrow(
         "Synthetic trusted actors are available only in tests.",
       );
     } finally {
@@ -44,7 +44,7 @@ describe("trusted game event application boundary", () => {
     const service = new GameEventService({
       accept,
     } as unknown as PrismaGameEventRepository);
-    await service.accept(input, scoringActor());
+    await service.accept(input, startActor());
     expect(accept).toHaveBeenCalledWith(
       expect.objectContaining({
         accountId: "account-a",
@@ -54,7 +54,7 @@ describe("trusted game event application boundary", () => {
           actorId: "score-service",
           actorKind: "SERVICE",
           actorUserId: null,
-          capability: "game.score",
+          capability: "game.start",
           scope: { kind: "GAME", gameId: "game-a" },
           authorizedAt: "2026-07-29T23:59:59.000Z",
         },
@@ -68,7 +68,7 @@ describe("trusted game event application boundary", () => {
       accept,
     } as unknown as PrismaGameEventRepository);
     await expect(
-      service.accept(input, JSON.parse(JSON.stringify(scoringActor()))),
+      service.accept(input, JSON.parse(JSON.stringify(startActor()))),
     ).rejects.toMatchObject({ code: "AUTHORIZATION_REQUIRED" });
     await expect(
       service.accept(
@@ -78,8 +78,30 @@ describe("trusted game event application boundary", () => {
           actorId: "score-service",
           actorKind: "SERVICE",
           actorUserId: null,
-          capability: "game.score",
+          capability: "game.start",
           scope: { kind: "GAME", gameId: "game-b" },
+          authorizedAt: "2026-07-29T23:59:59.000Z",
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "AUTHORIZATION_REQUIRED" });
+    expect(accept).not.toHaveBeenCalled();
+  });
+
+  it("does not let the general scoring capability start a game", async () => {
+    const accept = vi.fn();
+    const service = new GameEventService({
+      accept,
+    } as unknown as PrismaGameEventRepository);
+    await expect(
+      service.accept(
+        input,
+        trustedActorForTest({
+          accountId: "account-a",
+          actorId: "score-service",
+          actorKind: "SERVICE",
+          actorUserId: null,
+          capability: "game.score",
+          scope: { kind: "GAME", gameId: "game-a" },
           authorizedAt: "2026-07-29T23:59:59.000Z",
         }),
       ),

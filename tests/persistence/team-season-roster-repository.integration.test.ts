@@ -73,7 +73,7 @@ integration("team, season, and roster management persistence", () => {
         actorId: `${runPrefix}-score-service`,
         actorKind: "SERVICE",
         actorUserId: null,
-        capability: "game.score",
+        capability: "game.start",
         scope: { kind: "GAME", gameId: ids.game },
         authorizedAt: "2026-01-01T00:00:00.000Z",
       },
