@@ -1,5 +1,6 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 
+import { AuthorizationError } from "@/server/auth/errors";
 import type {
   ActiveAuthority,
   AuthenticatedIdentity,
@@ -27,26 +28,121 @@ export interface AuthorizationStore {
 }
 
 type DatabaseClient = PrismaClient | Prisma.TransactionClient;
+type ProviderIdentityErrorMetadata = {
+  modelName?: unknown;
+  target?: unknown;
+  driverAdapterError?: {
+    cause?: {
+      constraint?: {
+        fields?: unknown;
+      };
+    };
+  };
+};
+
+const conflictRecoveryAttempts = 3;
+const visibilityRetryDelayMs = 2;
+const userSelection = { id: true, status: true } as const;
+
+function normalizedConstraintFields(error: unknown): string[] | null {
+  if (
+    !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+    error.code !== "P2002"
+  ) {
+    return null;
+  }
+  const metadata = error.meta as ProviderIdentityErrorMetadata | undefined;
+  if (metadata?.modelName !== "AppUser") return null;
+  const fields = Array.isArray(metadata.target)
+    ? metadata.target
+    : metadata.driverAdapterError?.cause?.constraint?.fields;
+  if (!Array.isArray(fields)) return null;
+  const normalized = fields.flatMap((field) =>
+    typeof field === "string"
+      ? [
+          field.startsWith('"') && field.endsWith('"')
+            ? field.slice(1, -1)
+            : field,
+        ]
+      : [],
+  );
+  return normalized.length === fields.length ? normalized : null;
+}
+
+function isProviderIdentityConflict(error: unknown): boolean {
+  const fields = normalizedConstraintFields(error);
+  return (
+    fields?.length === 2 &&
+    fields.includes("provider") &&
+    fields.includes("providerSubject")
+  );
+}
+
+function waitForVisibility(attempt: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, visibilityRetryDelayMs * attempt);
+  });
+}
+
+function provisioningFailure(): AuthorizationError {
+  return new AuthorizationError("USER_PROVISIONING_FAILURE");
+}
 
 export class PrismaAuthorizationStore implements AuthorizationStore {
   constructor(private readonly prisma: DatabaseClient) {}
 
-  async resolveOrProvisionUser(identity: AuthenticatedIdentity) {
-    const user = await this.prisma.appUser.upsert({
+  private findUser(identity: AuthenticatedIdentity) {
+    return this.prisma.appUser.findUnique({
       where: {
         provider_providerSubject: {
           provider: identity.provider,
           providerSubject: identity.providerSubject,
         },
       },
-      create: {
-        provider: identity.provider,
-        providerSubject: identity.providerSubject,
-      },
-      update: {},
-      select: { id: true, status: true },
+      select: userSelection,
     });
-    return { id: user.id, active: user.status === "ACTIVE" };
+  }
+
+  private async recoverConcurrentUser(identity: AuthenticatedIdentity) {
+    for (let attempt = 1; attempt <= conflictRecoveryAttempts; attempt += 1) {
+      const user = await this.findUser(identity);
+      if (user) return user;
+      if (attempt < conflictRecoveryAttempts) {
+        await waitForVisibility(attempt);
+      }
+    }
+    throw provisioningFailure();
+  }
+
+  async resolveOrProvisionUser(identity: AuthenticatedIdentity) {
+    try {
+      const existing = await this.findUser(identity);
+      if (existing) {
+        return { id: existing.id, active: existing.status === "ACTIVE" };
+      }
+      try {
+        const user = await this.prisma.appUser.create({
+          data: {
+            provider: identity.provider,
+            providerSubject: identity.providerSubject,
+          },
+          select: userSelection,
+        });
+        return { id: user.id, active: user.status === "ACTIVE" };
+      } catch (error) {
+        if (!isProviderIdentityConflict(error)) throw error;
+        const user = await this.recoverConcurrentUser(identity);
+        return { id: user.id, active: user.status === "ACTIVE" };
+      }
+    } catch (error) {
+      if (
+        error instanceof AuthorizationError &&
+        error.code === "USER_PROVISIONING_FAILURE"
+      ) {
+        throw error;
+      }
+      throw provisioningFailure();
+    }
   }
 
   async listAvailableAccounts(appUserId: string) {

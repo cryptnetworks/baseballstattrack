@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { AuthorizationService } from "@/server/auth/authorization-service";
 import { PrismaAuthorizationStore } from "@/server/auth/store";
+import { runAuthorizedTransaction } from "@/server/auth/transaction";
 import { AUTH_PROVIDER, type AuthenticatedIdentity } from "@/server/auth/types";
 import { seedPersistenceScoringFixture } from "../fixtures/persistence-scoring-fixture";
 
@@ -28,12 +29,19 @@ integration("production database authorization", () => {
 
   beforeAll(async () => {
     ids = await seedPersistenceScoringFixture(prisma, prefix);
-    const [first, second] = await Promise.all([
-      store.resolveOrProvisionUser(identity),
-      store.resolveOrProvisionUser(identity),
-    ]);
-    expect(first.id).toBe(second.id);
-    appUserId = first.id;
+    const concurrentUsers = await Promise.all(
+      Array.from({ length: 20 }, () => store.resolveOrProvisionUser(identity)),
+    );
+    expect(new Set(concurrentUsers.map(({ id }) => id)).size).toBe(1);
+    appUserId = concurrentUsers[0]!.id;
+    await expect(
+      prisma.appUser.count({
+        where: {
+          provider: identity.provider,
+          providerSubject: identity.providerSubject,
+        },
+      }),
+    ).resolves.toBe(1);
     await prisma.accountMembership.create({
       data: {
         id: membershipId,
@@ -57,6 +65,82 @@ integration("production database authorization", () => {
 
   afterAll(async () => {
     await prisma.$disconnect();
+  });
+
+  it("keeps existing, distinct, disabled, and immutable identities correct", async () => {
+    const existing = await Promise.all(
+      Array.from({ length: 10 }, () => store.resolveOrProvisionUser(identity)),
+    );
+    expect(new Set(existing.map(({ id }) => id))).toEqual(new Set([appUserId]));
+
+    const distinctIdentities = Array.from({ length: 10 }, (_, index) => ({
+      provider: AUTH_PROVIDER,
+      providerSubject: `${prefix}-distinct-${index}`,
+    })) satisfies AuthenticatedIdentity[];
+    const distinctUsers = await Promise.all(
+      distinctIdentities.map((subject) =>
+        store.resolveOrProvisionUser(subject),
+      ),
+    );
+    expect(new Set(distinctUsers.map(({ id }) => id)).size).toBe(10);
+    await expect(
+      prisma.appUser.count({
+        where: {
+          provider: AUTH_PROVIDER,
+          providerSubject: { startsWith: `${prefix}-distinct-` },
+        },
+      }),
+    ).resolves.toBe(10);
+
+    const disabledIdentity = {
+      provider: AUTH_PROVIDER,
+      providerSubject: `${prefix}-disabled`,
+    } satisfies AuthenticatedIdentity;
+    const disabled = await store.resolveOrProvisionUser(disabledIdentity);
+    await prisma.appUser.update({
+      where: { id: disabled.id },
+      data: { status: "DISABLED" },
+    });
+    const disabledResults = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        store.resolveOrProvisionUser(disabledIdentity),
+      ),
+    );
+    expect(disabledResults).toEqual(
+      Array.from({ length: 5 }, () => ({
+        id: disabled.id,
+        active: false,
+      })),
+    );
+    await expect(
+      prisma.appUser.update({
+        where: { id: disabled.id },
+        data: { providerSubject: `${prefix}-reassigned` },
+      }),
+    ).rejects.toBeDefined();
+    await expect(
+      prisma.appUser.count({
+        where: {
+          provider: disabledIdentity.provider,
+          providerSubject: disabledIdentity.providerSubject,
+        },
+      }),
+    ).resolves.toBe(1);
+  });
+
+  it("rechecks the stable identity inside concurrent serializable authorization", async () => {
+    const actorIds = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        runAuthorizedTransaction(
+          prisma,
+          identity,
+          { kind: "GAME", accountId: ids.account, gameId: ids.game },
+          "game.score",
+          async (_transaction, actor) => actor.appUserId,
+        ),
+      ),
+    );
+    expect(new Set(actorIds)).toEqual(new Set([appUserId]));
   });
 
   it("authorizes the exact account-scoped database target", async () => {

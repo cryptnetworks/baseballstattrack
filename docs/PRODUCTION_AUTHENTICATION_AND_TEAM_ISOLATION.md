@@ -30,10 +30,17 @@ Protected work follows one server-owned chain:
    actor types. Their former arbitrary actor-JSON entry point is no longer a
    public application boundary.
 
-The `AppUser` upsert is safe under concurrent first requests because the
-database uniqueness constraint serializes the provider identity. A disabled
-user, inactive membership, suspended or archived Account, revoked assignment,
-unknown target, or mismatched tenant fails closed.
+Concurrent first requests read by provider identity and attempt one create. The
+database uniqueness constraint remains authoritative: the winner creates the
+`AppUser`; callers that receive the exact provider-identity conflict perform a
+small bounded reread and return that same stable id. Unrelated unique conflicts
+and a winner that remains invisible after the bounded attempts fail as a
+generic provisioning error. High-risk authorization transactions provision
+before opening their serializable transaction, then re-read the stable user and
+current authority inside it, so conflict recovery never runs in an aborted
+transaction. No email or mutable profile field participates in identity
+resolution. A disabled user, inactive membership, suspended or archived
+Account, revoked assignment, unknown target, or mismatched tenant fails closed.
 
 ## Supabase session boundary
 
@@ -109,13 +116,15 @@ disablement, removal, role revocation, and grant revocation take effect on the
 next authorization attempt even while a provider session remains valid.
 Regranting is likewise visible only after a fresh attempt.
 
-High-risk new mutations use `runAuthorizedTransaction`. It opens a serializable
-Prisma transaction, reads current authority in that transaction, and supplies
-both its transaction client and opaque actor to the write callback. The write
-must use that supplied transaction client so revocation cannot occur between
-the authority read and commit without a serializable conflict or retry. It must
-also write the required security audit record in that transaction. Callers
-must not retry a denied authorization as an idempotency strategy.
+High-risk new mutations use `runAuthorizedTransaction`. It resolves or
+provisions the stable provider identity before opening a serializable Prisma
+transaction, then re-reads the user and current authority in that transaction
+and supplies both its transaction client and opaque actor to the write
+callback. The write must use that supplied transaction client so revocation
+cannot occur between the authority read and commit without a serializable
+conflict or retry. It must also write the required security audit record in
+that transaction. Callers must not retry a denied authorization as an
+idempotency strategy.
 
 Existing M1 repositories keep their immutable event, optimistic revision, and
 audit behavior. Their application services now require the opaque actor
@@ -135,9 +144,10 @@ a member, or receive anonymous system-wide authority.
 
 Unauthenticated requests receive `401`. Authenticated callers without current
 authority receive a generic `403` that does not distinguish missing resources,
-wrong Account, inactive membership, or insufficient capability. Provider or
-server configuration failures return a generic `500` message. Detailed tokens,
-cookies, secrets, provider errors, emails, and protected target metadata are
+wrong Account, inactive membership, or insufficient capability. Provider,
+server configuration, or user-provisioning failures return a generic `500`
+message. Detailed tokens, cookies, secrets, provider errors, Prisma diagnostics,
+constraint names, provider subjects, emails, and protected target metadata are
 not included in responses.
 
 Application code may use correlation IDs and stable internal actor IDs for
