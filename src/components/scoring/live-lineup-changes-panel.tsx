@@ -25,6 +25,7 @@ import {
   currentBatterId,
   nextBatterId,
 } from "@/features/scoring/plate-appearance";
+import { useScoringDraft } from "@/features/scoring/use-scoring-draft";
 
 type ChangeMode = "BATTING" | "DEFENSE" | "ALIGNMENT" | "PITCHING";
 
@@ -176,10 +177,8 @@ export function LiveLineupChangesPanel({
   const [incomingPitcher, setIncomingPitcher] = useState(
     pitchingCandidates[0]?.playerId ?? "",
   );
+  const [engaged, setEngaged] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const [clientSubmissionId, setClientSubmissionId] = useState(
-    initialClientSubmissionId,
-  );
   const resilientAction = async (
     previous: typeof initialLineupChangeActionResult,
     formData: FormData,
@@ -200,7 +199,6 @@ export function LiveLineupChangesPanel({
     initialLineupChangeActionResult,
   );
   const statusRef = useRef<HTMLDivElement>(null);
-  const locked = pending || result.status === "ERROR";
 
   useEffect(() => {
     if (result.status !== "IDLE") statusRef.current?.focus();
@@ -228,9 +226,26 @@ export function LiveLineupChangesPanel({
               position,
             })
           : emptyPreview("Select the leaving and entering players.");
+  const { clientSubmissionId, abandon, blockedByRecoveredDraft, draftReady } =
+    useScoringDraft({
+      kind: "LINEUP_CHANGE",
+      accountId,
+      gameId,
+      setupSnapshotId,
+      setupRevision: state.setupRevision,
+      sourceRevision: state.sourceRevision,
+      initialClientSubmissionId,
+      proposal: preview.body,
+      engaged,
+      pending,
+      resultStatus: result.status,
+    });
+  const locked =
+    pending || result.status === "ERROR" || blockedByRecoveredDraft;
 
   const chooseMode = (nextMode: ChangeMode) => {
     setMode(nextMode);
+    setEngaged(true);
     setConfirmed(false);
     if (nextMode === "BATTING") {
       const player = state.lineups[offense].find(
@@ -252,6 +267,7 @@ export function LiveLineupChangesPanel({
 
   const selectOutgoing = (playerId: string) => {
     setOutgoing(playerId);
+    setEngaged(true);
     const player = state.lineups[side].find(
       ({ playerId: candidate }) => candidate === playerId,
     );
@@ -262,7 +278,7 @@ export function LiveLineupChangesPanel({
   };
 
   const discardFailedChange = () => {
-    setClientSubmissionId(crypto.randomUUID());
+    abandon();
     setConfirmed(false);
     window.location.reload();
   };
@@ -318,13 +334,17 @@ export function LiveLineupChangesPanel({
         <p className="font-semibold">
           {pending
             ? "Saving lineup change"
-            : result.status === "ERROR"
+            : result.status === "ERROR" || blockedByRecoveredDraft
               ? "Change not confirmed"
-              : "No pending lineup change"}
+              : engaged
+                ? "Locally pending lineup change"
+                : "No pending lineup change"}
         </p>
         <p className="mt-1 text-sm">
-          {result.message ||
-            `Current batter: ${player(currentBatter)}. On deck: ${player(onDeck)}. Active pitcher: ${player(state.activePitcher[defense])}.`}
+          {blockedByRecoveredDraft
+            ? "Resolve the recovered lineup-change draft above before starting another."
+            : result.message ||
+              `Current batter: ${player(currentBatter)}. On deck: ${player(onDeck)}. Active pitcher: ${player(state.activePitcher[defense])}.`}
         </p>
       </div>
 
@@ -374,6 +394,7 @@ export function LiveLineupChangesPanel({
                 className="mt-2 min-h-12 w-full rounded-lg border border-[var(--line)] bg-white px-3"
                 onChange={(event) => {
                   setIncoming(event.target.value);
+                  setEngaged(true);
                   setConfirmed(false);
                 }}
                 value={incoming}
@@ -391,6 +412,7 @@ export function LiveLineupChangesPanel({
                 className="mt-2 min-h-12 w-full rounded-lg border border-[var(--line)] bg-white px-3"
                 onChange={(event) => {
                   setPosition(event.target.value as BaseballPosition);
+                  setEngaged(true);
                   setConfirmed(false);
                 }}
                 value={position}
@@ -415,6 +437,7 @@ export function LiveLineupChangesPanel({
                 className="mt-2 min-h-12 w-full rounded-lg border border-[var(--line)] bg-white px-3"
                 onChange={(event) => {
                   setFirstSwap(event.target.value);
+                  setEngaged(true);
                   setConfirmed(false);
                 }}
                 value={firstSwap}
@@ -432,6 +455,7 @@ export function LiveLineupChangesPanel({
                 className="mt-2 min-h-12 w-full rounded-lg border border-[var(--line)] bg-white px-3"
                 onChange={(event) => {
                   setSecondSwap(event.target.value);
+                  setEngaged(true);
                   setConfirmed(false);
                 }}
                 value={secondSwap}
@@ -464,6 +488,7 @@ export function LiveLineupChangesPanel({
                 className="mt-2 min-h-12 w-full rounded-lg border border-[var(--line)] bg-white px-3"
                 onChange={(event) => {
                   setIncomingPitcher(event.target.value);
+                  setEngaged(true);
                   setConfirmed(false);
                 }}
                 value={incomingPitcher}
@@ -546,7 +571,10 @@ export function LiveLineupChangesPanel({
           <input
             checked={confirmed}
             disabled={locked || preview.body === null}
-            onChange={(event) => setConfirmed(event.target.checked)}
+            onChange={(event) => {
+              setEngaged(true);
+              setConfirmed(event.target.checked);
+            }}
             type="checkbox"
           />
           Confirm the leaving player, entering player, role, and effective game
@@ -557,6 +585,8 @@ export function LiveLineupChangesPanel({
             className="min-h-12 flex-1 rounded-lg bg-slate-950 px-5 font-semibold text-white disabled:opacity-50 sm:flex-none"
             disabled={
               pending ||
+              blockedByRecoveredDraft ||
+              !draftReady ||
               preview.body === null ||
               (!confirmed && result.status !== "ERROR")
             }

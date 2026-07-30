@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, useSyncExternalStore } from "react";
 
 import {
   initialRunnerPlayActionResult,
@@ -14,6 +14,7 @@ import {
   type RunnerPlayDraft,
   type RunnerPlayType,
 } from "@/features/scoring/runner-interactions";
+import { useScoringDraft } from "@/features/scoring/use-scoring-draft";
 
 const bases = ["FIRST", "SECOND", "THIRD"] as const;
 const labels: Record<RunnerPlayType, string> = {
@@ -30,6 +31,15 @@ const baseLabels: Record<Base, string> = {
   FIRST: "first",
   SECOND: "second",
   THIRD: "third",
+};
+
+const subscribeOnline = (onChange: () => void) => {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
 };
 
 function outcomesFrom(base: Base): RunnerOutcome[] {
@@ -132,9 +142,29 @@ export function RunnerBaseOutPanel({
   );
   const [outFielderId, setOutFielderId] = useState("");
   const [errorFielderId, setErrorFielderId] = useState("");
-  const [clientSubmissionId] = useState(initialClientSubmissionId);
+  const [engaged, setEngaged] = useState(false);
+  const online = useSyncExternalStore(
+    subscribeOnline,
+    () => navigator.onLine,
+    () => true,
+  );
+  const resilientAction = async (
+    previous: typeof initialRunnerPlayActionResult,
+    formData: FormData,
+  ) => {
+    try {
+      return await recordRunnerPlayAction(previous, formData);
+    } catch {
+      return {
+        status: "ERROR" as const,
+        code: "NETWORK_FAILURE",
+        message:
+          "The connection failed before acceptance was confirmed. Retry this unchanged runner play.",
+      };
+    }
+  };
   const [result, action, pending] = useActionState(
-    recordRunnerPlayAction,
+    resilientAction,
     initialRunnerPlayActionResult,
   );
   const draft = useMemo<RunnerPlayDraft>(
@@ -151,6 +181,22 @@ export function RunnerBaseOutPanel({
     () => previewRunnerPlay(state, draft),
     [draft, state],
   );
+  const { clientSubmissionId, abandon, blockedByRecoveredDraft, draftReady } =
+    useScoringDraft({
+      kind: "RUNNER_PLAY",
+      accountId,
+      gameId,
+      setupSnapshotId,
+      setupRevision: state.setupRevision,
+      sourceRevision: state.sourceRevision,
+      initialClientSubmissionId,
+      proposal: preview.body,
+      engaged,
+      pending,
+      resultStatus: result.status,
+    });
+  const locked =
+    pending || result.status === "ERROR" || blockedByRecoveredDraft;
 
   const battingSide = state.half === "TOP" ? "AWAY" : "HOME";
   const walkOffCandidate =
@@ -170,10 +216,25 @@ export function RunnerBaseOutPanel({
         }`}
         role={result.status === "ERROR" ? "alert" : "status"}
       >
-        {pending
-          ? "Recording the complete runner play…"
-          : result.message ||
-            `Authoritative source revision ${state.sourceRevision}.`}
+        <p className="font-semibold">
+          {pending
+            ? "Saving"
+            : !online && engaged
+              ? "Pending connection"
+              : result.status === "ERROR" || blockedByRecoveredDraft
+                ? "Needs attention"
+                : engaged
+                  ? "Locally pending"
+                  : "Saved"}
+        </p>
+        <p className="mt-1 text-sm">
+          {pending
+            ? "Recording the complete runner play…"
+            : blockedByRecoveredDraft
+              ? "Resolve the recovered runner-play draft above before starting another."
+              : result.message ||
+                `Authoritative source revision ${state.sourceRevision}.`}
+        </p>
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
@@ -240,7 +301,10 @@ export function RunnerBaseOutPanel({
             value={preview.body ? JSON.stringify(preview.body) : ""}
           />
 
-          <fieldset className="rounded-xl border border-[var(--line)] bg-white p-4 sm:p-6">
+          <fieldset
+            className="rounded-xl border border-[var(--line)] bg-white p-4 sm:p-6"
+            disabled={locked}
+          >
             <legend className="px-1 text-lg font-semibold">
               Atomic runner play
             </legend>
@@ -258,6 +322,7 @@ export function RunnerBaseOutPanel({
               className="mt-2 min-h-12 w-full rounded-lg border border-[var(--line)] bg-white px-3"
               id="playType"
               onChange={(event) => {
+                setEngaged(true);
                 setPlayType(event.target.value as RunnerPlayType);
                 setOutcomes({});
               }}
@@ -296,12 +361,13 @@ export function RunnerBaseOutPanel({
                     <select
                       className="mt-3 min-h-12 w-full rounded-lg border border-[var(--line)] bg-white px-3"
                       id={`${base}-outcome`}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        setEngaged(true);
                         setOutcomes({
                           ...outcomes,
                           [base]: event.target.value as RunnerOutcome,
-                        })
-                      }
+                        });
+                      }}
                       value={outcome}
                     >
                       {outcomesFrom(base).map((candidate) => (
@@ -315,13 +381,14 @@ export function RunnerBaseOutPanel({
                         Earned-run classification
                         <select
                           className="mt-2 min-h-12 w-full rounded-lg border border-[var(--line)] bg-white px-3"
-                          onChange={(event) =>
+                          onChange={(event) => {
+                            setEngaged(true);
                             setEarnedRuns({
                               ...earnedRuns,
                               [base]: event.target
                                 .value as RunnerPlayDraft["earnedRuns"][Base],
-                            })
-                          }
+                            });
+                          }}
                           value={earnedRuns[base] ?? "PENDING"}
                         >
                           <option value="PENDING">Pending scorer review</option>
@@ -342,7 +409,10 @@ export function RunnerBaseOutPanel({
                 Fielder receiving the putout
                 <select
                   className="mt-2 min-h-12 w-full rounded-lg border border-[var(--line)] bg-white px-3"
-                  onChange={(event) => setOutFielderId(event.target.value)}
+                  onChange={(event) => {
+                    setEngaged(true);
+                    setOutFielderId(event.target.value);
+                  }}
                   value={outFielderId}
                 >
                   <option value="">Select fielder</option>
@@ -360,7 +430,10 @@ export function RunnerBaseOutPanel({
                 Fielder charged with error
                 <select
                   className="mt-2 min-h-12 w-full rounded-lg border border-[var(--line)] bg-white px-3"
-                  onChange={(event) => setErrorFielderId(event.target.value)}
+                  onChange={(event) => {
+                    setEngaged(true);
+                    setErrorFielderId(event.target.value);
+                  }}
                   value={errorFielderId}
                 >
                   <option value="">Select fielder</option>
@@ -401,13 +474,46 @@ export function RunnerBaseOutPanel({
               completion event.
             </p>
           ) : null}
-          <button
-            className="mt-5 min-h-12 w-full rounded-lg bg-slate-950 px-5 font-semibold text-white disabled:opacity-50 sm:w-auto"
-            disabled={pending || preview.body === null}
-            type="submit"
-          >
-            {pending ? "Recording…" : "Record complete runner play"}
-          </button>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              className="min-h-12 w-full rounded-lg bg-slate-950 px-5 font-semibold text-white disabled:opacity-50 sm:w-auto"
+              disabled={
+                pending ||
+                blockedByRecoveredDraft ||
+                !draftReady ||
+                !online ||
+                preview.body === null
+              }
+              type="submit"
+            >
+              {pending
+                ? "Recording…"
+                : result.status === "ERROR"
+                  ? "Retry unchanged runner play"
+                  : "Record complete runner play"}
+            </button>
+            {result.status === "ERROR" ? (
+              <>
+                <button
+                  className="min-h-12 rounded-lg border border-[var(--line)] bg-white px-4 font-semibold"
+                  onClick={() => window.location.reload()}
+                  type="button"
+                >
+                  Reload authoritative state
+                </button>
+                <button
+                  className="min-h-12 rounded-lg border border-[var(--line)] bg-white px-4 font-semibold"
+                  onClick={() => {
+                    abandon();
+                    window.location.reload();
+                  }}
+                  type="button"
+                >
+                  Discard local draft
+                </button>
+              </>
+            ) : null}
+          </div>
         </form>
       )}
     </div>

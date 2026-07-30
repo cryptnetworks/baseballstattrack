@@ -11,6 +11,7 @@ import {
   BaseState,
   RunnerBaseOutPanel,
 } from "@/components/scoring/runner-base-out-panel";
+import { ScoringRecoveryBoundary } from "@/components/scoring/scoring-recovery-boundary";
 import { replayGame, type AcceptedEvent } from "@/domain/events/event-log";
 import { getGameEventService } from "@/server/app/game-event-service";
 import { getGameSetupService } from "@/server/app/game-setup-service";
@@ -142,6 +143,19 @@ export default async function ScoreGamePage({ params }: PageProps) {
             <p className="text-2xl font-semibold">{state.score.HOME}</p>
           </div>
         </section>
+
+        <ScoringRecoveryBoundary
+          context={{
+            accountId,
+            gameId,
+            setupSnapshotId: current.game.readySetupSnapshotId,
+            setupRevision: state.setupRevision,
+            sourceRevision: state.sourceRevision,
+            acceptedSubmissionIds: events.map(
+              ({ clientSubmissionId }) => clientSubmissionId,
+            ),
+          }}
+        />
 
         {state.status === "IN_PROGRESS" ? (
           <>
