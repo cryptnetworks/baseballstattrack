@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { ApplicationShell } from "@/components/app/application-shell";
+import { LiveLineupChangesPanel } from "@/components/scoring/live-lineup-changes-panel";
 import { PlateAppearancePanel } from "@/components/scoring/plate-appearance-panel";
 import {
   BaseState,
@@ -157,6 +158,15 @@ export default async function ScoreGamePage({ params }: PageProps) {
                 state={state}
               />
             </div>
+            <LiveLineupChangesPanel
+              accountId={accountId}
+              gameId={gameId}
+              initialClientSubmissionId={randomUUID()}
+              key={`lineup-${state.sourceRevision}`}
+              playerNames={playerNames}
+              setupSnapshotId={current.game.readySetupSnapshotId}
+              state={state}
+            />
             <section
               aria-labelledby="runner-only-heading"
               className="mt-10 border-t border-[var(--line)] pt-8"

@@ -875,7 +875,7 @@ describe("negative scoring fixtures", () => {
             outgoingPlayerId: fixturePlayer(substitution.setup, "AWAY", 1),
             incomingPlayerId: fixturePlayer(
               substitution.setup,
-              "AWAY",
+              "HOME",
               "bench",
             ),
             position: "CATCHER",

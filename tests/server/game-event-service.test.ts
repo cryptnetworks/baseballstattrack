@@ -153,4 +153,30 @@ describe("trusted game event application boundary", () => {
       }),
     );
   });
+
+  it("accepts a typed live lineup change through game.score", async () => {
+    const accept = vi.fn().mockResolvedValue({ idempotentReplay: false });
+    const service = new GameEventService({
+      accept,
+    } as unknown as PrismaGameEventRepository);
+    const body = {
+      eventType: "PitchingChangeMade",
+      payload: {
+        side: "HOME",
+        outgoingPitcherId: "home-starter",
+        incomingPitcherId: "home-reliever",
+        inheritedRunnerIds: ["away-runner"],
+      },
+    } as const;
+    await service.accept({ ...input, body }, scoreActor());
+    expect(accept).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body,
+        actor: expect.objectContaining({
+          capability: "game.score",
+          accountId: "account-a",
+        }),
+      }),
+    );
+  });
 });
