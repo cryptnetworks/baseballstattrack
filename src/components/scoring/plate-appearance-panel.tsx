@@ -27,6 +27,7 @@ import {
   type PlateOutcome,
 } from "@/features/scoring/plate-appearance";
 import type { RunnerOutcome } from "@/features/scoring/runner-interactions";
+import { useScoringDraft } from "@/features/scoring/use-scoring-draft";
 
 const bases = ["FIRST", "SECOND", "THIRD"] as const;
 const baseLabels: Record<Base, string> = {
@@ -90,7 +91,6 @@ export function PlateAppearancePanel({
   lastAcceptedAction: string;
 }) {
   const [draft, setDraft] = useState<PlateAppearanceDraft | null>(null);
-  const [clientSubmissionId] = useState(initialClientSubmissionId);
   const online = useSyncExternalStore(
     subscribeOnline,
     () => navigator.onLine,
@@ -119,11 +119,27 @@ export function PlateAppearancePanel({
     initialPlateAppearanceActionResult,
   );
   const statusRef = useRef<HTMLDivElement>(null);
-  const detailsRef = useRef<HTMLDivElement>(null);
+  const detailsRef = useRef<HTMLFieldSetElement>(null);
   const preview = useMemo(
     () => (draft ? previewPlateAppearance(state, draft) : null),
     [draft, state],
   );
+  const { clientSubmissionId, abandon, blockedByRecoveredDraft, draftReady } =
+    useScoringDraft({
+      kind: "PLATE_APPEARANCE",
+      accountId,
+      gameId,
+      setupSnapshotId,
+      setupRevision: state.setupRevision,
+      sourceRevision: state.sourceRevision,
+      initialClientSubmissionId,
+      proposal: preview?.body ?? null,
+      engaged: draft !== null,
+      pending,
+      resultStatus: result.status,
+    });
+  const locked =
+    pending || result.status === "ERROR" || blockedByRecoveredDraft;
   const chooseOutcome = useCallback(
     (outcome: PlateOutcome) => {
       setDraft(createPlateAppearanceDraft(state, outcome));
@@ -222,17 +238,21 @@ export function PlateAppearancePanel({
             ? "Saving"
             : !online
               ? "Pending connection"
-              : result.status === "ERROR"
+              : result.status === "ERROR" || blockedByRecoveredDraft
                 ? "Needs attention"
-                : "Saved"}
+                : draft
+                  ? "Locally pending"
+                  : "Saved"}
         </p>
         <p className="mt-1 text-sm">
           {pending
             ? "Submitting this complete play once."
             : !online
               ? "This draft remains local to the open page. Reconnect before recording."
-              : result.message ||
-                `Authoritative source revision ${state.sourceRevision}. Last accepted: ${lastAcceptedAction}.`}
+              : blockedByRecoveredDraft
+                ? "Resolve the recovered plate-appearance draft above before starting another."
+                : result.message ||
+                  `Authoritative source revision ${state.sourceRevision}. Last accepted: ${lastAcceptedAction}.`}
         </p>
       </div>
 
@@ -250,7 +270,7 @@ export function PlateAppearancePanel({
                   ? "border-[var(--accent)] bg-emerald-50 text-[var(--accent-strong)]"
                   : "border-[var(--line)] bg-white"
               }`}
-              disabled={pending}
+              disabled={locked}
               key={outcome.value}
               onClick={() => chooseOutcome(outcome.value)}
               type="button"
@@ -269,7 +289,7 @@ export function PlateAppearancePanel({
               <button
                 aria-keyshortcuts={outcome.key}
                 className="min-h-12 rounded-lg border border-[var(--line)] bg-white px-3 text-left font-medium"
-                disabled={pending}
+                disabled={locked}
                 key={outcome.value}
                 onClick={() => chooseOutcome(outcome.value)}
                 type="button"
@@ -303,8 +323,10 @@ export function PlateAppearancePanel({
             value={preview.body ? JSON.stringify(preview.body) : ""}
           />
 
-          <div
+          <fieldset
+            aria-label="Plate appearance proposal"
             className="rounded-xl border border-[var(--line)] bg-white p-4 sm:p-6"
+            disabled={locked}
             ref={detailsRef}
             tabIndex={-1}
           >
@@ -532,7 +554,7 @@ export function PlateAppearancePanel({
                 </select>
               </label>
             ) : null}
-          </div>
+          </fieldset>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <BaseState
@@ -586,7 +608,13 @@ export function PlateAppearancePanel({
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               className="min-h-12 flex-1 rounded-lg bg-slate-950 px-5 font-semibold text-white disabled:opacity-50 sm:flex-none"
-              disabled={pending || !online || preview.body === null}
+              disabled={
+                pending ||
+                blockedByRecoveredDraft ||
+                !draftReady ||
+                !online ||
+                preview.body === null
+              }
               type="submit"
             >
               {pending
@@ -596,13 +624,25 @@ export function PlateAppearancePanel({
                   : "Record plate appearance"}
             </button>
             {result.status === "ERROR" ? (
-              <button
-                className="min-h-12 rounded-lg border border-[var(--line)] bg-white px-4 font-semibold"
-                onClick={() => window.location.reload()}
-                type="button"
-              >
-                Reload authoritative state
-              </button>
+              <>
+                <button
+                  className="min-h-12 rounded-lg border border-[var(--line)] bg-white px-4 font-semibold"
+                  onClick={() => window.location.reload()}
+                  type="button"
+                >
+                  Reload authoritative state
+                </button>
+                <button
+                  className="min-h-12 rounded-lg border border-[var(--line)] bg-white px-4 font-semibold"
+                  onClick={() => {
+                    abandon();
+                    window.location.reload();
+                  }}
+                  type="button"
+                >
+                  Discard local draft
+                </button>
+              </>
             ) : null}
           </div>
         </form>

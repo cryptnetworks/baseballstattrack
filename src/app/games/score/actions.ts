@@ -33,6 +33,11 @@ export const initialLineupChangeActionResult: LineupChangeActionResult = {
   status: "IDLE",
   message: "",
 };
+export type ScoringRecoveryActionResult = RunnerPlayActionResult;
+export const initialScoringRecoveryActionResult: ScoringRecoveryActionResult = {
+  status: "IDLE",
+  message: "",
+};
 
 type ScoringSubmissionEventType =
   | "DefensiveAlignmentChanged"
@@ -230,6 +235,37 @@ export async function recordLineupChangeAction(
       message: accepted.idempotentReplay
         ? "Lineup change was already recorded; authoritative state reloaded."
         : "Lineup change recorded at the current game state.",
+      acceptedRevision: accepted.event.acceptedRevision,
+    };
+  } catch (error) {
+    if (
+      error instanceof GameEventError &&
+      error.code === "STALE_SOURCE_REVISION"
+    ) {
+      const gameId = id.safeParse(formData.get("gameId"));
+      if (gameId.success) revalidatePath(`/games/score/${gameId.data}`);
+    }
+    return safeFailure(error);
+  }
+}
+
+export async function recordRecoveredScoringAction(
+  _previous: ScoringRecoveryActionResult,
+  formData: FormData,
+): Promise<ScoringRecoveryActionResult> {
+  try {
+    const accepted = await acceptScoringSubmission(formData, [
+      "PlateAppearanceRecorded",
+      "RunnerPlayRecorded",
+      "DefensiveSubstitutionMade",
+      "DefensiveAlignmentChanged",
+      "PitchingChangeMade",
+    ]);
+    return {
+      status: "SUCCESS",
+      message: accepted.idempotentReplay
+        ? "The interrupted action was already accepted. State is reconciled."
+        : "The recovered action was accepted. State is reconciled.",
       acceptedRevision: accepted.event.acceptedRevision,
     };
   } catch (error) {
