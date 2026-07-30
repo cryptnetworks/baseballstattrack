@@ -1,6 +1,6 @@
 # GitHub taxonomy and planning blueprint
 
-The repository has a materialized issue taxonomy, five dated milestones, and a live Projects v2 delivery board. Keep labels lowercase except for size labels, and use one type, one or more areas, one priority, one status, and one size on planned issues.
+The repository has a materialized issue taxonomy, nine roadmap milestones, and a live Projects v2 delivery board. Keep labels lowercase except for size labels, and use one type, one or more areas, one priority, one status, and one size on planned issues.
 
 ## Labels
 
@@ -33,6 +33,10 @@ Reproduction outcomes such as duplicate, expected behavior, cannot reproduce, ve
 - M2 — Scorekeeping MVP — due 2026-11-06
 - M3 — Season experience — due 2026-12-18
 - M4 — Production readiness — due 2027-02-05
+- M5 — Integrations and ecosystem — native milestone 6
+- M6 — Advanced analytics — native milestone 7
+- M7 — Offline and mobile — native milestone 8
+- M8 — League ecosystem — native milestone 9
 
 ## Projects v2 delivery board
 
@@ -40,18 +44,18 @@ Reproduction outcomes such as duplicate, expected behavior, cannot reproduce, ve
 - Repository: https://github.com/cryptnetworks/baseballstattrack
 - Views: Table (open issues), Board (workflow by Status), Roadmap (roadmap planning), My Work (assignee filter).
 - Fields: Status, Priority, Type, Area, Target, Size, plus GitHub's built-in issue fields.
-- The board contains the canonical roadmap and planning issues; expansion issues are staged through #96 and will be assigned to M5–M8 when those native milestones are materialized.
+- The board contains the canonical roadmap and planning issues; expansion issues through #127 are assigned to their native M5–M8 milestones. Issue #96 tracks final reconciliation of board views and planning metadata.
 - Use milestone dates for roadmap targets; use the custom Target field for filtering and grouping.
 
 The issue, milestone, security, and project trackers are live. GitHub's built-in Status field currently provides Todo, In Progress, and Done; blocked/needs-design/needs-review/ready remain labels for finer triage.
 
 ## Expansion milestones
 
-The next roadmap targets are defined here and in docs/ROADMAP.md. Issue #96 tracks their native GitHub materialization.
+The next roadmap targets are defined here and in docs/ROADMAP.md. Native GitHub milestones M5–M8 are now available; issue #96 tracks final reconciliation.
 
 - M5 — Integrations and ecosystem: versioned API consumers, Discord, webhooks, calendar, and notifications.
 - M6 — Advanced analytics: explainable batted-ball, pitch, lineup, matchup, and trend analysis.
 - M7 — Offline and mobile: conflict-safe offline scoring, PWA delivery, and secure device recovery.
 - M8 — League ecosystem: configurable ruleset packs, portable data, and delegated organization administration.
 
-For future issues, use the exact target prefix and corresponding Target metadata until native milestones M5–M8 exist.
+For future issues, use the exact target prefix, corresponding Target metadata, and the matching native GitHub milestone.
