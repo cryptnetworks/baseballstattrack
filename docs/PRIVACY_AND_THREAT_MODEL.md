@@ -60,13 +60,21 @@ An accepted setup snapshot, source event, correction, and historical actor id is
 - Rebuilds record the source and privacy-overlay revisions and regenerate projections/reports when either changes. Existing hosted exports are revoked when possible and new output is generated from current authorized data; downloaded copies cannot be changed or recalled.
 - The overlay reduces risk, not identity: jersey number, lineup, date, opponent, location, game history, and statistics remain potentially reidentifying. A requested action that cannot meet its stated privacy purpose through this model requires legal/privacy review before implementation.
 
-## Future export contract
+## Export contract
 
-Exports are not implemented in M0/MVP. Before any export ships, it must require active membership, explicit `report.export`, exact Account/source scope, authorization for each record or a proved exact shared scope, a report-type minimum-field allowlist, current source or a freshly rebuilt projection, and a durable audit manifest.
+The initial M3 JSON export and mutation-free import dry run are documented in
+[Data export and import validation](DATA_EXPORT_AND_IMPORT.md). Export requires
+active membership, explicit `report.export`, exact Account scope, current
+source replay, current privacy overlays, a strict field allowlist, and a
+restricted audit manifest. Import validation separately requires
+Account-scoped `account.manage`; no import commit or cross-Account transfer is
+implemented.
 
 - Server-generated filenames, row and total-size limits, and an all-or-nothing generation result are required. A failure produces no downloadable partial artifact and records a safe failure outcome.
 - The generator must prevent mixed-Account batches, reauthorize before each protected artifact and again at hosted download, and revoke future hosted access when membership or source authorization is removed. Hosted access is short lived.
-- CSV and spreadsheet output must use output-format-specific formula-injection defenses, with tests for untrusted values beginning with `=`, `+`, `-`, or `@`. The contract intentionally does not prescribe an unsafe escaping technique.
+- JSON is the implemented archival format. The shared future CSV/spreadsheet
+  neutralization rule prefixes cells whose first effective character is `=`,
+  `+`, `-`, or `@`, including after control characters; tests cover each case.
 - Exclude contacts, age data, notes, tokens, raw source-event payloads, and raw audit data unless a future restricted-audit policy approves them. Corrections or privacy overlays require regeneration from current authorized data.
 
 ## Retention, deletion, and restore categories

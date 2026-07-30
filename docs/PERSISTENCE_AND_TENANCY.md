@@ -398,6 +398,21 @@ Recovery policy:
 | Player privacy deletion request             | Snapshot/pseudonymization policy.                            | Privacy workflow audit.                            | Remove personal fields, keep historical snapshots/stat continuity.  |
 | Export contains later-redacted player data  | Track exports and minimize report fields.                    | Privacy workflow/export audit.                     | Reissue/redact where possible; record limits under issue #8 policy. |
 
+## Portable-data boundary
+
+The implemented M3 export reads one exact Account with bounded queries, rebuilds
+accepted game history and derived summaries, applies current privacy overlays,
+and emits no source Account identifier. Export generation never writes
+baseball data; its required security audit is a separate append-only record.
+
+The initial import path is validation and dry run only. It performs no database
+promotion, staging-table write, upsert, or source-row mutation. Existing target
+logical IDs are conflicts, cross-Account ownership fields are rejected, and
+every accepted game is replayed before a zero-mutation plan is returned. A
+future commit path requires a new reviewed transaction/staging design and
+cannot reuse validation success as authorization. See
+[Data export and import validation](DATA_EXPORT_AND_IMPORT.md).
+
 ## Explicit Deferrals
 
 - Production Prisma models and migrations: M1 issues #9-#12.
