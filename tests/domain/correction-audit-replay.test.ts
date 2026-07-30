@@ -77,4 +77,24 @@ describe("correction command boundary", () => {
     ).rejects.toMatchObject({ code: "AUTHORIZATION_REQUIRED" });
     expect(acceptCorrection).not.toHaveBeenCalled();
   });
+
+  it("denies correction-history loading outside exact authorized Account and Game scope", async () => {
+    const loadAcceptedHistory = vi.fn();
+    const service = new CorrectionAuditReplayService({
+      loadAcceptedHistory,
+    } as unknown as PrismaGameEventRepository);
+
+    await expect(
+      service.loadCorrectionContext(
+        "account-a",
+        "game-a",
+        "setup-a",
+        trustedActorForTest({
+          ...actor,
+          scope: { kind: "GAME", gameId: "another-game" },
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "AUTHORIZATION_REQUIRED" });
+    expect(loadAcceptedHistory).not.toHaveBeenCalled();
+  });
 });

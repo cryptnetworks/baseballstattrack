@@ -11,8 +11,14 @@ import {
   BaseState,
   RunnerBaseOutPanel,
 } from "@/components/scoring/runner-base-out-panel";
+import { ScoringCorrectionsPanel } from "@/components/scoring/scoring-corrections-panel";
 import { ScoringRecoveryBoundary } from "@/components/scoring/scoring-recovery-boundary";
 import { replayGame, type AcceptedEvent } from "@/domain/events/event-log";
+import {
+  buildCorrectionAudit,
+  buildRecentPlayHistory,
+  countRecentPlayHistory,
+} from "@/features/scoring/scoring-corrections";
 import { getGameEventService } from "@/server/app/game-event-service";
 import { getGameSetupService } from "@/server/app/game-setup-service";
 import { getAuthorizationService } from "@/server/auth/application";
@@ -25,6 +31,7 @@ export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ gameId: string }>;
+  searchParams: Promise<{ correctionPage?: string | string[] }>;
 };
 
 async function loadScoringContext(accountId: string, gameId: string) {
@@ -40,7 +47,9 @@ async function loadScoringContext(accountId: string, gameId: string) {
       actor,
     );
     const setupSnapshotId = current.game.readySetupSnapshotId;
-    if (!setupSnapshotId || !current.setup) return { current, state: null };
+    if (!setupSnapshotId || !current.setup) {
+      return { acceptedSetup: null, current, state: null };
+    }
     const history = await getGameEventService().loadAcceptedHistory(
       accountId,
       gameId,
@@ -48,6 +57,7 @@ async function loadScoringContext(accountId: string, gameId: string) {
       actor,
     );
     return {
+      acceptedSetup: history.setup,
       current,
       state: replayGame(history.setup, history.events, {
         verifyEvidence: true,
@@ -60,16 +70,35 @@ async function loadScoringContext(accountId: string, gameId: string) {
   }
 }
 
-export default async function ScoreGamePage({ params }: PageProps) {
+async function canCorrectGame(accountId: string, gameId: string) {
+  try {
+    await authorizeProtectedRequest(
+      authenticatePageSession,
+      getAuthorizationService(),
+      { kind: "GAME", accountId, gameId },
+      "game.correct",
+    );
+    return true;
+  } catch (error) {
+    if (error instanceof AuthorizationError) return false;
+    throw error;
+  }
+}
+
+export default async function ScoreGamePage({
+  params,
+  searchParams,
+}: PageProps) {
   const { gameId } = await params;
   const accountId = (await cookies()).get(selectedAccountCookie.name)?.value;
   if (!accountId) redirect("/accounts");
   const {
+    acceptedSetup,
     current,
     state,
     events = [],
   } = await loadScoringContext(accountId, gameId);
-  if (!current.setup || !current.game.readySetupSnapshotId) {
+  if (!current.setup || !current.game.readySetupSnapshotId || !acceptedSetup) {
     redirect(`/games/setup/${gameId}`);
   }
 
@@ -95,6 +124,39 @@ export default async function ScoreGamePage({ params }: PageProps) {
     .sort((left, right) => left.label.localeCompare(right.label));
   const lastEvent = events.at(-1);
   const lastAcceptedAction = summarizeLastAction(lastEvent);
+  const correctionAccess = await canCorrectGame(accountId, gameId);
+  const correctionHistoryCount = correctionAccess
+    ? countRecentPlayHistory(events)
+    : 0;
+  const correctionAudit = correctionAccess
+    ? buildCorrectionAudit(acceptedSetup, events)
+    : [];
+  const rawCorrectionPage = (await searchParams).correctionPage;
+  const requestedCorrectionPage = Number.parseInt(
+    Array.isArray(rawCorrectionPage)
+      ? (rawCorrectionPage[0] ?? "1")
+      : (rawCorrectionPage ?? "1"),
+    10,
+  );
+  const correctionPageCount = Math.max(
+    1,
+    Math.ceil(correctionHistoryCount / 10),
+  );
+  const correctionPage = Math.min(
+    correctionPageCount - 1,
+    Math.max(
+      0,
+      Number.isFinite(requestedCorrectionPage)
+        ? requestedCorrectionPage - 1
+        : 0,
+    ),
+  );
+  const correctionHistory = correctionAccess
+    ? buildRecentPlayHistory(acceptedSetup, events, playerNames, {
+        offset: correctionPage * 10,
+        limit: 10,
+      })
+    : [];
 
   return (
     <ApplicationShell>
@@ -225,6 +287,47 @@ export default async function ScoreGamePage({ params }: PageProps) {
                 />
               </div>
             </div>
+          </section>
+        )}
+
+        {correctionAccess ? (
+          <ScoringCorrectionsPanel
+            accountId={accountId}
+            audit={correctionAudit}
+            gameId={gameId}
+            gameStatus={state.status}
+            history={correctionHistory}
+            page={correctionPage}
+            pageCount={correctionPageCount}
+            playerNames={playerNames}
+            setupSnapshotId={current.game.readySetupSnapshotId}
+            sourceRevision={state.sourceRevision}
+            submission={{
+              eventId: randomUUID(),
+              playTransactionId: randomUUID(),
+              idempotencyKey: randomUUID(),
+              replacementId: randomUUID(),
+              recordedAt: new Date().toISOString(),
+            }}
+          />
+        ) : (
+          <section
+            aria-labelledby="corrections-unavailable-heading"
+            className="mt-10 border-t border-[var(--line)] pt-8"
+          >
+            <h2
+              className="text-2xl font-semibold"
+              id="corrections-unavailable-heading"
+            >
+              Recent plays and corrections
+            </h2>
+            <p
+              className="mt-4 rounded-xl border border-[var(--line)] bg-white p-4"
+              role="status"
+            >
+              Correction history is available only to members authorized for
+              this Account and game.
+            </p>
           </section>
         )}
       </main>
