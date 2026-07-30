@@ -16,7 +16,10 @@ Every accepted event contains:
 
 Sequence and source revision—not either timestamp—determine order. Sequence starts at one and each accepted transaction advances both sequence and source revision by one. The database prevents ties. Serializable acceptance and a `Game.revision` compare-and-swap ensure that one of two writers for the same expected revision wins.
 
-`EVENT_SCHEMA_VERSION` is currently 2. Versions 1 and 2 have strict validation branches. Version 2 adds the explicit earned/unearned/pending judgment required for every counting run, including a successful steal of home; it does not rewrite version 1 rows. Version 1 remains replayable, but exact statistic derivation fails visibly when a v1 scoring run lacks that judgment. Unknown versions and event types fail closed, and type/payload mismatches are rejected. Future versions must preserve stored payloads through explicit parser/upcast branches. Baseball interpretation remains separately pinned by `rulesetVersionId`. The narrow issue #11 compatibility decision and behavior are documented in [STATISTIC_DERIVATION.md](STATISTIC_DERIVATION.md).
+`EVENT_SCHEMA_VERSION` is currently 3. Versions 1, 2, and 3 have strict validation branches. Version 2 adds the explicit earned/unearned/pending judgment required for every counting run, including a successful steal of home; it does not rewrite version 1 rows. Version 3 adds the atomic `RunnerPlayRecorded` payload for multi-runner standalone advances, errors, steals, caught stealing, pickoffs, wild pitches, and passed balls; older versions cannot claim that event type. Versions 1 and 2 remain replayable without rewriting stored rows. Exact statistic derivation still fails visibly when a v1 scoring run lacks an earned-run judgment. Unknown versions and event types fail closed, and type/payload mismatches are rejected. Future versions must preserve stored payloads through explicit parser/upcast branches. Baseball interpretation remains separately pinned by `rulesetVersionId`. The issue #11 earned-run compatibility decision is documented in [STATISTIC_DERIVATION.md](STATISTIC_DERIVATION.md); the schema-v3 runner boundary is documented in [RUNNER_AND_BASE_OUT_INTERACTIONS.md](RUNNER_AND_BASE_OUT_INTERACTIONS.md).
+
+`REDUCER_VERSION` is `2` for the schema-v3 runner-play transition and stricter
+forced-advance and force-third-out validation.
 
 ## Typed vocabulary and privacy
 
@@ -30,6 +33,10 @@ Version 1 supports:
 - append-only correction replacement, reversal, and correction-of-correction.
 
 Plate-appearance payloads keep batter credit, movement, fielding credit, and scorer judgment distinct while accepting them as one all-or-nothing event. This prevents a run, out, or batter result from being accepted partially. Aggregated game/season/career statistics are intentionally absent.
+
+Version 3 additionally supports a single all-or-nothing runner-play payload
+containing every affected runner plus required error, runner-out, out-path,
+passed-ball, pitcher-responsibility, run-counting, and earned-run judgments.
 
 Payloads are strict allowlists of stable IDs and baseball facts. They reject names, contacts, birth/age data, notes, medical/injury/family information, secrets, tokens, URLs, and generic metadata. Errors never echo payloads or raw database errors.
 

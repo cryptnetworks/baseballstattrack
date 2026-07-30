@@ -197,6 +197,42 @@ function applyMovements(
     );
   }
 
+  const forcedSafeMovement = (
+    from: RunnerMovement["from"],
+    to: RunnerMovement["to"],
+  ) =>
+    movements.some(
+      (movement) =>
+        movement.from === from &&
+        movement.to === to &&
+        movement.forced &&
+        movement.to !== "OUT",
+    );
+  for (const movement of movements) {
+    if (movement.to === "OUT") continue;
+    const validForcedAdvance =
+      !movement.forced ||
+      (movement.from === "BATTER" && movement.to === "FIRST") ||
+      (movement.from === "FIRST" &&
+        movement.to === "SECOND" &&
+        forcedSafeMovement("BATTER", "FIRST")) ||
+      (movement.from === "SECOND" &&
+        movement.to === "THIRD" &&
+        forcedSafeMovement("FIRST", "SECOND")) ||
+      (movement.from === "THIRD" &&
+        movement.to === "HOME" &&
+        forcedSafeMovement("SECOND", "THIRD"));
+    if (
+      !validForcedAdvance ||
+      (movement.cause === "FORCED_ADVANCE" && !movement.forced)
+    ) {
+      throw new GameEventError(
+        "INVALID_RUNNER_MOVEMENT",
+        "Forced advancement does not form a valid occupied-base chain.",
+      );
+    }
+  }
+
   const beforeBases = { ...state.bases };
   const freedBases = new Set<Base>();
   for (const movement of movements) {
@@ -269,6 +305,16 @@ function applyMovements(
     throw new GameEventError(
       "INVALID_BASEBALL_TRANSITION",
       "Recorded out order is inconsistent with game state.",
+    );
+  }
+  const inningEndingOut = outs.find(({ out }) => out?.outNumber === 3)?.out;
+  if (
+    inningEndingOut?.force &&
+    movements.some(({ to, runCounts }) => to === "HOME" && runCounts === true)
+  ) {
+    throw new GameEventError(
+      "INVALID_BASEBALL_TRANSITION",
+      "A run cannot count when the third out is a force out.",
     );
   }
 
@@ -591,6 +637,37 @@ function applyBody(state: GameState, body: EventBody): void {
         ]),
       );
       return;
+    case "RunnerPlayRecorded": {
+      requireLive(state);
+      const defense = fieldingSide(state);
+      const activeDefenders = Object.values(state.defense[defense]);
+      if (
+        body.payload.fieldingCredits.some(
+          ({ fielderId }) => !activeDefenders.includes(fielderId),
+        ) ||
+        new Set(
+          body.payload.fieldingCredits.map(
+            ({ credit, fielderId }) => `${fielderId}\0${credit}`,
+          ),
+        ).size !== body.payload.fieldingCredits.length
+      ) {
+        throw new GameEventError(
+          "INVALID_LINEUP",
+          "Runner-play fielding credit references an invalid defender.",
+        );
+      }
+      if (
+        body.payload.playType === "PASSED_BALL" &&
+        body.payload.responsibleFielderId !== state.defense[defense].CATCHER
+      ) {
+        throw new GameEventError(
+          "INVALID_LINEUP",
+          "Passed-ball responsibility must identify the active catcher.",
+        );
+      }
+      finishOuts(state, applyMovements(state, body.payload.movements));
+      return;
+    }
     case "DefensiveSubstitutionMade": {
       requireLive(state);
       if (body.payload.side !== fieldingSide(state)) {
@@ -843,6 +920,7 @@ const replaceableEventTypes = new Set<AcceptedEvent["eventType"]>([
   "RunnerAdvanceRecorded",
   "RunnerOutRecorded",
   "StolenBaseAttemptRecorded",
+  "RunnerPlayRecorded",
   "DefensiveSubstitutionMade",
   "DefensiveAlignmentChanged",
   "PitchingChangeMade",

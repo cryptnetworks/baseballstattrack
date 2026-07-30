@@ -17,7 +17,7 @@ A game projection uses only:
 
 `replayGameTimeline` resolves corrections, validates authoritative replay, and exposes each effective body with its deterministic pre-event state. The statistic pipeline then extracts integer facts, aggregates players and sides, computes exact rates, verifies reconciliation, and returns sorted arrays plus version metadata. It does not read current rosters, names, membership, wall-clock time, locale, random state, previously stored totals, or database row order.
 
-`STATISTIC_DERIVATION_VERSION` is currently `1`. It changes when a formula, event interpretation, earned-run rule, fielding rule, or display-independent numeric behavior changes. `STATISTIC_RULES_VERSION` is also `1`; unknown versions fail with `UNSUPPORTED_RULESET`. Database ruleset identity remains separately present as `rulesetVersionId`.
+`STATISTIC_DERIVATION_VERSION` is currently `2`; version 2 adds the schema-v3 runner-play interpretations documented below. It changes when a formula, event interpretation, earned-run rule, fielding rule, or display-independent numeric behavior changes. `STATISTIC_RULES_VERSION` remains `1`; unknown versions fail with `UNSUPPORTED_RULESET`. Database ruleset identity remains separately present as `rulesetVersionId`.
 
 ## Event schema v2 and earned runs
 
@@ -34,6 +34,16 @@ Event schema v2 is therefore a narrow, durable compatibility correction:
 - a `PENDING` judgment fails with `INCOMPLETE_REPLAY_STATE` until an append-only correction supplies a final classification.
 
 Earned runs are summed from the explicit effective scoring judgments and charged to each movement's `responsiblePitcherId`. This implementation deliberately does not simulate or guess an error-free inning.
+
+## Event schema v3 runner plays
+
+Event schema v3 adds `RunnerPlayRecorded`, an atomic movement ledger for
+standalone optional advances, errors, steals, caught stealing, pickoffs, wild
+pitches, and passed balls. Statistic derivation applies every counting movement
+to runs and responsible-pitcher totals, successful steal movements to `SB`,
+caught-stealing outs to `CS`, out paths to pitcher/fielding outs, and explicit
+error credits to fielding errors. Runner-only scoring remains RBI-ineligible.
+Versions 1 and 2 remain replayable and cannot contain this event type.
 
 ## Raw batting counters
 
@@ -67,7 +77,7 @@ Rates are represented as reduced `{ numerator, denominator }` pairs. A zero deno
 
 `BB` includes intentional walks. Sacrifice bunts are excluded from the OBP denominator; sacrifice flies are included. Reached-on-error and fielder's-choice outcomes count as AB but not H or times on base in the numerator.
 
-The current `INTERFERENCE` outcome does not distinguish catcher interference from other ruleset-specific interference. Because the canonical contract makes its OBP treatment ruleset-dependent, derivation fails with `UNSUPPORTED_RULESET` if it encounters this outcome. Dropped-third-strike, award, wild-pitch, passed-ball, balk, defensive-indifference, and special-runner source types are not present in schema v2 and are not fabricated.
+The current `INTERFERENCE` outcome does not distinguish catcher interference from other ruleset-specific interference. Because the canonical contract makes its OBP treatment ruleset-dependent, derivation fails with `UNSUPPORTED_RULESET` if it encounters this outcome. Dropped-third-strike, generic award, balk, defensive-indifference, and special-runner source types are not present in the accepted vocabulary and are not fabricated. Schema v3 accepts wild-pitch and passed-ball runner plays, but no pitch-level facts are inferred.
 
 ## Pitching counters and formulas
 
@@ -100,7 +110,9 @@ Supported counters are putouts, assists, errors, double plays participated in, a
 - `chances = putouts + assists + errors`
 - `fielding percentage = (putouts + assists) / chances`
 
-Fielding percentage is `null` at zero chances. Passed balls and position-specific appearances are not supported by the accepted event vocabulary.
+Fielding percentage is `null` at zero chances. Schema v3 records passed-ball
+responsibility for replay and audit, but passed-ball counting statistics and
+position-specific appearances are not emitted by the current projection.
 
 ## Team, inning, game, and season results
 

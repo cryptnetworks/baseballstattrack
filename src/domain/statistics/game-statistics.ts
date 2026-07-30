@@ -16,7 +16,7 @@ import {
   type ExactRate,
 } from "./statistic-values";
 
-export const STATISTIC_DERIVATION_VERSION = 1 as const;
+export const STATISTIC_DERIVATION_VERSION = 2 as const;
 export const STATISTIC_RULES_VERSION = 1 as const;
 
 export type BattingCounters = {
@@ -733,6 +733,44 @@ export function deriveGameStatistics(
             playerSides,
             fieldingFor,
           );
+        }
+        break;
+      }
+      case "RunnerPlayRecorded": {
+        const side = battingSide(step);
+        const defense = opposite(side);
+        recordInning(step, side);
+        for (const movement of body.payload.movements) {
+          applyCountingRun(step, movement, side, null);
+          if (body.payload.playType === "STOLEN_BASE") {
+            battingFor(movement.runnerId, side).stolenBases += 1;
+          }
+          if (
+            body.payload.playType === "CAUGHT_STEALING" &&
+            movement.to === "OUT"
+          ) {
+            battingFor(movement.runnerId, side).caughtStealing += 1;
+          }
+        }
+        const outs = body.payload.movements.filter(({ to }) => to === "OUT");
+        pitchingFor(step.before.activePitcher[defense], defense).outsRecorded +=
+          outs.length;
+        if (body.payload.fieldingCredits.length > 0) {
+          for (const credit of body.payload.fieldingCredits) {
+            const counters = fieldingFor(credit.fielderId, defense);
+            if (credit.credit === "PUTOUT") counters.putouts += 1;
+            if (credit.credit === "ASSIST") counters.assists += 1;
+            if (credit.credit === "ERROR") counters.errors += 1;
+          }
+        } else {
+          for (const movement of outs) {
+            creditOutPath(
+              movement.out!.fielders,
+              defense,
+              playerSides,
+              fieldingFor,
+            );
+          }
         }
         break;
       }
