@@ -657,6 +657,52 @@ describe("lifecycle and invalid transitions", () => {
 });
 
 describe("corrections and deterministic replay", () => {
+  it("rejects correction attempts after cancellation or abandonment", () => {
+    const cancelled: AcceptedEvent[] = [];
+    append(
+      setup,
+      cancelled,
+      {
+        eventType: "GameCancelled",
+        payload: { reasonCode: "SCHEDULE_CHANGE" },
+      },
+      "cancelled-game",
+    );
+    expect(() =>
+      append(setup, cancelled, {
+        eventType: "CorrectionApplied",
+        payload: {
+          policy: "REVERSE_EVENTS",
+          targetEventIds: ["cancelled-game"],
+          replacements: [],
+          reasonCode: "INVALID_LIFECYCLE",
+        },
+      }),
+    ).toThrowError(
+      expect.objectContaining({ code: "INVALID_LIFECYCLE_TRANSITION" }),
+    );
+
+    const abandoned: AcceptedEvent[] = [];
+    append(setup, abandoned, startBody, "abandoned-start");
+    append(setup, abandoned, {
+      eventType: "GameAbandoned",
+      payload: { reasonCode: "UNPLAYABLE_FIELD" },
+    });
+    expect(() =>
+      append(setup, abandoned, {
+        eventType: "CorrectionApplied",
+        payload: {
+          policy: "REVERSE_EVENTS",
+          targetEventIds: ["abandoned-start"],
+          replacements: [],
+          reasonCode: "INVALID_LIFECYCLE",
+        },
+      }),
+    ).toThrowError(
+      expect.objectContaining({ code: "INVALID_LIFECYCLE_TRANSITION" }),
+    );
+  });
+
   it("replaces an original event, preserves it for audit, and reverses the correction", () => {
     const history: AcceptedEvent[] = [];
     append(setup, history, startBody);
