@@ -180,6 +180,12 @@ export default async function ScoreGamePage({
           >
             View accepted setup
           </Link>
+          <Link
+            className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] bg-white px-4 font-medium"
+            href={`/games/${gameId}/box-score`}
+          >
+            View box score
+          </Link>
         </div>
 
         <section
