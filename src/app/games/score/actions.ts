@@ -6,7 +6,20 @@ import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import {
+  CorrectionWorkflowError,
+  type CorrectionWorkflowResult,
+} from "@/domain/corrections";
 import { GameEventError, parseEventBody } from "@/domain/events/event-log";
+import {
+  ScoringCorrectionError,
+  buildCorrectionPayload,
+  correctionReasonCodes,
+  previewCorrection,
+  type CorrectionDraft,
+  type CorrectionPreview,
+} from "@/features/scoring/scoring-corrections";
+import { getCorrectionAuditReplayService } from "@/server/app/correction-audit-replay-service";
 import { getGameEventService } from "@/server/app/game-event-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import { AuthorizationError } from "@/server/auth/errors";
@@ -38,6 +51,38 @@ export const initialScoringRecoveryActionResult: ScoringRecoveryActionResult = {
   status: "IDLE",
   message: "",
 };
+export type CorrectionPreviewActionResult =
+  | { status: "IDLE"; message: string }
+  | {
+      status: "PREVIEW";
+      message: string;
+      draft: CorrectionDraft;
+      preview: CorrectionPreview;
+    }
+  | { status: "ERROR"; message: string; code: string };
+export const initialCorrectionPreviewActionResult: CorrectionPreviewActionResult =
+  {
+    status: "IDLE",
+    message: "",
+  };
+export type CorrectionApplyActionResult =
+  | { status: "IDLE"; message: string }
+  | {
+      status: "SUCCESS";
+      message: string;
+      acceptedRevision: number;
+      verificationStatus: CorrectionWorkflowResult["version"]["verificationStatus"];
+    }
+  | { status: "ERROR"; message: string; code: string };
+export const initialCorrectionApplyActionResult: CorrectionApplyActionResult = {
+  status: "IDLE",
+  message: "",
+};
+export type ReopenGameActionResult = RunnerPlayActionResult;
+export const initialReopenGameActionResult: ReopenGameActionResult = {
+  status: "IDLE",
+  message: "",
+};
 
 type ScoringSubmissionEventType =
   | "DefensiveAlignmentChanged"
@@ -57,6 +102,142 @@ const submissionSchema = z
     body: z.string().min(1).max(20_000),
   })
   .strict();
+const correctionSelectionSchema = z
+  .object({
+    accountId: id,
+    gameId: id,
+    setupSnapshotId: id,
+    expectedRevision: z.coerce.number().int().nonnegative(),
+    targetEventId: id,
+    action: z.enum(["REVERSE_EVENT", "REPLACE_PLATE_JUDGMENT"]),
+    replacementOutcome: z.string().trim().max(64).nullable(),
+    errorFielderId: id.nullable(),
+    reasonCode: z.enum(correctionReasonCodes),
+    replacementId: id,
+  })
+  .strict();
+const correctionSubmissionSchema = correctionSelectionSchema.extend({
+  eventId: id,
+  playTransactionId: id,
+  idempotencyKey: id,
+  recordedAt: z.iso.datetime(),
+  confirmed: z.literal("yes"),
+});
+const reopenSchema = z
+  .object({
+    accountId: id,
+    gameId: id,
+    setupSnapshotId: id,
+    expectedRevision: z.coerce.number().int().nonnegative(),
+    eventId: id,
+    playTransactionId: id,
+    clientSubmissionId: id,
+    recordedAt: z.iso.datetime(),
+    reasonCode: z.literal("SCORER_REVIEW"),
+    confirmed: z.literal("yes"),
+  })
+  .strict();
+
+function optionalId(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function correctionInput(formData: FormData) {
+  return {
+    accountId: formData.get("accountId"),
+    gameId: formData.get("gameId"),
+    setupSnapshotId: formData.get("setupSnapshotId"),
+    expectedRevision: formData.get("expectedRevision"),
+    targetEventId: formData.get("targetEventId"),
+    action: formData.get("action"),
+    replacementOutcome: optionalId(formData, "replacementOutcome"),
+    errorFielderId: optionalId(formData, "errorFielderId"),
+    reasonCode: formData.get("reasonCode"),
+    replacementId: formData.get("replacementId"),
+  };
+}
+
+async function authorizeGameAction(
+  accountId: string,
+  gameId: string,
+  capability: "game.correct" | "game.reopen",
+) {
+  const selected = (await cookies()).get(selectedAccountCookie.name)?.value;
+  if (selected !== accountId) {
+    throw new AuthorizationError("ACCOUNT_UNAVAILABLE");
+  }
+  const requestHeaders = await headers();
+  return authorizeProtectedAction({
+    origin: requestHeaders.get("origin"),
+    host: requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
+    authenticate: authenticatePageSession,
+    authorization: getAuthorizationService(),
+    target: { kind: "GAME", accountId, gameId },
+    capability,
+  });
+}
+
+function safeCorrectionFailure(error: unknown) {
+  if (error instanceof ScoringCorrectionError) {
+    return {
+      status: "ERROR" as const,
+      code: error.code,
+      message: error.message,
+    };
+  }
+  if (error instanceof CorrectionWorkflowError) {
+    const messages: Partial<Record<CorrectionWorkflowError["code"], string>> = {
+      STALE_SOURCE_REVISION:
+        "The game changed elsewhere. Reload the current history and preview the correction again.",
+      LIFECYCLE_CONFLICT:
+        "The game lifecycle changed. Verified games must be reopened before correction.",
+      INVALID_CORRECTION:
+        "The replacement does not produce valid replayable game history.",
+      DUPLICATE_SUBMISSION:
+        "This correction identity was already used for different content. Reload and try again.",
+      NOT_FOUND_OR_INACCESSIBLE:
+        "The selected game or correction target is unavailable.",
+    };
+    return {
+      status: "ERROR" as const,
+      code: error.code,
+      message:
+        messages[error.code] ??
+        "The correction was rejected without changing accepted history.",
+    };
+  }
+  if (error instanceof GameEventError) {
+    return {
+      status: "ERROR" as const,
+      code: error.code,
+      message:
+        error.code === "STALE_SOURCE_REVISION"
+          ? "The game changed elsewhere. Reload and preview the correction again."
+          : "The proposed correction is not valid against authoritative history.",
+    };
+  }
+  if (error instanceof AuthorizationError) {
+    return {
+      status: "ERROR" as const,
+      code: error.code,
+      message: "Correction history is unavailable for this account and game.",
+    };
+  }
+  if (error instanceof z.ZodError) {
+    return {
+      status: "ERROR" as const,
+      code: "INVALID_INPUT",
+      message:
+        "Select a play, correction action, supported reason, and any required replacement fields.",
+    };
+  }
+  return {
+    status: "ERROR" as const,
+    code: "UNEXPECTED_FAILURE",
+    message: "The correction request failed closed. Try again.",
+  };
+}
 
 function safeFailure(
   error: unknown,
@@ -276,6 +457,168 @@ export async function recordRecoveredScoringAction(
       const gameId = id.safeParse(formData.get("gameId"));
       if (gameId.success) revalidatePath(`/games/score/${gameId.data}`);
     }
+    return safeFailure(error);
+  }
+}
+
+export async function previewScoringCorrectionAction(
+  _previous: CorrectionPreviewActionResult,
+  formData: FormData,
+): Promise<CorrectionPreviewActionResult> {
+  try {
+    const draft = correctionSelectionSchema.parse(correctionInput(formData));
+    const actor = await authorizeGameAction(
+      draft.accountId,
+      draft.gameId,
+      "game.correct",
+    );
+    const history =
+      await getCorrectionAuditReplayService().loadCorrectionContext(
+        draft.accountId,
+        draft.gameId,
+        draft.setupSnapshotId,
+        actor,
+      );
+    const current = history.events.at(-1)?.acceptedRevision ?? 0;
+    if (current !== draft.expectedRevision) {
+      throw new CorrectionWorkflowError(
+        "STALE_SOURCE_REVISION",
+        "Expected source revision is stale.",
+      );
+    }
+    const payload = buildCorrectionPayload(history.events, draft);
+    return {
+      status: "PREVIEW",
+      message:
+        "Preview calculated from authoritative history. It has not been accepted.",
+      draft,
+      preview: previewCorrection(history.setup, history.events, payload),
+    };
+  } catch (error) {
+    return safeCorrectionFailure(error);
+  }
+}
+
+export async function applyScoringCorrectionAction(
+  _previous: CorrectionApplyActionResult,
+  formData: FormData,
+): Promise<CorrectionApplyActionResult> {
+  try {
+    const input = correctionSubmissionSchema.parse({
+      ...correctionInput(formData),
+      eventId: formData.get("eventId"),
+      playTransactionId: formData.get("playTransactionId"),
+      idempotencyKey: formData.get("idempotencyKey"),
+      recordedAt: formData.get("recordedAt"),
+      confirmed: formData.get("confirmed"),
+    });
+    const actor = await authorizeGameAction(
+      input.accountId,
+      input.gameId,
+      "game.correct",
+    );
+    const service = getCorrectionAuditReplayService();
+    const history = await service.loadCorrectionContext(
+      input.accountId,
+      input.gameId,
+      input.setupSnapshotId,
+      actor,
+    );
+    const current = history.events.at(-1)?.acceptedRevision ?? 0;
+    const correction = buildCorrectionPayload(history.events, input, {
+      allowSuperseded: true,
+    });
+    if (current === input.expectedRevision) {
+      previewCorrection(history.setup, history.events, correction);
+    }
+    const accepted = await service.applyCorrection(
+      {
+        action: "APPLY_CORRECTION",
+        accountId: input.accountId,
+        gameId: input.gameId,
+        setupSnapshotId: input.setupSnapshotId,
+        expectedSourceRevision: input.expectedRevision,
+        eventId: input.eventId,
+        playTransactionId: input.playTransactionId,
+        idempotencyKey: input.idempotencyKey,
+        correlationId: input.idempotencyKey,
+        recordedAt: input.recordedAt,
+        correction,
+      },
+      actor,
+    );
+    revalidatePath(`/games/score/${input.gameId}`);
+    return {
+      status: "SUCCESS",
+      message: accepted.idempotentReplay
+        ? "This exact correction was already accepted. Authoritative history is reconciled."
+        : "Correction accepted. Replay, statistics, and the audit trail were updated.",
+      acceptedRevision: accepted.correction.acceptedRevision,
+      verificationStatus: accepted.version.verificationStatus,
+    };
+  } catch (error) {
+    const gameId = id.safeParse(formData.get("gameId"));
+    if (
+      gameId.success &&
+      ((error instanceof CorrectionWorkflowError &&
+        error.code === "STALE_SOURCE_REVISION") ||
+        (error instanceof GameEventError &&
+          error.code === "STALE_SOURCE_REVISION"))
+    ) {
+      revalidatePath(`/games/score/${gameId.data}`);
+    }
+    return safeCorrectionFailure(error);
+  }
+}
+
+export async function reopenGameForCorrectionAction(
+  _previous: ReopenGameActionResult,
+  formData: FormData,
+): Promise<ReopenGameActionResult> {
+  try {
+    const input = reopenSchema.parse({
+      accountId: formData.get("accountId"),
+      gameId: formData.get("gameId"),
+      setupSnapshotId: formData.get("setupSnapshotId"),
+      expectedRevision: formData.get("expectedRevision"),
+      eventId: formData.get("eventId"),
+      playTransactionId: formData.get("playTransactionId"),
+      clientSubmissionId: formData.get("clientSubmissionId"),
+      recordedAt: formData.get("recordedAt"),
+      reasonCode: formData.get("reasonCode"),
+      confirmed: formData.get("confirmed"),
+    });
+    const actor = await authorizeGameAction(
+      input.accountId,
+      input.gameId,
+      "game.reopen",
+    );
+    const accepted = await getGameEventService().accept(
+      {
+        accountId: input.accountId,
+        gameId: input.gameId,
+        setupSnapshotId: input.setupSnapshotId,
+        expectedRevision: input.expectedRevision,
+        eventId: input.eventId,
+        playTransactionId: input.playTransactionId,
+        clientSubmissionId: input.clientSubmissionId,
+        recordedAt: input.recordedAt,
+        body: {
+          eventType: "GameReopened",
+          payload: { reasonCode: input.reasonCode },
+        },
+      },
+      actor,
+    );
+    revalidatePath(`/games/score/${input.gameId}`);
+    return {
+      status: "SUCCESS",
+      message: accepted.idempotentReplay
+        ? "The game was already reopened. Authoritative state is reconciled."
+        : "Game reopened explicitly. Corrections now require fresh preview and confirmation.",
+      acceptedRevision: accepted.event.acceptedRevision,
+    };
+  } catch (error) {
     return safeFailure(error);
   }
 }

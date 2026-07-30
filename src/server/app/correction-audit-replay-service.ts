@@ -7,6 +7,7 @@ import { GameEventError } from "@/domain/events/event-log";
 import { toCorrectionActor } from "@/server/auth/trusted-actor-adapters";
 import type { TrustedActorContext } from "@/server/auth/types";
 import { PrismaGameEventRepository } from "@/server/data/game-event-repository";
+import { getPrismaClient } from "@/server/data/prisma";
 
 function translateCorrectionError(error: unknown): never {
   if (error instanceof CorrectionWorkflowError) throw error;
@@ -66,6 +67,20 @@ function translateCorrectionError(error: unknown): never {
 export class CorrectionAuditReplayService {
   constructor(private readonly repository: PrismaGameEventRepository) {}
 
+  async loadCorrectionContext(
+    accountId: string,
+    gameId: string,
+    setupSnapshotId: string,
+    actorInput: TrustedActorContext,
+  ) {
+    toCorrectionActor(actorInput, accountId, gameId);
+    return this.repository.loadAcceptedHistory(
+      accountId,
+      gameId,
+      setupSnapshotId,
+    );
+  }
+
   async applyCorrection(input: unknown, actorInput: TrustedActorContext) {
     const command = parseCorrectionCommand(input);
     const actor = toCorrectionActor(
@@ -105,4 +120,10 @@ export class CorrectionAuditReplayService {
       translateCorrectionError(error);
     }
   }
+}
+
+export function getCorrectionAuditReplayService() {
+  return new CorrectionAuditReplayService(
+    new PrismaGameEventRepository(getPrismaClient()),
+  );
 }
