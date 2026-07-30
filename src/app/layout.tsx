@@ -29,6 +29,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <a className="skip-link" href="#main-content">
+          Skip to main content
+        </a>
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>

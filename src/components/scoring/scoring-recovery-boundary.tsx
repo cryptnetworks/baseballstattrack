@@ -3,6 +3,7 @@
 import {
   useActionState,
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -138,6 +139,7 @@ export function ScoringRecoveryBoundary({
   );
   const [entries, setEntries] = useState<RecoveryEntry[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
   const resilientAction = async (
     previous: typeof initialScoringRecoveryActionResult,
     formData: FormData,
@@ -187,6 +189,7 @@ export function ScoringRecoveryBoundary({
         ),
       );
     }
+    requestAnimationFrame(() => statusRef.current?.focus());
     return response;
   };
   const [, action, pending] = useActionState(
@@ -281,6 +284,7 @@ export function ScoringRecoveryBoundary({
           : candidate,
       ),
     );
+    requestAnimationFrame(() => statusRef.current?.focus());
   };
 
   return (
@@ -291,7 +295,9 @@ export function ScoringRecoveryBoundary({
       <div
         aria-live="polite"
         className="flex flex-wrap items-start justify-between gap-3"
+        ref={statusRef}
         role="status"
+        tabIndex={-1}
       >
         <div>
           <h2 className="font-semibold" id="recovery-heading">
@@ -407,7 +413,7 @@ export function ScoringRecoveryBoundary({
                   {entry.phase !== "RECONCILED" &&
                   entry.phase !== "ABANDONED_LOCAL_DRAFT" ? (
                     <button
-                      className="min-h-11 rounded-lg border border-[var(--line)] px-4 font-semibold"
+                      className="min-h-11 rounded-lg border border-red-300 px-4 font-semibold text-red-800"
                       onClick={() => discard(entry)}
                       type="button"
                     >

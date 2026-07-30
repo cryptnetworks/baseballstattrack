@@ -6,7 +6,11 @@ export default function StatusPage() {
 
   return (
     <ApplicationShell>
-      <main className="mx-auto w-full max-w-4xl px-6 py-12">
+      <main
+        className="mx-auto w-full max-w-4xl px-6 py-12"
+        id="main-content"
+        tabIndex={-1}
+      >
         <h1 className="text-3xl font-semibold tracking-normal">Status</h1>
         <dl className="mt-8 grid gap-4 sm:grid-cols-2">
           <div className="rounded-md border border-[var(--line)] bg-[var(--panel)] p-5">

@@ -44,7 +44,11 @@ export default async function GameSetupIndexPage() {
   const { accountId, context } = await loadGameSetupIndex();
   return (
     <ApplicationShell>
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+      <main
+        className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6"
+        id="main-content"
+        tabIndex={-1}
+      >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-[var(--accent-strong)]">

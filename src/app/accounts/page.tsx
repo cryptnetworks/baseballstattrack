@@ -24,11 +24,14 @@ export default async function AccountsPage() {
   const selected = (await cookies()).get(selectedAccountCookie.name)?.value;
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
+    <main className="mx-auto max-w-2xl p-8" id="main-content" tabIndex={-1}>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Select an account</h1>
         <form action={signOut}>
-          <button className="text-sm underline" type="submit">
+          <button
+            className="min-h-11 rounded-lg px-3 text-sm underline"
+            type="submit"
+          >
             Sign out
           </button>
         </form>
@@ -56,7 +59,10 @@ export default async function AccountsPage() {
             >
               <form action={selectAccount}>
                 <input name="accountId" type="hidden" value={account.id} />
-                <button className="w-full text-left" type="submit">
+                <button
+                  className="min-h-11 w-full rounded-lg text-left"
+                  type="submit"
+                >
                   <span className="font-medium">{account.displayName}</span>
                   <span className="ml-2 text-sm text-slate-500">
                     {selected === account.id ? "Selected" : account.slug}

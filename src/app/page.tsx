@@ -9,7 +9,11 @@ export default function HomePage() {
 
   return (
     <ApplicationShell>
-      <section className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-5xl flex-col justify-center px-6 py-12">
+      <main
+        className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-5xl flex-col justify-center px-6 py-12"
+        id="main-content"
+        tabIndex={-1}
+      >
         <div className="max-w-3xl">
           <StatusBadge status={status.status} />
           <h1 className="mt-6 text-4xl font-semibold tracking-normal text-[var(--foreground)] sm:text-5xl">
@@ -35,7 +39,7 @@ export default function HomePage() {
             </a>
           </div>
         </div>
-      </section>
+      </main>
     </ApplicationShell>
   );
 }

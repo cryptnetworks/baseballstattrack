@@ -886,7 +886,7 @@ export function GameSetupWizard({
         ) : null}
       </section>
 
-      <div className="sticky bottom-0 mt-6 border-t border-[var(--line)] bg-[var(--background)]/95 py-4 backdrop-blur">
+      <div className="mt-6 border-t border-[var(--line)] py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-2">
             <button

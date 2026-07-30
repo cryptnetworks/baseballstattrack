@@ -160,7 +160,11 @@ export default async function ScoreGamePage({
 
   return (
     <ApplicationShell>
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+      <main
+        className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6"
+        id="main-content"
+        tabIndex={-1}
+      >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-[var(--accent-strong)]">
@@ -190,26 +194,33 @@ export default async function ScoreGamePage({
 
         <section
           aria-label="Game state"
-          className="mt-6 grid gap-3 rounded-xl bg-slate-950 p-4 text-white sm:grid-cols-4"
+          className="mt-6 rounded-xl bg-slate-950 p-4 text-white"
         >
-          <div>
-            <p className="text-sm text-slate-300">Inning</p>
-            <p className="text-2xl font-semibold">
-              {state.half?.toLowerCase()} {state.inning}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-300">Outs</p>
-            <p className="text-2xl font-semibold">{state.outs}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-300">{teams.AWAY}</p>
-            <p className="text-2xl font-semibold">{state.score.AWAY}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-300">{teams.HOME}</p>
-            <p className="text-2xl font-semibold">{state.score.HOME}</p>
-          </div>
+          <p aria-atomic="true" aria-live="polite" className="sr-only">
+            {state.half?.toLowerCase()} of inning {state.inning}, {state.outs}{" "}
+            outs. {teams.AWAY} {state.score.AWAY}, {teams.HOME}{" "}
+            {state.score.HOME}.
+          </p>
+          <dl className="grid gap-3 sm:grid-cols-4">
+            <div>
+              <dt className="text-sm text-slate-300">Inning</dt>
+              <dd className="text-2xl font-semibold">
+                {state.half?.toLowerCase()} {state.inning}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-slate-300">Outs</dt>
+              <dd className="text-2xl font-semibold">{state.outs}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-slate-300">{teams.AWAY}</dt>
+              <dd className="text-2xl font-semibold">{state.score.AWAY}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-slate-300">{teams.HOME}</dt>
+              <dd className="text-2xl font-semibold">{state.score.HOME}</dd>
+            </div>
+          </dl>
         </section>
 
         <ScoringRecoveryBoundary

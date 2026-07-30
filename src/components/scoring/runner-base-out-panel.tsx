@@ -1,6 +1,13 @@
 "use client";
 
-import { useActionState, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import {
   initialRunnerPlayActionResult,
@@ -167,6 +174,7 @@ export function RunnerBaseOutPanel({
     resilientAction,
     initialRunnerPlayActionResult,
   );
+  const statusRef = useRef<HTMLDivElement>(null);
   const draft = useMemo<RunnerPlayDraft>(
     () => ({
       playType,
@@ -198,6 +206,10 @@ export function RunnerBaseOutPanel({
   const locked =
     pending || result.status === "ERROR" || blockedByRecoveredDraft;
 
+  useEffect(() => {
+    if (result.status !== "IDLE") statusRef.current?.focus();
+  }, [result]);
+
   const battingSide = state.half === "TOP" ? "AWAY" : "HOME";
   const walkOffCandidate =
     state.half === "BOTTOM" &&
@@ -214,7 +226,9 @@ export function RunnerBaseOutPanel({
             ? "border-red-300 bg-red-50 text-red-950"
             : "border-[var(--line)] bg-white"
         }`}
+        ref={statusRef}
         role={result.status === "ERROR" ? "alert" : "status"}
+        tabIndex={-1}
       >
         <p className="font-semibold">
           {pending

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 
 import { useRouter } from "next/navigation";
@@ -43,11 +43,13 @@ function VerifyButton({ mode }: Pick<Props, "mode">) {
 
 export function BoxScoreVerificationPanel(props: Props) {
   const router = useRouter();
+  const statusRef = useRef<HTMLParagraphElement>(null);
   const [state, action] = useActionState(
     verifyBoxScoreAction,
     initialVerifyBoxScoreActionResult,
   );
   useEffect(() => {
+    if (state.status === "ERROR") statusRef.current?.focus();
     if (state.status === "SUCCESS") router.refresh();
   }, [router, state.status]);
   return (
@@ -115,7 +117,9 @@ export function BoxScoreVerificationPanel(props: Props) {
       {state.message ? (
         <p
           className="mt-3 text-sm"
+          ref={statusRef}
           role={state.status === "ERROR" ? "alert" : "status"}
+          tabIndex={-1}
         >
           {state.message}
         </p>
