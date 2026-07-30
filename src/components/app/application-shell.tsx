@@ -28,6 +28,12 @@ export function ApplicationShell({ children }: ApplicationShellProps) {
             </Link>
             <Link
               className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)]"
+              href="/reports/season"
+            >
+              Seasons
+            </Link>
+            <Link
+              className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)]"
               href="/status"
             >
               Status
