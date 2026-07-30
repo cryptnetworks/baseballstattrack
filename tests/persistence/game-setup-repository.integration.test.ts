@@ -7,6 +7,7 @@ import { TeamSeasonRosterService } from "@/server/app/team-season-roster-service
 import { PrismaGameEventRepository } from "@/server/data/game-event-repository";
 import { PrismaGameSetupRepository } from "@/server/data/game-setup-repository";
 import { PrismaTeamSeasonRosterRepository } from "@/server/data/team-season-roster-repository";
+import { trustedActorForTest } from "../fixtures/trusted-actor";
 
 const databaseUrl = process.env.DATABASE_URL;
 const integration = databaseUrl ? describe : describe.skip;
@@ -43,49 +44,53 @@ integration("game setup persistence", () => {
   const setupActor = (
     gameId: string,
     capability: "game.setup" | "game.view" = "game.setup",
-  ) => ({
-    accountId: ids.account,
-    actorId: `${prefix}-setup-service`,
-    actorKind: "SERVICE" as const,
-    actorUserId: null,
-    membershipId: null,
-    capability,
-    scope: { kind: "GAME" as const, gameId },
-    authorizedAt: "2026-07-29T19:00:00.000Z",
-  });
+  ) =>
+    trustedActorForTest({
+      accountId: ids.account,
+      actorId: `${prefix}-setup-service`,
+      actorKind: "SERVICE" as const,
+      actorUserId: null,
+      membershipId: null,
+      capability,
+      scope: { kind: "GAME" as const, gameId },
+      authorizedAt: "2026-07-29T19:00:00.000Z",
+    });
   const createActor = (
     seasonId = ids.season,
     capability = "game.create" as const,
-  ) => ({
-    accountId: ids.account,
-    actorId: `${prefix}-setup-service`,
-    actorKind: "SERVICE" as const,
-    actorUserId: null,
-    membershipId: null,
-    capability,
-    scope: { kind: "SEASON" as const, seasonId },
-    authorizedAt: "2026-07-29T19:00:00.000Z",
-  });
-  const rosterActor = () => ({
-    accountId: ids.account,
-    actorId: `${prefix}-roster-service`,
-    actorKind: "SERVICE" as const,
-    actorUserId: null,
-    membershipId: null,
-    capability: "roster.manage" as const,
-    scope: { kind: "ACCOUNT" as const },
-    authorizedAt: "2026-07-29T19:00:00.000Z",
-  });
-  const seasonActor = (seasonId: string) => ({
-    accountId: ids.account,
-    actorId: `${prefix}-season-service`,
-    actorKind: "SERVICE" as const,
-    actorUserId: null,
-    membershipId: null,
-    capability: "season.manage" as const,
-    scope: { kind: "SEASON" as const, seasonId },
-    authorizedAt: "2026-07-29T19:00:00.000Z",
-  });
+  ) =>
+    trustedActorForTest({
+      accountId: ids.account,
+      actorId: `${prefix}-setup-service`,
+      actorKind: "SERVICE" as const,
+      actorUserId: null,
+      membershipId: null,
+      capability,
+      scope: { kind: "SEASON" as const, seasonId },
+      authorizedAt: "2026-07-29T19:00:00.000Z",
+    });
+  const rosterActor = () =>
+    trustedActorForTest({
+      accountId: ids.account,
+      actorId: `${prefix}-roster-service`,
+      actorKind: "SERVICE" as const,
+      actorUserId: null,
+      membershipId: null,
+      capability: "roster.manage" as const,
+      scope: { kind: "ACCOUNT" as const },
+      authorizedAt: "2026-07-29T19:00:00.000Z",
+    });
+  const seasonActor = (seasonId: string) =>
+    trustedActorForTest({
+      accountId: ids.account,
+      actorId: `${prefix}-season-service`,
+      actorKind: "SERVICE" as const,
+      actorUserId: null,
+      membershipId: null,
+      capability: "season.manage" as const,
+      scope: { kind: "SEASON" as const, seasonId },
+      authorizedAt: "2026-07-29T19:00:00.000Z",
+    });
 
   const managedSlot = (
     playerId: string,
@@ -546,7 +551,7 @@ integration("game setup persistence", () => {
         ...setupActor(game.id),
         accountId: "another-account",
       }),
-    ).rejects.toMatchObject({ code: "ACCOUNT_MISMATCH" });
+    ).rejects.toMatchObject({ code: "AUTHORIZATION_REQUIRED" });
     const incomplete = await setupService.saveSetupRevision(
       saveCommand(game.id, 0, "incomplete", { incomplete: true }),
       setupActor(game.id),
@@ -590,7 +595,7 @@ integration("game setup persistence", () => {
     );
     const current = await setupService.loadCurrentSetup(
       { accountId: ids.account, gameId: game.id },
-      { ...setupActor(game.id, "game.view"), capability: "game.view" },
+      setupActor(game.id, "game.view"),
     );
     expect(current.game.setupRevision).toBe(1);
     expect(current.setup?.setupRevision).toBe(1);
@@ -762,10 +767,15 @@ integration("game setup persistence", () => {
 
     const season = await rosterService.createSeason(
       { accountId: ids.account, displayName: "Creation Race Season" },
-      {
-        ...seasonActor(ids.season),
-        scope: { kind: "ACCOUNT" as const },
-      },
+      trustedActorForTest({
+        accountId: ids.account,
+        actorId: `${prefix}-season-service`,
+        actorKind: "SERVICE",
+        actorUserId: null,
+        capability: "season.manage",
+        scope: { kind: "ACCOUNT" },
+        authorizedAt: "2026-07-29T19:00:00.000Z",
+      }),
     );
     const participation = await rosterService.addTeamSeason(
       {

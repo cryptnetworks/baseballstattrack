@@ -10,7 +10,6 @@ import {
   endRosterPeriodCommandSchema,
   namePageSchema,
   parseManagementInput,
-  requireManagementActor,
   rosterHistoryPageSchema,
   setPlayerArchivedCommandSchema,
   setTeamArchivedCommandSchema,
@@ -21,6 +20,8 @@ import {
   updateTeamCommandSchema,
   type ManagementActorContext,
 } from "@/domain/management/team-season-roster";
+import { toManagementActor } from "@/server/auth/trusted-actor-adapters";
+import type { TrustedActorContext } from "@/server/auth/types";
 import { PrismaTeamSeasonRosterRepository } from "@/server/data/team-season-roster-repository";
 
 function requireAccountScope(actor: ManagementActorContext): void {
@@ -47,9 +48,9 @@ function requireTarget<T extends { teamId: string; seasonId: string }>(
 export class TeamSeasonRosterService {
   constructor(private readonly repository: PrismaTeamSeasonRosterRepository) {}
 
-  async createTeam(input: unknown, actorInput: unknown) {
+  async createTeam(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(createTeamCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "team.manage",
@@ -58,9 +59,9 @@ export class TeamSeasonRosterService {
     return this.repository.createTeam(command, actor);
   }
 
-  async updateTeam(input: unknown, actorInput: unknown) {
+  async updateTeam(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(updateTeamCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "team.manage",
@@ -69,9 +70,9 @@ export class TeamSeasonRosterService {
     return this.repository.updateTeam(command, actor);
   }
 
-  async setTeamArchived(input: unknown, actorInput: unknown) {
+  async setTeamArchived(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(setTeamArchivedCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "team.manage",
@@ -80,9 +81,9 @@ export class TeamSeasonRosterService {
     return this.repository.setTeamArchived(command, actor);
   }
 
-  async createSeason(input: unknown, actorInput: unknown) {
+  async createSeason(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(createSeasonCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "season.manage",
@@ -91,9 +92,9 @@ export class TeamSeasonRosterService {
     return this.repository.createSeason(command, actor);
   }
 
-  async updateSeason(input: unknown, actorInput: unknown) {
+  async updateSeason(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(updateSeasonCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "season.manage",
@@ -102,9 +103,9 @@ export class TeamSeasonRosterService {
     return this.repository.updateSeason(command, actor);
   }
 
-  async transitionSeason(input: unknown, actorInput: unknown) {
+  async transitionSeason(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(transitionSeasonCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "season.manage",
@@ -113,9 +114,9 @@ export class TeamSeasonRosterService {
     return this.repository.transitionSeason(command, actor);
   }
 
-  async addTeamSeason(input: unknown, actorInput: unknown) {
+  async addTeamSeason(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(addTeamSeasonCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "season.manage",
@@ -127,12 +128,12 @@ export class TeamSeasonRosterService {
     return this.repository.addTeamSeason(command, actor);
   }
 
-  async setTeamSeasonArchived(input: unknown, actorInput: unknown) {
+  async setTeamSeasonArchived(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(
       setTeamSeasonArchivedCommandSchema,
       input,
     );
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "season.manage",
@@ -147,9 +148,9 @@ export class TeamSeasonRosterService {
     return this.repository.setTeamSeasonArchived(command, actor);
   }
 
-  async createPlayer(input: unknown, actorInput: unknown) {
+  async createPlayer(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(createPlayerCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "roster.manage",
@@ -158,9 +159,9 @@ export class TeamSeasonRosterService {
     return this.repository.createPlayer(command, actor);
   }
 
-  async updatePlayer(input: unknown, actorInput: unknown) {
+  async updatePlayer(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(updatePlayerCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "roster.manage",
@@ -169,9 +170,9 @@ export class TeamSeasonRosterService {
     return this.repository.updatePlayer(command, actor);
   }
 
-  async setPlayerArchived(input: unknown, actorInput: unknown) {
+  async setPlayerArchived(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(setPlayerArchivedCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "roster.manage",
@@ -180,9 +181,9 @@ export class TeamSeasonRosterService {
     return this.repository.setPlayerArchived(command, actor);
   }
 
-  async addRosterPeriod(input: unknown, actorInput: unknown) {
+  async addRosterPeriod(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(addRosterPeriodCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "roster.manage",
@@ -197,9 +198,9 @@ export class TeamSeasonRosterService {
     return this.repository.addRosterPeriod(command, actor);
   }
 
-  async endRosterPeriod(input: unknown, actorInput: unknown) {
+  async endRosterPeriod(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(endRosterPeriodCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "roster.manage",
@@ -213,9 +214,9 @@ export class TeamSeasonRosterService {
     return this.repository.endRosterPeriod(command, actor);
   }
 
-  async changeJersey(input: unknown, actorInput: unknown) {
+  async changeJersey(input: unknown, actorInput: TrustedActorContext) {
     const command = parseManagementInput(changeJerseyCommandSchema, input);
-    const actor = requireManagementActor(
+    const actor = toManagementActor(
       actorInput,
       command.accountId,
       "roster.manage",
@@ -229,43 +230,27 @@ export class TeamSeasonRosterService {
     return this.repository.changeJersey(command, actor);
   }
 
-  async listTeams(input: unknown, actorInput: unknown) {
+  async listTeams(input: unknown, actorInput: TrustedActorContext) {
     const page = parseManagementInput(namePageSchema, input);
-    const actor = requireManagementActor(
-      actorInput,
-      page.accountId,
-      "team.view",
-    );
+    const actor = toManagementActor(actorInput, page.accountId, "team.view");
     return this.repository.listTeams(page, actor);
   }
 
-  async listSeasons(input: unknown, actorInput: unknown) {
+  async listSeasons(input: unknown, actorInput: TrustedActorContext) {
     const page = parseManagementInput(namePageSchema, input);
-    const actor = requireManagementActor(
-      actorInput,
-      page.accountId,
-      "season.view",
-    );
+    const actor = toManagementActor(actorInput, page.accountId, "season.view");
     return this.repository.listSeasons(page, actor);
   }
 
-  async listPlayers(input: unknown, actorInput: unknown) {
+  async listPlayers(input: unknown, actorInput: TrustedActorContext) {
     const page = parseManagementInput(namePageSchema, input);
-    const actor = requireManagementActor(
-      actorInput,
-      page.accountId,
-      "roster.view",
-    );
+    const actor = toManagementActor(actorInput, page.accountId, "roster.view");
     return this.repository.listPlayers(page, actor);
   }
 
-  async listRosterHistory(input: unknown, actorInput: unknown) {
+  async listRosterHistory(input: unknown, actorInput: TrustedActorContext) {
     const page = parseManagementInput(rosterHistoryPageSchema, input);
-    const actor = requireManagementActor(
-      actorInput,
-      page.accountId,
-      "roster.view",
-    );
+    const actor = toManagementActor(actorInput, page.accountId, "roster.view");
     return this.repository.listRosterHistory(page, actor);
   }
 }

@@ -1,6 +1,6 @@
 # Authentication and authorization boundaries
 
-This is the M0 contract for identity, account membership, authorization, recovery, sessions, invitations, and security auditing. It defines boundaries for future M1 persistence and application services; privacy/data-minimization and threat rules are in [PRIVACY_AND_THREAT_MODEL.md](PRIVACY_AND_THREAT_MODEL.md). It does not implement authentication, middleware, Prisma models, migrations, invitations, recovery, or UI.
+This is the M0 contract for identity, account membership, authorization, recovery, sessions, invitations, and security auditing. The production session and database-authority implementation is documented in [PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md](PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md); privacy/data-minimization and threat rules are in [PRIVACY_AND_THREAT_MODEL.md](PRIVACY_AND_THREAT_MODEL.md). Invitations and recovery remain outside the implemented authentication slice.
 
 ## Decisions at a glance
 

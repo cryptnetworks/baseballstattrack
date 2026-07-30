@@ -11,6 +11,7 @@ import {
 } from "@/server/data/game-event-repository";
 import { PrismaStatisticProjectionRepository } from "@/server/data/statistic-projection-repository";
 import { seedPersistenceScoringFixture } from "../fixtures/persistence-scoring-fixture";
+import { trustedActorForTest } from "../fixtures/trusted-actor";
 
 const databaseUrl = process.env.DATABASE_URL;
 const integration = databaseUrl ? describe : describe.skip;
@@ -161,10 +162,11 @@ integration("correction audit and replay workflow", () => {
         reasonCode: "SCORER_REVIEW",
       },
     });
-    const correctionActor = {
+    const correctionActor = trustedActorForTest({
       ...actor("game.correct"),
+      actorKind: "SERVICE",
       membershipId: null,
-    };
+    });
     const raced = await Promise.allSettled([
       service.applyCorrection(correctionCommand("a"), correctionActor),
       service.applyCorrection(correctionCommand("b"), correctionActor),

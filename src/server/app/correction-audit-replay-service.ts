@@ -2,9 +2,10 @@ import {
   CorrectionWorkflowError,
   correctionBody,
   parseCorrectionCommand,
-  requireCorrectionActor,
 } from "@/domain/corrections";
 import { GameEventError } from "@/domain/events/event-log";
+import { toCorrectionActor } from "@/server/auth/trusted-actor-adapters";
+import type { TrustedActorContext } from "@/server/auth/types";
 import { PrismaGameEventRepository } from "@/server/data/game-event-repository";
 
 function translateCorrectionError(error: unknown): never {
@@ -65,9 +66,9 @@ function translateCorrectionError(error: unknown): never {
 export class CorrectionAuditReplayService {
   constructor(private readonly repository: PrismaGameEventRepository) {}
 
-  async applyCorrection(input: unknown, actorInput: unknown) {
+  async applyCorrection(input: unknown, actorInput: TrustedActorContext) {
     const command = parseCorrectionCommand(input);
-    const actor = requireCorrectionActor(
+    const actor = toCorrectionActor(
       actorInput,
       command.accountId,
       command.gameId,

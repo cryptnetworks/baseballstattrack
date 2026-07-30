@@ -6,18 +6,19 @@ import {
   loadCurrentSetupQuerySchema,
   markSetupReadyCommandSchema,
   parseGameSetupInput,
-  requireGameSetupActor,
   rosterCandidatePageSchema,
   saveSetupRevisionCommandSchema,
 } from "@/domain/setup/game-setup";
+import { toGameSetupActor } from "@/server/auth/trusted-actor-adapters";
+import type { TrustedActorContext } from "@/server/auth/types";
 import { PrismaGameSetupRepository } from "@/server/data/game-setup-repository";
 
 export class GameSetupService {
   constructor(private readonly repository: PrismaGameSetupRepository) {}
 
-  async createDraftGame(input: unknown, actorInput: unknown) {
+  async createDraftGame(input: unknown, actorInput: TrustedActorContext) {
     const command = parseGameSetupInput(createDraftGameCommandSchema, input);
-    const actor = requireGameSetupActor(
+    const actor = toGameSetupActor(
       actorInput,
       command.accountId,
       "game.create",
@@ -36,46 +37,30 @@ export class GameSetupService {
     return this.repository.createDraftGame(command, actor);
   }
 
-  async saveSetupRevision(input: unknown, actorInput: unknown) {
+  async saveSetupRevision(input: unknown, actorInput: TrustedActorContext) {
     const command = parseGameSetupInput(saveSetupRevisionCommandSchema, input);
-    const actor = requireGameSetupActor(
-      actorInput,
-      command.accountId,
-      "game.setup",
-    );
+    const actor = toGameSetupActor(actorInput, command.accountId, "game.setup");
     assertGameScope(actor, command.gameId);
     return this.repository.saveSetupRevision(command, actor);
   }
 
-  async markSetupReady(input: unknown, actorInput: unknown) {
+  async markSetupReady(input: unknown, actorInput: TrustedActorContext) {
     const command = parseGameSetupInput(markSetupReadyCommandSchema, input);
-    const actor = requireGameSetupActor(
-      actorInput,
-      command.accountId,
-      "game.setup",
-    );
+    const actor = toGameSetupActor(actorInput, command.accountId, "game.setup");
     assertGameScope(actor, command.gameId);
     return this.repository.markSetupReady(command, actor);
   }
 
-  async loadCurrentSetup(input: unknown, actorInput: unknown) {
+  async loadCurrentSetup(input: unknown, actorInput: TrustedActorContext) {
     const query = parseGameSetupInput(loadCurrentSetupQuerySchema, input);
-    const actor = requireGameSetupActor(
-      actorInput,
-      query.accountId,
-      "game.view",
-    );
+    const actor = toGameSetupActor(actorInput, query.accountId, "game.view");
     assertGameScope(actor, query.gameId);
     return this.repository.loadCurrentSetup(query);
   }
 
-  async listRosterCandidates(input: unknown, actorInput: unknown) {
+  async listRosterCandidates(input: unknown, actorInput: TrustedActorContext) {
     const page = parseGameSetupInput(rosterCandidatePageSchema, input);
-    const actor = requireGameSetupActor(
-      actorInput,
-      page.accountId,
-      "game.setup",
-    );
+    const actor = toGameSetupActor(actorInput, page.accountId, "game.setup");
     assertGameScope(actor, page.gameId);
     return this.repository.listRosterCandidates(page);
   }
