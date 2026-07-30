@@ -21,7 +21,7 @@ env:
 jobs:
   verify:
     name: verify
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
       postgres:
