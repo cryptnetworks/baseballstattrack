@@ -18,6 +18,8 @@ import {
   assertGameCreateScope,
   type CreateDraftGameCommand,
   type GameSetupActorContext,
+  type GameSetupCreationContextQuery,
+  type GameSetupWorkflowContextQuery,
   type LoadCurrentSetupQuery,
   type MarkSetupReadyCommand,
   type RosterCandidatePage,
@@ -189,6 +191,201 @@ export class PrismaGameSetupRepository {
       where: { accountId_id: { accountId, id: teamSeasonId } },
       select: { teamId: true, seasonId: true },
     });
+  }
+
+  async loadCreationContext(query: GameSetupCreationContextQuery) {
+    const [teamSeasons, rulesets, games] = await Promise.all([
+      this.prisma.teamSeason.findMany({
+        where: {
+          accountId: query.accountId,
+          archivedAt: null,
+          team: { status: TeamStatus.ACTIVE },
+          season: { status: { in: [SeasonStatus.DRAFT, SeasonStatus.ACTIVE] } },
+        },
+        select: {
+          id: true,
+          teamId: true,
+          seasonId: true,
+          team: { select: { displayName: true } },
+          season: { select: { displayName: true, status: true } },
+        },
+        orderBy: [
+          { season: { displayName: "asc" } },
+          { team: { displayName: "asc" } },
+          { id: "asc" },
+        ],
+      }),
+      this.prisma.rulesetVersion.findMany({
+        where: {
+          accountId: query.accountId,
+          status: RulesetStatus.ACTIVE,
+        },
+        select: { id: true, name: true, version: true },
+        orderBy: [{ name: "asc" }, { version: "desc" }, { id: "asc" }],
+      }),
+      this.prisma.game.findMany({
+        where: {
+          accountId: query.accountId,
+          revision: 0,
+          archivedAt: null,
+          status: { in: [GameStatus.DRAFT, GameStatus.READY] },
+        },
+        select: {
+          id: true,
+          status: true,
+          setupRevision: true,
+          scheduledAt: true,
+          location: true,
+          teamSeason: {
+            select: { team: { select: { displayName: true } } },
+          },
+          setupSnapshots: {
+            orderBy: { setupRevision: "desc" },
+            take: 1,
+            select: {
+              teamSnapshots: {
+                select: { side: true, displayName: true },
+                orderBy: { side: "asc" },
+              },
+            },
+          },
+        },
+        orderBy: [{ scheduledAt: "asc" }, { id: "asc" }],
+      }),
+    ]);
+    return { teamSeasons, rulesets, games };
+  }
+
+  async loadWorkflowContext(query: GameSetupWorkflowContextQuery) {
+    const game = await this.prisma.game.findUnique({
+      where: {
+        accountId_id: { accountId: query.accountId, id: query.gameId },
+      },
+      select: {
+        id: true,
+        accountId: true,
+        seasonId: true,
+        teamSeasonId: true,
+        status: true,
+        revision: true,
+        setupRevision: true,
+        readySetupSnapshotId: true,
+        scheduledAt: true,
+        location: true,
+        weatherCondition: true,
+        temperatureF: true,
+        teamSeason: {
+          select: {
+            teamId: true,
+            team: { select: { displayName: true } },
+            season: { select: { displayName: true } },
+          },
+        },
+      },
+    });
+    if (!game) {
+      throw new GameSetupError(
+        "NOT_FOUND_OR_INACCESSIBLE",
+        "Game is unavailable.",
+      );
+    }
+    const setup =
+      game.setupRevision === 0
+        ? null
+        : await this.prisma.gameSetupSnapshot.findUnique({
+            where: {
+              gameId_setupRevision: {
+                gameId: query.gameId,
+                setupRevision: game.setupRevision,
+              },
+            },
+            include: {
+              teamSnapshots: { orderBy: [{ side: "asc" }, { id: "asc" }] },
+              lineupSlots: {
+                orderBy: [{ battingOrder: "asc" }, { id: "asc" }],
+              },
+            },
+          });
+    const snapshotTeamSeasonIds =
+      setup?.teamSnapshots
+        .map(({ teamSeasonId }) => teamSeasonId)
+        .filter((value): value is string => value !== null) ?? [];
+    const snapshotRosterIds =
+      setup?.lineupSlots
+        .map(({ rosterEntryId }) => rosterEntryId)
+        .filter((value): value is string => value !== null) ?? [];
+    const [teamSeasons, rulesets] = await Promise.all([
+      this.prisma.teamSeason.findMany({
+        where: {
+          accountId: query.accountId,
+          seasonId: game.seasonId,
+          OR: [
+            {
+              id: {
+                in: [game.teamSeasonId, ...snapshotTeamSeasonIds],
+              },
+            },
+            {
+              archivedAt: null,
+              team: { status: TeamStatus.ACTIVE },
+            },
+          ],
+        },
+        select: {
+          id: true,
+          teamId: true,
+          archivedAt: true,
+          team: { select: { displayName: true, status: true } },
+          rosterEntries: {
+            where: {
+              OR: [
+                { id: { in: snapshotRosterIds } },
+                {
+                  status: "ACTIVE",
+                  archivedAt: null,
+                  endsAt: null,
+                  startsAt: { lte: game.scheduledAt ?? new Date(0) },
+                  player: { archivedAt: null },
+                },
+              ],
+            },
+            select: {
+              id: true,
+              playerId: true,
+              jerseyNumber: true,
+              primaryPosition: true,
+              status: true,
+              startsAt: true,
+              endsAt: true,
+              archivedAt: true,
+              player: {
+                select: { displayName: true, archivedAt: true },
+              },
+            },
+            orderBy: [{ player: { displayName: "asc" } }, { playerId: "asc" }],
+          },
+        },
+        orderBy: [{ team: { displayName: "asc" } }, { id: "asc" }],
+      }),
+      this.prisma.rulesetVersion.findMany({
+        where: {
+          accountId: query.accountId,
+          OR: [
+            { status: RulesetStatus.ACTIVE },
+            ...(setup ? [{ id: setup.rulesetVersionId }] : []),
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          version: true,
+          status: true,
+          configuration: true,
+        },
+        orderBy: [{ name: "asc" }, { version: "desc" }, { id: "asc" }],
+      }),
+    ]);
+    return { game, setup, teamSeasons, rulesets };
   }
 
   async createDraftGame(

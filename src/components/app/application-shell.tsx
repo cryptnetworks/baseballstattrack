@@ -13,12 +13,20 @@ export function ApplicationShell({ children }: ApplicationShellProps) {
           <Link className="text-base font-semibold" href="/">
             Baseball Stat Track
           </Link>
-          <Link
-            className="text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)]"
-            href="/status"
-          >
-            Status
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              className="text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)]"
+              href="/games/setup"
+            >
+              Games
+            </Link>
+            <Link
+              className="text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)]"
+              href="/status"
+            >
+              Status
+            </Link>
+          </div>
         </nav>
       </header>
       {children}

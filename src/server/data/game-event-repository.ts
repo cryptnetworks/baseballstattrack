@@ -42,6 +42,7 @@ export type ValidatedActorContext = {
   actorKind: "USER" | "SERVICE" | "SYSTEM";
   actorUserId: string | null;
   capability:
+    | "game.start"
     | "game.score"
     | "game.correct"
     | "game.reopen"
@@ -376,7 +377,9 @@ export class PrismaGameEventRepository {
           ? command.actor.capability === "game.correct"
           : body.eventType === "GameReopened"
             ? command.actor.capability === "game.reopen"
-            : command.actor.capability === "game.score";
+            : body.eventType === "GameStarted"
+              ? command.actor.capability === "game.start"
+              : command.actor.capability === "game.score";
     if (!permittedCapability) {
       throw new GameEventError(
         "INVALID_LIFECYCLE_TRANSITION",

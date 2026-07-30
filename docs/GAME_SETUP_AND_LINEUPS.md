@@ -2,6 +2,11 @@
 
 Issue #14 implements the editable, Account-scoped pre-scoring setup workflow. `GameSetupService` is the public application boundary, backed by strict Zod commands and serializable PostgreSQL transactions. It creates draft games, appends immutable setup revisions, validates readiness, loads the current revision, and lists bounded eligible roster candidates.
 
+Issue #16's responsive scorekeeper workflow is documented in
+[GAME_SETUP_WORKFLOW.md](GAME_SETUP_WORKFLOW.md). It is a UI and
+application-query layer over this contract; it does not replace setup
+persistence or make browser state authoritative.
+
 ## Draft game lifecycle
 
 A game is created in `DRAFT` for one selected `Season` and one required managed `TeamSeason`. The season, team, and participation must share the Account and remain open and active. `Game.revision` remains the accepted source-event revision and starts at zero. Pregame editing uses the separate `Game.setupRevision`.

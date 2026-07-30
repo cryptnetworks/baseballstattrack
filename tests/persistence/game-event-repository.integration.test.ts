@@ -26,22 +26,32 @@ integration("PrismaGameEventRepository", () => {
     scope: { kind: "GAME" as const, gameId: `${runPrefix}-game` },
     authorizedAt: "2026-07-29T15:59:59.000Z",
   };
+  const startActor = {
+    ...actor,
+    capability: "game.start" as const,
+  };
 
   const command = (
     overrides: Partial<AcceptEventCommand> = {},
-  ): AcceptEventCommand => ({
-    accountId: `${runPrefix}-account`,
-    gameId: `${runPrefix}-game`,
-    setupSnapshotId: `${runPrefix}-setup`,
-    expectedRevision: 0,
-    eventId: `${runPrefix}-event-start`,
-    playTransactionId: `${runPrefix}-play-start`,
-    clientSubmissionId: `${runPrefix}-submit-start`,
-    recordedAt: "2026-07-29T16:00:00.000Z",
-    actor,
-    body: { eventType: "GameStarted", payload: {} },
-    ...overrides,
-  });
+  ): AcceptEventCommand => {
+    const body: AcceptEventCommand["body"] = overrides.body ?? {
+      eventType: "GameStarted",
+      payload: {},
+    };
+    return {
+      accountId: `${runPrefix}-account`,
+      gameId: `${runPrefix}-game`,
+      setupSnapshotId: `${runPrefix}-setup`,
+      expectedRevision: 0,
+      eventId: `${runPrefix}-event-start`,
+      playTransactionId: `${runPrefix}-play-start`,
+      clientSubmissionId: `${runPrefix}-submit-start`,
+      recordedAt: "2026-07-29T16:00:00.000Z",
+      actor: body.eventType === "GameStarted" ? startActor : actor,
+      body,
+      ...overrides,
+    };
+  };
 
   beforeAll(async () => {
     await prisma.account.create({

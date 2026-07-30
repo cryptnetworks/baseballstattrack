@@ -6,6 +6,7 @@ import {
   PrismaGameEventRepository,
   type ValidatedActorContext,
 } from "@/server/data/game-event-repository";
+import { getPrismaClient } from "@/server/data/prisma";
 import { AuthorizationError } from "@/server/auth/errors";
 import {
   requireTrustedActor,
@@ -43,6 +44,7 @@ function capabilityForEvent(
       ? "game.reverify"
       : "game.verify";
   }
+  if (eventType === "GameStarted") return "game.start";
   if (eventType === "GameReopened") return "game.reopen";
   return "game.score";
 }
@@ -112,4 +114,8 @@ export class GameEventService {
     requireGameTarget(actor, accountId, gameId, "game.view");
     return this.repository.replay(accountId, gameId, setupSnapshotId);
   }
+}
+
+export function getGameEventService() {
+  return new GameEventService(new PrismaGameEventRepository(getPrismaClient()));
 }

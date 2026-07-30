@@ -3,6 +3,8 @@ import {
   assertGameCreateScope,
   assertGameScope,
   createDraftGameCommandSchema,
+  gameSetupCreationContextQuerySchema,
+  gameSetupWorkflowContextQuerySchema,
   loadCurrentSetupQuerySchema,
   markSetupReadyCommandSchema,
   parseGameSetupInput,
@@ -11,7 +13,9 @@ import {
 } from "@/domain/setup/game-setup";
 import { toGameSetupActor } from "@/server/auth/trusted-actor-adapters";
 import type { TrustedActorContext } from "@/server/auth/types";
+import { requireTrustedActor } from "@/server/auth/types";
 import { PrismaGameSetupRepository } from "@/server/data/game-setup-repository";
+import { getPrismaClient } from "@/server/data/prisma";
 
 export class GameSetupService {
   constructor(private readonly repository: PrismaGameSetupRepository) {}
@@ -64,4 +68,46 @@ export class GameSetupService {
     assertGameScope(actor, page.gameId);
     return this.repository.listRosterCandidates(page);
   }
+
+  async loadCreationContext(input: unknown, actorInput: TrustedActorContext) {
+    const query = parseGameSetupInput(
+      gameSetupCreationContextQuerySchema,
+      input,
+    );
+    const actor = requireTrustedActor(
+      actorInput,
+      query.accountId,
+      "game.create",
+    );
+    if (actor.target.kind !== "ACCOUNT") {
+      throw new GameSetupError(
+        "AUTHORIZATION_REQUIRED",
+        "Account scope is required to list game setup choices.",
+      );
+    }
+    return this.repository.loadCreationContext(query);
+  }
+
+  async loadWorkflowContext(input: unknown, actorInput: TrustedActorContext) {
+    const query = parseGameSetupInput(
+      gameSetupWorkflowContextQuerySchema,
+      input,
+    );
+    const actor = requireTrustedActor(
+      actorInput,
+      query.accountId,
+      "game.setup",
+    );
+    if (actor.target.kind !== "GAME" || actor.target.gameId !== query.gameId) {
+      throw new GameSetupError(
+        "AUTHORIZATION_REQUIRED",
+        "Exact Game scope is required.",
+      );
+    }
+    return this.repository.loadWorkflowContext(query);
+  }
+}
+
+export function getGameSetupService() {
+  return new GameSetupService(new PrismaGameSetupRepository(getPrismaClient()));
 }

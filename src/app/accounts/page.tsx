@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { selectAccount } from "@/app/accounts/actions";
@@ -36,6 +37,14 @@ export default async function AccountsPage() {
         Selection is a navigation preference. Every protected operation rechecks
         current membership and scope.
       </p>
+      {selected ? (
+        <Link
+          className="mt-4 inline-flex min-h-11 items-center rounded bg-slate-900 px-4 text-sm font-medium text-white"
+          href="/games/setup"
+        >
+          Continue to game setup
+        </Link>
+      ) : null}
       {accounts.length === 0 ? (
         <p className="mt-6">No active account membership is available.</p>
       ) : (

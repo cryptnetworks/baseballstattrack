@@ -381,7 +381,7 @@ integration("game setup persistence", () => {
           actorId: `${prefix}-score-service`,
           actorKind: "SERVICE",
           actorUserId: null,
-          capability: "game.score",
+          capability: "game.start",
           scope: { kind: "GAME", gameId: game.id },
           authorizedAt: "2026-08-01T17:59:00.000Z",
         },
@@ -403,7 +403,7 @@ integration("game setup persistence", () => {
         actorId: `${prefix}-score-service`,
         actorKind: "SERVICE",
         actorUserId: null,
-        capability: "game.score",
+        capability: "game.start",
         scope: { kind: "GAME", gameId: game.id },
         authorizedAt: "2026-08-01T17:59:00.000Z",
       },
@@ -532,6 +532,68 @@ integration("game setup persistence", () => {
     ).toBe(true);
   });
 
+  it("loads resumable Account-scoped creation and exact-game workflow context", async () => {
+    const game = await createGame();
+    await setupService.saveSetupRevision(
+      saveCommand(game.id, 0, "workflow-context"),
+      setupActor(game.id),
+    );
+    const creation = await setupService.loadCreationContext(
+      { accountId: ids.account },
+      trustedActorForTest({
+        accountId: ids.account,
+        actorId: `${prefix}-setup-service`,
+        actorKind: "SERVICE",
+        actorUserId: null,
+        membershipId: null,
+        capability: "game.create",
+        scope: { kind: "ACCOUNT" },
+        authorizedAt: "2026-07-29T19:00:00.000Z",
+      }),
+    );
+    expect(creation.teamSeasons.map(({ id }) => id)).toEqual(
+      expect.arrayContaining([ids.homeTeamSeason, ids.awayTeamSeason]),
+    );
+    expect(creation.rulesets).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: ids.ruleset })]),
+    );
+    expect(creation.games).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: game.id,
+          setupRevision: 1,
+          status: "DRAFT",
+        }),
+      ]),
+    );
+
+    const workflow = await setupService.loadWorkflowContext(
+      { accountId: ids.account, gameId: game.id },
+      setupActor(game.id),
+    );
+    expect(workflow.game).toMatchObject({
+      id: game.id,
+      accountId: ids.account,
+      teamSeasonId: ids.homeTeamSeason,
+      setupRevision: 1,
+    });
+    expect(workflow.setup).toMatchObject({
+      gameId: game.id,
+      setupRevision: 1,
+    });
+    expect(
+      workflow.teamSeasons
+        .find(({ id }) => id === ids.homeTeamSeason)
+        ?.rosterEntries.map(({ playerId }) => playerId),
+    ).toEqual(
+      expect.arrayContaining([
+        ids.homeBatter,
+        ids.homePitcherOne,
+        ids.homeBench,
+      ]),
+    );
+  });
+
   it("rejects incomplete, stale, cross-Account, and season-mismatched setup", async () => {
     await expect(
       setupService.createDraftGame(
@@ -633,7 +695,7 @@ integration("game setup persistence", () => {
         actorId: `${prefix}-race-score`,
         actorKind: "SERVICE",
         actorUserId: null,
-        capability: "game.score",
+        capability: "game.start",
         scope: { kind: "GAME", gameId: game.id },
         authorizedAt: "2026-08-01T17:59:00.000Z",
       },
