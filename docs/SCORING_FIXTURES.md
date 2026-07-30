@@ -148,11 +148,12 @@ production seed is created.
 
 Issue #12 does not expand the event vocabulary or ruleset implementation.
 League-specific tiebreak runners, interference subtypes, detailed earned-run
-reconstruction, balks, wild pitches/passed balls, pickoff variants, appeals,
-protests, multi-component play acceptance, and additional substitution rules
-remain deferred until their governing contracts and issue scope support them.
-The fixture builder should be extended only after those production semantics
-exist.
+reconstruction, balks, appeals, protests, pitch-level scoring, uncommon
+pickoff rules, and additional substitution rules remain deferred until their
+governing contracts and issue scope support them. Issue #18 fixtures cover the
+schema-v3 atomic runner-play subset for errors, steals/caught stealing,
+pickoffs, wild pitches, and passed balls. The fixture builder should be
+extended only after additional production semantics exist.
 
 ## Acceptance mapping
 

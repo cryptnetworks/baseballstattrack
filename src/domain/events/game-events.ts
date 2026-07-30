@@ -2,12 +2,13 @@ import { createHash } from "node:crypto";
 
 import { z } from "zod";
 
-export const EVENT_SCHEMA_VERSION = 2 as const;
+export const EVENT_SCHEMA_VERSION = 3 as const;
 export const SUPPORTED_EVENT_SCHEMA_VERSIONS = [
   1,
+  2,
   EVENT_SCHEMA_VERSION,
 ] as const;
-export const REDUCER_VERSION = 1 as const;
+export const REDUCER_VERSION = 2 as const;
 
 const id = z.string().trim().min(1).max(128);
 const side = z.enum(["HOME", "AWAY"]);
@@ -39,6 +40,9 @@ const movementCause = z.enum([
   "STOLEN_BASE",
   "CAUGHT_STEALING",
   "PICKOFF",
+  "RUNNER_OUT",
+  "WILD_PITCH",
+  "PASSED_BALL",
   "AWARD",
   "CORRECTION",
 ]);
@@ -248,6 +252,7 @@ const runnerOut = z
         cause: z.enum([
           "CAUGHT_STEALING",
           "PICKOFF",
+          "RUNNER_OUT",
           "FIELDERS_CHOICE",
           "OTHER",
         ]),
@@ -281,6 +286,125 @@ const stolenBase = z
             message:
               "Earned-run classification is allowed only for a successful steal of home.",
             path: ["earnedRun"],
+          });
+        }
+      }),
+  })
+  .strict();
+
+const runnerPlay = z
+  .object({
+    eventType: z.literal("RunnerPlayRecorded"),
+    payload: z
+      .object({
+        playType: z.enum([
+          "OPTIONAL_ADVANCE",
+          "ERROR",
+          "STOLEN_BASE",
+          "CAUGHT_STEALING",
+          "PICKOFF",
+          "RUNNER_OUT",
+          "WILD_PITCH",
+          "PASSED_BALL",
+        ]),
+        movements: z.array(runnerMovement).min(1).max(4),
+        fieldingCredits: z.array(
+          z
+            .object({
+              fielderId: id,
+              credit: z.enum(["PUTOUT", "ASSIST", "ERROR"]),
+              errorType: id.nullable(),
+            })
+            .strict(),
+        ),
+        responsibleFielderId: id.nullable(),
+      })
+      .strict()
+      .superRefine((payload, context) => {
+        const expectedCause = {
+          OPTIONAL_ADVANCE: "OPTIONAL_ADVANCE",
+          ERROR: "ERROR",
+          STOLEN_BASE: "STOLEN_BASE",
+          CAUGHT_STEALING: "CAUGHT_STEALING",
+          PICKOFF: "PICKOFF",
+          RUNNER_OUT: "RUNNER_OUT",
+          WILD_PITCH: "WILD_PITCH",
+          PASSED_BALL: "PASSED_BALL",
+        } as const;
+        if (
+          payload.movements.some(
+            ({ from, cause }) =>
+              from === "BATTER" || cause !== expectedCause[payload.playType],
+          )
+        ) {
+          context.addIssue({
+            code: "custom",
+            message:
+              "Standalone runner-play movements must match the recorded play type.",
+            path: ["movements"],
+          });
+        }
+        const outs = payload.movements.filter(({ to }) => to === "OUT");
+        if (
+          (payload.playType === "CAUGHT_STEALING" ||
+            payload.playType === "PICKOFF") &&
+          outs.length !== 1
+        ) {
+          context.addIssue({
+            code: "custom",
+            message:
+              "Caught stealing and pickoff plays require one runner out.",
+            path: ["movements"],
+          });
+        }
+        if (payload.playType === "RUNNER_OUT" && outs.length === 0) {
+          context.addIssue({
+            code: "custom",
+            message: "A runner-out play requires at least one runner out.",
+            path: ["movements"],
+          });
+        }
+        if (
+          !["CAUGHT_STEALING", "PICKOFF", "RUNNER_OUT"].includes(
+            payload.playType,
+          ) &&
+          outs.length > 0
+        ) {
+          context.addIssue({
+            code: "custom",
+            message: "This runner-play type cannot record an out.",
+            path: ["movements"],
+          });
+        }
+        const errors = payload.fieldingCredits.filter(
+          ({ credit }) => credit === "ERROR",
+        );
+        if (
+          (payload.playType === "ERROR" && errors.length === 0) ||
+          (payload.playType !== "ERROR" && errors.length > 0) ||
+          errors.some(({ errorType }) => errorType === null) ||
+          payload.fieldingCredits.some(
+            ({ credit, errorType }) => credit !== "ERROR" && errorType !== null,
+          )
+        ) {
+          context.addIssue({
+            code: "custom",
+            message:
+              "Error plays require typed error credit and other plays cannot contain one.",
+            path: ["fieldingCredits"],
+          });
+        }
+        if (
+          (payload.playType === "PASSED_BALL" &&
+            payload.responsibleFielderId === null) ||
+          (payload.playType !== "PASSED_BALL" &&
+            payload.responsibleFielderId !== null)
+        ) {
+          context.addIssue({
+            code: "custom",
+            message:
+              "Passed balls require the responsible catcher and other runner plays do not.",
+            path: ["responsibleFielderId"],
           });
         }
       }),
@@ -332,6 +456,7 @@ const replaceableEventBodySchema = z.discriminatedUnion("eventType", [
   runnerAdvance,
   runnerOut,
   stolenBase,
+  runnerPlay,
   defensiveSubstitution,
   defensiveAlignment,
   pitchingChange,
@@ -427,6 +552,7 @@ export const eventBodySchema = z.discriminatedUnion("eventType", [
   runnerAdvance,
   runnerOut,
   stolenBase,
+  runnerPlay,
   defensiveSubstitution,
   defensiveAlignment,
   pitchingChange,
@@ -450,6 +576,9 @@ function scoringMovements(body: EventBody): RunnerMovement[] {
   }
   if (body.eventType === "RunnerAdvanceRecorded") {
     return [body.payload];
+  }
+  if (body.eventType === "RunnerPlayRecorded") {
+    return body.payload.movements;
   }
   if (body.eventType === "CorrectionApplied") {
     return body.payload.replacements.flatMap(({ body: replacement }) =>
@@ -476,15 +605,15 @@ function validateVersionedRunClassifications(
       : []),
   ];
   if (
-    (schemaVersion === EVENT_SCHEMA_VERSION &&
+    (schemaVersion >= 2 &&
       classifications.some((classification) => classification === undefined)) ||
     (schemaVersion === 1 &&
       classifications.some((classification) => classification !== undefined))
   ) {
     throw new GameEventError(
       "INVALID_PAYLOAD",
-      schemaVersion === EVENT_SCHEMA_VERSION
-        ? "Event schema version 2 requires earned-run classification for every counting run."
+      schemaVersion >= 2
+        ? "Event schema version 2 or newer requires earned-run classification for every counting run."
         : "Event schema version 1 cannot contain version 2 earned-run classification.",
     );
   }
@@ -498,7 +627,11 @@ export const eventEnvelopeSchema = z
     setupSnapshotId: id,
     setupRevision: z.int().positive(),
     sequence: z.int().positive(),
-    schemaVersion: z.union([z.literal(1), z.literal(EVENT_SCHEMA_VERSION)]),
+    schemaVersion: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(EVENT_SCHEMA_VERSION),
+    ]),
     rulesetVersionId: id,
     playTransactionId: id.nullable(),
     componentOrder: z.int().nonnegative().nullable(),
@@ -678,6 +811,19 @@ export function parseEventBody(
 ): EventBody {
   const result = eventBodySchema.safeParse(input);
   if (result.success) {
+    if (
+      schemaVersion < EVENT_SCHEMA_VERSION &&
+      (result.data.eventType === "RunnerPlayRecorded" ||
+        (result.data.eventType === "CorrectionApplied" &&
+          result.data.payload.replacements.some(
+            ({ body }) => body.eventType === "RunnerPlayRecorded",
+          )))
+    ) {
+      throw new GameEventError(
+        "INVALID_PAYLOAD",
+        "RunnerPlayRecorded requires event schema version 3.",
+      );
+    }
     validateVersionedRunClassifications(result.data, schemaVersion);
     return result.data;
   }

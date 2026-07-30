@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 
 import { mutateGameSetupAction } from "@/app/games/setup/actions";
 import {
@@ -940,6 +941,14 @@ export function GameSetupWizard({
               >
                 Start game
               </button>
+            ) : null}
+            {gameStatus === "IN_PROGRESS" ? (
+              <Link
+                className="inline-flex min-h-12 items-center rounded-lg bg-slate-950 px-4 font-semibold text-white"
+                href={`/games/score/${currentDraft.gameId}`}
+              >
+                Continue to live scoring
+              </Link>
             ) : null}
           </div>
         </div>

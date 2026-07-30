@@ -535,4 +535,51 @@ integration("PrismaGameEventRepository", () => {
     );
     expect(resumed.event.acceptedRevision).toBe(6);
   });
+
+  it("persists and reloads one atomic schema-v3 runner play", async () => {
+    const accepted = await repository.accept(
+      command({
+        expectedRevision: 6,
+        eventId: `${runPrefix}-event-runner-play`,
+        playTransactionId: `${runPrefix}-play-runner-play`,
+        clientSubmissionId: `${runPrefix}-submit-runner-play`,
+        body: {
+          eventType: "RunnerPlayRecorded",
+          payload: {
+            playType: "WILD_PITCH",
+            movements: [
+              {
+                runnerId: `${runPrefix}-away-batter`,
+                from: "FIRST",
+                to: "SECOND",
+                cause: "WILD_PITCH",
+                forced: false,
+                responsiblePitcherId: `${runPrefix}-home-pitcher`,
+              },
+            ],
+            fieldingCredits: [],
+            responsibleFielderId: null,
+          },
+        },
+      }),
+    );
+    expect(accepted.event).toMatchObject({
+      schemaVersion: 3,
+      eventType: "RunnerPlayRecorded",
+      acceptedRevision: 7,
+    });
+    const reloaded = await repository.replay(
+      `${runPrefix}-account`,
+      `${runPrefix}-game`,
+      `${runPrefix}-setup`,
+    );
+    expect(reloaded.state).toMatchObject({
+      sourceRevision: 7,
+      bases: {
+        FIRST: null,
+        SECOND: `${runPrefix}-away-batter`,
+        THIRD: null,
+      },
+    });
+  });
 });
