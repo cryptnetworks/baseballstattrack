@@ -374,12 +374,20 @@ export default async function GameBoxScorePage({ params }: PageProps) {
               {report.version.setupRevision}
             </p>
           </div>
-          <Link
-            className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] bg-white px-4 font-medium print:hidden"
-            href={`/games/score/${gameId}`}
-          >
-            Return to scorekeeping
-          </Link>
+          <div className="flex flex-wrap gap-3 print:hidden">
+            <Link
+              className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] bg-white px-4 font-medium"
+              href={`/games/${gameId}/box-score/print`}
+            >
+              Printable report
+            </Link>
+            <Link
+              className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] bg-white px-4 font-medium"
+              href={`/games/score/${gameId}`}
+            >
+              Return to scorekeeping
+            </Link>
+          </div>
         </div>
 
         <section

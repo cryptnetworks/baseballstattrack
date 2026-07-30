@@ -68,12 +68,20 @@ export default async function PlayerSeasonSummaryPage({
         id="main-content"
         tabIndex={-1}
       >
-        <Link
-          className="inline-flex min-h-11 items-center rounded-lg underline"
-          href={`/reports/season?selection=${dashboard.version.teamId}:${dashboard.version.seasonId}`}
-        >
-          Back to season dashboard
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            className="inline-flex min-h-11 items-center rounded-lg underline"
+            href={`/reports/season?selection=${dashboard.version.teamId}:${dashboard.version.seasonId}`}
+          >
+            Back to season dashboard
+          </Link>
+          <Link
+            className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] bg-white px-4 font-medium"
+            href={`/reports/season/players/${player.playerId}/print?teamId=${dashboard.version.teamId}&seasonId=${dashboard.version.seasonId}`}
+          >
+            Printable player report
+          </Link>
+        </div>
         <p className="mt-5 text-sm font-medium text-[var(--accent)]">
           {dashboard.selection.teamDisplayName} ·{" "}
           {dashboard.selection.seasonDisplayName}

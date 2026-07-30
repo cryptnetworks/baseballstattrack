@@ -38,6 +38,7 @@ function fixtureReport() {
     setup: builder.setup,
     events: builder.events(),
     presentation: {
+      season: { id: "season-1", displayName: "2026 season" },
       teams: {
         AWAY: { id: "away", displayName: "Visitors" },
         HOME: { id: "home", displayName: "Hosts" },
