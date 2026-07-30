@@ -18,8 +18,9 @@ Sequence and source revision—not either timestamp—determine order. Sequence 
 
 `EVENT_SCHEMA_VERSION` is currently 3. Versions 1, 2, and 3 have strict validation branches. Version 2 adds the explicit earned/unearned/pending judgment required for every counting run, including a successful steal of home; it does not rewrite version 1 rows. Version 3 adds the atomic `RunnerPlayRecorded` payload for multi-runner standalone advances, errors, steals, caught stealing, pickoffs, wild pitches, and passed balls; older versions cannot claim that event type. Versions 1 and 2 remain replayable without rewriting stored rows. Exact statistic derivation still fails visibly when a v1 scoring run lacks an earned-run judgment. Unknown versions and event types fail closed, and type/payload mismatches are rejected. Future versions must preserve stored payloads through explicit parser/upcast branches. Baseball interpretation remains separately pinned by `rulesetVersionId`. The issue #11 earned-run compatibility decision is documented in [STATISTIC_DERIVATION.md](STATISTIC_DERIVATION.md); the schema-v3 runner boundary is documented in [RUNNER_AND_BASE_OUT_INTERACTIONS.md](RUNNER_AND_BASE_OUT_INTERACTIONS.md).
 
-`REDUCER_VERSION` is `2` for the schema-v3 runner-play transition and stricter
-forced-advance and force-third-out validation.
+`REDUCER_VERSION` is `3`. Version 2 added the schema-v3 runner-play transition
+and stricter forced-advance and force-third-out validation. Version 3 rejects a
+sacrifice classification with two outs, when no sacrifice can be credited.
 
 ## Typed vocabulary and privacy
 

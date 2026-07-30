@@ -6,6 +6,7 @@ import {
   BaseState,
   RunnerBaseOutPanel,
 } from "@/components/scoring/runner-base-out-panel";
+import { PlateAppearancePanel } from "@/components/scoring/plate-appearance-panel";
 import {
   ScoringFixtureBuilder,
   currentFixtureBatter,
@@ -70,5 +71,40 @@ describe("runner base-out components", () => {
     expect(html).toContain("Responsible pitcher");
     expect(html).toContain("Record complete runner play");
     expect(html).toContain("Optional / scorer selected");
+  });
+
+  it("renders touch and keyboard optimized plate-appearance actions with authoritative context", () => {
+    const builder = new ScoringFixtureBuilder();
+    builder.start();
+    const state = builder.state();
+    const batter = currentFixtureBatter(state);
+    const catcher = state.defense.HOME.CATCHER!;
+    const html = renderToStaticMarkup(
+      createElement(PlateAppearancePanel, {
+        accountId: state.accountId,
+        gameId: state.gameId,
+        setupSnapshotId: state.setupSnapshotId,
+        state,
+        playerNames: {
+          [batter]: "Current Batter",
+          [catcher]: "Home Catcher",
+          [state.activePitcher.HOME]: "Home Pitcher",
+        },
+        defenders: [{ id: catcher, label: "Home Catcher · catcher" }],
+        initialClientSubmissionId: "plate-submission-ui",
+        lastAcceptedAction: "game started",
+      }),
+    );
+    expect(html).toContain("Record plate appearance");
+    expect(html).toContain("Current Batter");
+    expect(html).toContain("Home Pitcher");
+    expect(html).toContain("Common outcomes");
+    expect(html).toContain("More outcomes");
+    expect(html).toContain('aria-keyshortcuts="k"');
+    expect(html).toContain("min-h-14");
+    expect(html).toContain("grid-cols-2");
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain("Last accepted: game started");
+    expect(html).toContain('href="#runner-only-actions"');
   });
 });

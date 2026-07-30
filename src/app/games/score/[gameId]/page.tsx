@@ -5,10 +5,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { ApplicationShell } from "@/components/app/application-shell";
+import { PlateAppearancePanel } from "@/components/scoring/plate-appearance-panel";
 import {
   BaseState,
   RunnerBaseOutPanel,
 } from "@/components/scoring/runner-base-out-panel";
+import { replayGame, type AcceptedEvent } from "@/domain/events/event-log";
 import { getGameEventService } from "@/server/app/game-event-service";
 import { getGameSetupService } from "@/server/app/game-setup-service";
 import { getAuthorizationService } from "@/server/auth/application";
@@ -37,13 +39,19 @@ async function loadScoringContext(accountId: string, gameId: string) {
     );
     const setupSnapshotId = current.game.readySetupSnapshotId;
     if (!setupSnapshotId || !current.setup) return { current, state: null };
-    const replay = await getGameEventService().replay(
+    const history = await getGameEventService().loadAcceptedHistory(
       accountId,
       gameId,
       setupSnapshotId,
       actor,
     );
-    return { current, state: replay.state };
+    return {
+      current,
+      state: replayGame(history.setup, history.events, {
+        verifyEvidence: true,
+      }).state,
+      events: history.events,
+    };
   } catch (error) {
     if (error instanceof AuthorizationError) notFound();
     throw error;
@@ -54,7 +62,11 @@ export default async function ScoreGamePage({ params }: PageProps) {
   const { gameId } = await params;
   const accountId = (await cookies()).get(selectedAccountCookie.name)?.value;
   if (!accountId) redirect("/accounts");
-  const { current, state } = await loadScoringContext(accountId, gameId);
+  const {
+    current,
+    state,
+    events = [],
+  } = await loadScoringContext(accountId, gameId);
   if (!current.setup || !current.game.readySetupSnapshotId) {
     redirect(`/games/setup/${gameId}`);
   }
@@ -79,6 +91,8 @@ export default async function ScoreGamePage({ params }: PageProps) {
         .toLowerCase()}`,
     }))
     .sort((left, right) => left.label.localeCompare(right.label));
+  const lastEvent = events.at(-1);
+  const lastAcceptedAction = summarizeLastAction(lastEvent);
 
   return (
     <ApplicationShell>
@@ -128,30 +142,49 @@ export default async function ScoreGamePage({ params }: PageProps) {
           </div>
         </section>
 
-        <section className="mt-6">
-          <h2 className="text-2xl font-semibold">
-            Runner and base-out interactions
-          </h2>
-          <p className="mt-2 max-w-3xl text-[var(--muted)]">
-            The before state comes from authoritative event replay. Proposed
-            runner outcomes are submitted as one atomic play and reconciled from
-            the server after acceptance.
-          </p>
-
-          {state.status === "IN_PROGRESS" ? (
-            <div className="mt-5">
-              <RunnerBaseOutPanel
+        {state.status === "IN_PROGRESS" ? (
+          <>
+            <div className="mt-6">
+              <PlateAppearancePanel
                 accountId={accountId}
                 defenders={defenders}
                 gameId={gameId}
                 initialClientSubmissionId={randomUUID()}
-                key={state.sourceRevision}
+                key={`plate-${state.sourceRevision}`}
+                lastAcceptedAction={lastAcceptedAction}
                 playerNames={playerNames}
                 setupSnapshotId={current.game.readySetupSnapshotId}
                 state={state}
               />
             </div>
-          ) : (
+            <section
+              aria-labelledby="runner-only-heading"
+              className="mt-10 border-t border-[var(--line)] pt-8"
+              id="runner-only-actions"
+            >
+              <h2 className="text-2xl font-semibold" id="runner-only-heading">
+                Runner-only actions
+              </h2>
+              <p className="mt-2 max-w-3xl text-[var(--muted)]">
+                Record steals, pickoffs, wild pitches, passed balls, errors, or
+                other advances that occur outside a completed plate appearance.
+              </p>
+              <div className="mt-5">
+                <RunnerBaseOutPanel
+                  accountId={accountId}
+                  defenders={defenders}
+                  gameId={gameId}
+                  initialClientSubmissionId={randomUUID()}
+                  key={`runner-${state.sourceRevision}`}
+                  playerNames={playerNames}
+                  setupSnapshotId={current.game.readySetupSnapshotId}
+                  state={state}
+                />
+              </div>
+            </section>
+          </>
+        ) : (
+          <section className="mt-6">
             <div className="mt-5">
               <p
                 className="rounded-xl border border-[var(--line)] bg-white p-4"
@@ -168,9 +201,20 @@ export default async function ScoreGamePage({ params }: PageProps) {
                 />
               </div>
             </div>
-          )}
-        </section>
+          </section>
+        )}
       </main>
     </ApplicationShell>
   );
+}
+
+function summarizeLastAction(event: AcceptedEvent | undefined) {
+  if (!event) return "none";
+  if (event.eventType === "PlateAppearanceRecorded") {
+    return event.payload.outcome.replaceAll("_", " ").toLowerCase();
+  }
+  if (event.eventType === "RunnerPlayRecorded") {
+    return event.payload.playType.replaceAll("_", " ").toLowerCase();
+  }
+  return event.eventType.replaceAll(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 }

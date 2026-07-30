@@ -538,11 +538,14 @@ function applyBody(state: GameState, body: EventBody): void {
         (body.payload.outcome === "SACRIFICE_BUNT" &&
           body.payload.battedBall !== "BUNT") ||
         (body.payload.outcome === "SACRIFICE_FLY" &&
-          body.payload.battedBall !== "FLY_BALL")
+          body.payload.battedBall !== "FLY_BALL") ||
+        ((body.payload.outcome === "SACRIFICE_BUNT" ||
+          body.payload.outcome === "SACRIFICE_FLY") &&
+          state.outs === 2)
       ) {
         throw new GameEventError(
           "INVALID_BASEBALL_TRANSITION",
-          "Sacrifice classification contradicts batted-ball judgment.",
+          "Sacrifice classification contradicts the batted-ball or out state.",
         );
       }
       const batterMovements = body.payload.movements.filter(
