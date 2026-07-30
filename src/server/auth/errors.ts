@@ -3,6 +3,7 @@ export type AuthorizationErrorCode =
   | "INVALID_SESSION"
   | "SESSION_EXPIRED"
   | "PROVIDER_FAILURE"
+  | "USER_PROVISIONING_FAILURE"
   | "USER_DISABLED"
   | "NO_ACTIVE_MEMBERSHIP"
   | "INSUFFICIENT_CAPABILITY"
@@ -35,6 +36,7 @@ export function safeAuthorizationStatus(error: unknown): 401 | 403 | 500 {
   }
   return error.code === "CONFIGURATION_ERROR" ||
     error.code === "PROVIDER_FAILURE" ||
+    error.code === "USER_PROVISIONING_FAILURE" ||
     error.code === "AUDIT_FAILURE"
     ? 500
     : 403;
