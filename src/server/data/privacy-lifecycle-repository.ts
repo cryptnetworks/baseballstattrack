@@ -631,6 +631,30 @@ export class PrismaPrivacyLifecycleRepository {
               lastFailureCode: "ACCOUNT_ARCHIVED",
             },
           });
+          await tx.notificationPreference.updateMany({
+            where: {
+              accountId: input.accountId,
+              status: { not: "OPTED_OUT" },
+            },
+            data: {
+              status: "DISABLED",
+              optedOutAt: null,
+              disabledAt: input.now,
+            },
+          });
+          await tx.notificationDelivery.updateMany({
+            where: {
+              accountId: input.accountId,
+              status: { in: ["PENDING", "PROCESSING"] },
+            },
+            data: {
+              status: "CANCELLED",
+              cancelledAt: input.now,
+              leaseOwner: null,
+              leaseExpiresAt: null,
+              lastFailureCode: "ACCOUNT_ARCHIVED",
+            },
+          });
           await tx.externalDataSource.updateMany({
             where: {
               accountId: input.accountId,
@@ -661,6 +685,32 @@ export class PrismaPrivacyLifecycleRepository {
             },
           });
         } else if (request.target === "USER") {
+          await tx.notificationDelivery.updateMany({
+            where: {
+              accountId: input.accountId,
+              preference: { membership: { userId: request.targetId } },
+              status: { in: ["PENDING", "PROCESSING"] },
+            },
+            data: {
+              status: "CANCELLED",
+              cancelledAt: input.now,
+              leaseOwner: null,
+              leaseExpiresAt: null,
+              lastFailureCode: "RECIPIENT_DELETED",
+            },
+          });
+          await tx.notificationPreference.updateMany({
+            where: {
+              accountId: input.accountId,
+              membership: { userId: request.targetId },
+              status: { not: "OPTED_OUT" },
+            },
+            data: {
+              status: "DISABLED",
+              optedOutAt: null,
+              disabledAt: input.now,
+            },
+          });
           await tx.productAnalyticsConsent.deleteMany({
             where: { appUserId: request.targetId },
           });
