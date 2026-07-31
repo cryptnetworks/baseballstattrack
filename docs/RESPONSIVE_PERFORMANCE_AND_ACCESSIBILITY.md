@@ -32,6 +32,12 @@ Measurements were collected on 2026-07-30 with:
 prints sample count, median, and p95. Wall-clock values are evidence, not CI
 assertions, because shared-runner timing gates would be flaky.
 
+The required Vitest run executes the same harness once with smaller smoke
+profiles to prove every operation remains callable and correct without turning
+shared-runner speed into a pass/fail signal. Only the explicit
+`npm run experience:measure` command builds the full 75-event, 100-game, and
+9,000-record profiles and records repeated samples.
+
 `npm run experience:verify` reads the fresh `.next` production build, sums each
 route's unique referenced client chunks, measures raw and independently gzipped
 bytes, checks route isolation, and fails when an explicit budget is exceeded.
@@ -158,12 +164,12 @@ The final `npm run experience:measure` run produced:
 
 | Workflow                                      | Samples | Median (ms) | P95 (ms) |
 | --------------------------------------------- | ------: | ----------: | -------: |
-| Routine scoring preview                       |     200 |       0.002 |    0.005 |
+| Routine scoring preview                       |     200 |       0.003 |    0.006 |
 | Complex runner preview                        |     200 |       0.001 |    0.002 |
-| Correction preview                            |     100 |       0.313 |    0.392 |
-| 75-event evidence-verified replay             |      10 |      90.493 |   94.628 |
-| 100-game, many-candidate dashboard derivation |      20 |       3.125 |    3.332 |
-| 9,000-record portable import validation       |       5 |      11.394 |   12.291 |
+| Correction preview                            |     100 |       0.336 |    0.589 |
+| 75-event evidence-verified replay             |      10 |      90.082 |   93.006 |
+| 100-game, many-candidate dashboard derivation |      20 |       3.083 |    3.300 |
+| 9,000-record portable import validation       |       5 |      11.431 |   12.119 |
 
 These are in-process CPU measurements with data already in memory. They exclude
 database, network, React hydration, browser painting, and assistive-technology
