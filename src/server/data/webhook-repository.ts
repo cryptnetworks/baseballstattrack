@@ -2,6 +2,8 @@ import {
   ActorKind,
   AuditOutcome,
   AuditScope,
+  MembershipStatus,
+  NotificationPreferenceStatus,
   Prisma,
   WebhookAttemptOutcome,
   WebhookDeliveryStatus,
@@ -10,6 +12,10 @@ import {
   type WebhookEventName as StoredWebhookEventName,
 } from "@prisma/client";
 
+import {
+  NOTIFICATION_DELIVERY_RETENTION_DAYS,
+  NOTIFICATION_MESSAGE_VERSION,
+} from "@/domain/notifications";
 import {
   WEBHOOK_DEAD_LETTER_RETENTION_DAYS,
   WEBHOOK_DELIVERY_RETENTION_DAYS,
@@ -75,6 +81,73 @@ export async function enqueueWebhookEvent(
         retentionUntil: addDays(
           input.occurredAt,
           WEBHOOK_DELIVERY_RETENTION_DAYS,
+        ),
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  let teamId: string | null = null;
+  const teamExternalId =
+    typeof payload.teamId === "string" ? payload.teamId : null;
+  if (teamExternalId) {
+    teamId =
+      (
+        await tx.team.findUnique({
+          where: {
+            accountId_externalId: {
+              accountId: input.accountId,
+              externalId: teamExternalId,
+            },
+          },
+          select: { id: true },
+        })
+      )?.id ?? null;
+  } else if (
+    input.eventName === "REPORT_READY" &&
+    payload.scope === "GAME" &&
+    typeof payload.targetId === "string"
+  ) {
+    teamId =
+      (
+        await tx.game.findUnique({
+          where: {
+            accountId_externalId: {
+              accountId: input.accountId,
+              externalId: payload.targetId,
+            },
+          },
+          select: { teamSeason: { select: { teamId: true } } },
+        })
+      )?.teamSeason.teamId ?? null;
+  }
+  const preferences = await tx.notificationPreference.findMany({
+    where: {
+      accountId: input.accountId,
+      status: NotificationPreferenceStatus.ACTIVE,
+      sensitiveContent: false,
+      subscribedEvents: { has: input.eventName as StoredWebhookEventName },
+      membership: { status: MembershipStatus.ACTIVE },
+      OR: [{ teamId: null }, ...(teamId ? [{ teamId }] : [])],
+    },
+    select: {
+      id: true,
+      channel: true,
+      destinationReference: true,
+    },
+  });
+  if (preferences.length) {
+    await tx.notificationDelivery.createMany({
+      data: preferences.map((preference) => ({
+        accountId: input.accountId,
+        preferenceId: preference.id,
+        eventId: event.id,
+        channel: preference.channel,
+        destinationReference: preference.destinationReference,
+        messageVersion: NOTIFICATION_MESSAGE_VERSION,
+        retentionUntil: addDays(
+          input.occurredAt,
+          NOTIFICATION_DELIVERY_RETENTION_DAYS,
         ),
       })),
       skipDuplicates: true,

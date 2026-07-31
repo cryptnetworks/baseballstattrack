@@ -206,7 +206,10 @@ export class WebhookAdministrationService {
       .object({
         accountId: id,
         url: z.string().trim().min(1).max(2_048),
-        subscribedEvents: z.array(z.enum(webhookEventNames)).min(1).max(4),
+        subscribedEvents: z
+          .array(z.enum(webhookEventNames))
+          .min(1)
+          .max(webhookEventNames.length),
       })
       .strict()
       .parse(input);

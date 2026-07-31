@@ -210,10 +210,12 @@ enum WebhookEndpointStatus {
 }
 
 enum WebhookEventName {
+  GAME_COMPLETED
   GAME_VERIFIED
   GAME_CORRECTED
   REPORT_READY
   SEASON_REPORT_UPDATED
+  OPERATIONAL_FAILURE
 }
 
 enum WebhookDeliveryStatus {
@@ -225,6 +227,32 @@ enum WebhookDeliveryStatus {
 }
 
 enum WebhookAttemptOutcome {
+  SUCCEEDED
+  RETRYABLE_FAILURE
+  TERMINAL_FAILURE
+  CANCELLED
+}
+
+enum NotificationChannel {
+  EMAIL
+  DISCORD
+}
+
+enum NotificationPreferenceStatus {
+  ACTIVE
+  OPTED_OUT
+  DISABLED
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  DEAD_LETTER
+  CANCELLED
+}
+
+enum NotificationAttemptOutcome {
   SUCCEEDED
   RETRYABLE_FAILURE
   TERMINAL_FAILURE
@@ -338,6 +366,9 @@ model Account {
   webhookEvents           WebhookEvent[]
   webhookDeliveries       WebhookDelivery[]
   webhookAttempts         WebhookDeliveryAttempt[]
+  notificationPreferences NotificationPreference[]
+  notificationDeliveries  NotificationDelivery[]
+  notificationAttempts    NotificationDeliveryAttempt[]
   externalDataSources     ExternalDataSource[]
   externalIngestionRuns   ExternalIngestionRun[]
   externalProviderRecords ExternalProviderRecord[]
@@ -515,6 +546,7 @@ model AccountMembership {
   user               AppUser                    @relation(fields: [userId], references: [id], onDelete: Restrict)
   roleAssignments    MembershipRoleAssignment[]
   capabilityGrants   CapabilityGrant[]
+  notificationPreferences NotificationPreference[]
   acceptedInvitation MembershipInvitation?
 
   @@unique([accountId, id])
@@ -608,6 +640,7 @@ model Team {
   teamSeasons      TeamSeason[]
   roleAssignments  MembershipRoleAssignment[] @relation("RoleAssignmentTeam")
   capabilityGrants CapabilityGrant[]          @relation("CapabilityGrantTeam")
+  notificationPreferences NotificationPreference[]
 
   @@unique([accountId, id])
   @@unique([accountId, externalId])
@@ -1301,6 +1334,7 @@ model WebhookEvent {
 
   account    Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
   deliveries WebhookDelivery[]
+  notificationDeliveries NotificationDelivery[]
 
   @@unique([accountId, id])
   @@unique([accountId, deduplicationKey])
@@ -1359,6 +1393,91 @@ model WebhookDeliveryAttempt {
 
   account  Account         @relation(fields: [accountId], references: [id], onDelete: Restrict)
   delivery WebhookDelivery @relation(fields: [accountId, deliveryId], references: [accountId, id], onDelete: Restrict)
+
+  @@unique([accountId, id])
+  @@unique([deliveryId, attemptNumber])
+  @@index([accountId, completedAt])
+}
+
+model NotificationPreference {
+  id                   String                       @id @default(cuid())
+  externalId           String                       @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId            String
+  membershipId         String
+  teamId               String?
+  scopeKey             String
+  channel              NotificationChannel
+  destinationReference String
+  subscribedEvents     WebhookEventName[]
+  status               NotificationPreferenceStatus @default(ACTIVE)
+  sensitiveContent     Boolean                      @default(false)
+  optedOutAt           DateTime?
+  disabledAt           DateTime?
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+
+  account    Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  membership AccountMembership      @relation(fields: [accountId, membershipId], references: [accountId, id], onDelete: Restrict)
+  team       Team?                  @relation(fields: [accountId, teamId], references: [accountId, id], onDelete: Restrict)
+  deliveries NotificationDelivery[]
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@unique([accountId, membershipId, scopeKey, channel])
+  @@index([accountId, status, channel])
+  @@index([accountId, teamId, status])
+}
+
+model NotificationDelivery {
+  id                   String                     @id @default(cuid())
+  externalId           String                     @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId            String
+  preferenceId         String
+  eventId              String
+  channel              NotificationChannel
+  destinationReference String
+  messageVersion       Int                        @default(1)
+  status               NotificationDeliveryStatus @default(PENDING)
+  attemptCount         Int                        @default(0)
+  nextAttemptAt        DateTime                   @default(now())
+  leaseOwner           String?
+  leaseExpiresAt       DateTime?
+  lastFailureCode      String?
+  deliveredAt          DateTime?
+  deadLetteredAt       DateTime?
+  cancelledAt          DateTime?
+  retentionUntil       DateTime
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+
+  account    Account                       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  preference NotificationPreference        @relation(fields: [accountId, preferenceId], references: [accountId, id], onDelete: Restrict)
+  event      WebhookEvent                  @relation(fields: [accountId, eventId], references: [accountId, id], onDelete: Restrict)
+  attempts   NotificationDeliveryAttempt[]
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@unique([preferenceId, eventId])
+  @@index([status, nextAttemptAt, leaseExpiresAt])
+  @@index([accountId, preferenceId, status, createdAt])
+  @@index([retentionUntil])
+}
+
+model NotificationDeliveryAttempt {
+  id             String                     @id @default(cuid())
+  accountId      String
+  deliveryId     String
+  workerId       String
+  attemptNumber  Int
+  outcome        NotificationAttemptOutcome
+  responseStatus Int?
+  failureCode    String?
+  durationMs     Int
+  startedAt      DateTime
+  completedAt    DateTime
+
+  account  Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  delivery NotificationDelivery @relation(fields: [accountId, deliveryId], references: [accountId, id], onDelete: Restrict)
 
   @@unique([accountId, id])
   @@unique([deliveryId, attemptNumber])
