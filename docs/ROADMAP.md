@@ -47,6 +47,8 @@ Primary epic: [#97](https://github.com/cryptnetworks/baseballstattrack/issues/97
 The accepted production trust tiers, surface ownership, onboarding,
 credentials, quotas, compatibility, deprecation, and support contract are in
 [Integrations and partner API program](INTEGRATIONS_AND_PARTNER_API_PROGRAM.md).
+The implemented Account-scoped, one-way external calendar contract is in
+[Calendar synchronization](CALENDAR_SYNCHRONIZATION.md).
 
 Primary issues: #73, #91–#99, #108–#121.
 
