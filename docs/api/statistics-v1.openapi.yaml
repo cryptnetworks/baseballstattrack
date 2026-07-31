@@ -1,0 +1,920 @@
+openapi: 3.1.0
+info:
+  title: Baseball Stat Track read API
+  version: 1.0.0
+  description: >-
+    Authenticated, read-only statistics boundary. Version 1 is additive-only;
+    accepted scoring history and private/internal identifiers are never exposed.
+  license:
+    name: Proprietary
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+  - url: /
+    description: Same-origin authenticated application API.
+security:
+  - bearerAuth: []
+tags:
+  - name: Accounts
+  - name: Directories
+  - name: Reports
+x-version-support:
+  current: v1
+  minimumSupported: v1
+  additiveOnly: true
+x-contract-examples:
+  - file: docs/api/examples/authorization-error.json
+    schema: ErrorEnvelope
+  - file: docs/api/examples/games-empty.json
+    schema: GameDirectoryEnvelope
+  - file: docs/api/examples/games-incomplete-page.json
+    schema: GameDirectoryEnvelope
+  - file: docs/api/examples/season-leaders-corrected.json
+    schema: SeasonReportEnvelope
+    consumer: discord-v1
+  - file: docs/api/examples/game-box-score-corrected.json
+    schema: BoxScoreEnvelope
+    consumer: discord-v1
+  - file: docs/api/examples/rate-limit-error.json
+    schema: ErrorEnvelope
+paths:
+  /api/v1/accounts:
+    get:
+      operationId: listAccountsV1
+      tags: [Accounts]
+      summary: List active Accounts available to the caller
+      responses:
+        "200":
+          description: Available Accounts
+          content:
+            application/vnd.baseballstattrack.stats.v1+json:
+              schema:
+                $ref: "#/components/schemas/AccountDirectoryEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerFailure"
+  /api/v1/accounts/{accountId}:
+    get:
+      operationId: getAccountV1
+      tags: [Accounts]
+      summary: Read one authorized Account
+      parameters:
+        - $ref: "#/components/parameters/AccountId"
+      responses:
+        "200":
+          description: Account
+          content:
+            application/vnd.baseballstattrack.stats.v1+json:
+              schema:
+                $ref: "#/components/schemas/AccountEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Unavailable"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerFailure"
+  /api/v1/accounts/{accountId}/teams:
+    get:
+      operationId: listTeamsV1
+      tags: [Directories]
+      summary: List authorized teams
+      parameters:
+        - $ref: "#/components/parameters/AccountId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Direction"
+        - $ref: "#/components/parameters/Query"
+      responses:
+        "200":
+          description: Team page
+          content:
+            application/vnd.baseballstattrack.stats.v1+json:
+              schema:
+                $ref: "#/components/schemas/TeamDirectoryEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Unavailable"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerFailure"
+  /api/v1/accounts/{accountId}/seasons:
+    get:
+      operationId: listSeasonsV1
+      tags: [Directories]
+      summary: List authorized seasons
+      parameters:
+        - $ref: "#/components/parameters/AccountId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Direction"
+        - $ref: "#/components/parameters/Query"
+      responses:
+        "200":
+          description: Season page
+          content:
+            application/vnd.baseballstattrack.stats.v1+json:
+              schema:
+                $ref: "#/components/schemas/SeasonDirectoryEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Unavailable"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerFailure"
+  /api/v1/accounts/{accountId}/players:
+    get:
+      operationId: listPlayersV1
+      tags: [Directories]
+      summary: List authorized players without private profile fields
+      parameters:
+        - $ref: "#/components/parameters/AccountId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Direction"
+        - $ref: "#/components/parameters/Query"
+      responses:
+        "200":
+          description: Player page
+          content:
+            application/vnd.baseballstattrack.stats.v1+json:
+              schema:
+                $ref: "#/components/schemas/PlayerDirectoryEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Unavailable"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerFailure"
+  /api/v1/accounts/{accountId}/games:
+    get:
+      operationId: listGamesV1
+      tags: [Directories]
+      summary: List games with freshness, correction, and report status
+      parameters:
+        - $ref: "#/components/parameters/AccountId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Direction"
+        - $ref: "#/components/parameters/SeasonFilter"
+      responses:
+        "200":
+          description: Game page
+          content:
+            application/vnd.baseballstattrack.stats.v1+json:
+              schema:
+                $ref: "#/components/schemas/GameDirectoryEnvelope"
+              examples:
+                empty:
+                  summary: No matching games
+                  externalValue: ./examples/games-empty.json
+                incomplete:
+                  summary: In-progress game and next-page cursor
+                  externalValue: ./examples/games-incomplete-page.json
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Unavailable"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerFailure"
+  /api/v1/accounts/{accountId}/games/{gameId}/box-score:
+    get:
+      operationId: getBoxScoreV1
+      tags: [Reports]
+      summary: Read a current reconciled game box score
+      parameters:
+        - $ref: "#/components/parameters/AccountId"
+        - $ref: "#/components/parameters/GameId"
+      responses:
+        "200":
+          description: Current box score
+          content:
+            application/vnd.baseballstattrack.stats.v1+json:
+              schema:
+                $ref: "#/components/schemas/BoxScoreEnvelope"
+              examples:
+                corrected:
+                  externalValue: ./examples/game-box-score-corrected.json
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Unavailable"
+        "409":
+          description: Source history changed while the report was produced
+          content:
+            application/vnd.baseballstattrack.stats.v1+json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerFailure"
+  /api/v1/accounts/{accountId}/seasons/{seasonId}/leaders:
+    get:
+      operationId: getSeasonReportV1
+      tags: [Reports]
+      summary: Read team record, recent games, players, and qualified leaders
+      parameters:
+        - $ref: "#/components/parameters/AccountId"
+        - $ref: "#/components/parameters/SeasonId"
+        - $ref: "#/components/parameters/TeamFilter"
+      responses:
+        "200":
+          description: Team-season report
+          content:
+            application/vnd.baseballstattrack.stats.v1+json:
+              schema:
+                $ref: "#/components/schemas/SeasonReportEnvelope"
+              examples:
+                corrected:
+                  externalValue: ./examples/season-leaders-corrected.json
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Unavailable"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerFailure"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Supabase access token
+      description: Dedicated integrations use a least-privilege active identity.
+  parameters:
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/ExternalId" }
+    GameId:
+      name: gameId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/ExternalId" }
+    SeasonId:
+      name: seasonId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/ExternalId" }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string, minLength: 1, maxLength: 512 }
+    Direction:
+      name: direction
+      in: query
+      schema: { type: string, enum: [asc, desc], default: asc }
+    Query:
+      name: query
+      in: query
+      schema: { type: string, minLength: 1, maxLength: 100 }
+    SeasonFilter:
+      name: seasonId
+      in: query
+      schema: { $ref: "#/components/schemas/ExternalId" }
+    TeamFilter:
+      name: teamId
+      in: query
+      required: true
+      schema: { $ref: "#/components/schemas/ExternalId" }
+  headers:
+    RateLimitLimit:
+      schema: { type: integer, minimum: 0 }
+    RateLimitRemaining:
+      schema: { type: integer, minimum: 0 }
+    RateLimitReset:
+      schema: { type: integer, minimum: 0 }
+    RetryAfter:
+      schema: { type: integer, minimum: 0 }
+  responses:
+    InvalidRequest:
+      description: Path, pagination, or filter input is invalid
+      content:
+        application/vnd.baseballstattrack.stats.v1+json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    Unauthenticated:
+      description: Authentication is missing, invalid, or expired
+      content:
+        application/vnd.baseballstattrack.stats.v1+json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    Unauthorized:
+      description: Non-enumerating current-authority denial
+      content:
+        application/vnd.baseballstattrack.stats.v1+json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          examples:
+            denied:
+              externalValue: ./examples/authorization-error.json
+    Unavailable:
+      description: No available resource matched after authentication
+      content:
+        application/vnd.baseballstattrack.stats.v1+json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    RateLimited:
+      description: Account or actor quota is exhausted
+      headers:
+        RateLimit-Limit: { $ref: "#/components/headers/RateLimitLimit" }
+        RateLimit-Remaining: { $ref: "#/components/headers/RateLimitRemaining" }
+        RateLimit-Reset: { $ref: "#/components/headers/RateLimitReset" }
+        Retry-After: { $ref: "#/components/headers/RetryAfter" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          examples:
+            exhausted:
+              externalValue: ./examples/rate-limit-error.json
+    ServerFailure:
+      description: Safe provider or application failure
+      content:
+        application/vnd.baseballstattrack.stats.v1+json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+  schemas:
+    ExternalId:
+      type: string
+      format: uuid
+    ApiVersion:
+      type: string
+      const: v1
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, error]
+      properties:
+        apiVersion: { $ref: "#/components/schemas/ApiVersion" }
+        error: { type: string, minLength: 1 }
+        code: { type: string }
+    Page:
+      type: object
+      additionalProperties: false
+      required: [limit, nextCursor]
+      properties:
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        nextCursor: { type: [string, "null"] }
+    AccountSummary:
+      type: object
+      additionalProperties: false
+      required: [id, displayName]
+      properties:
+        id: { $ref: "#/components/schemas/ExternalId" }
+        displayName: { type: string }
+    Account:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, status, createdAt]
+      properties:
+        id: { $ref: "#/components/schemas/ExternalId" }
+        displayName: { type: string }
+        status:
+          {
+            type: string,
+            enum: [ACTIVE, ARCHIVED, SUSPENDED, PENDING_DELETION],
+          }
+        createdAt: { type: string, format: date-time }
+    AccountDirectoryEnvelope:
+      $ref: "#/components/schemas/AccountSummaryListEnvelope"
+    AccountSummaryListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, data]
+      properties:
+        apiVersion: { $ref: "#/components/schemas/ApiVersion" }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/AccountSummary" }
+    AccountEnvelope:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, data]
+      properties:
+        apiVersion: { $ref: "#/components/schemas/ApiVersion" }
+        data: { $ref: "#/components/schemas/Account" }
+    Team:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, color, status, revision]
+      properties:
+        id: { $ref: "#/components/schemas/ExternalId" }
+        displayName: { type: string }
+        color: { type: [string, "null"] }
+        status: { type: string, enum: [ACTIVE, ARCHIVED] }
+        revision: { type: integer, minimum: 0 }
+    Season:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, startsOn, endsOn, status, revision]
+      properties:
+        id: { $ref: "#/components/schemas/ExternalId" }
+        displayName: { type: string }
+        startsOn: { type: [string, "null"], format: date }
+        endsOn: { type: [string, "null"], format: date }
+        status: { type: string, enum: [DRAFT, ACTIVE, COMPLETED, ARCHIVED] }
+        revision: { type: integer, minimum: 0 }
+    Player:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, battingSide, throwingHand, archived, revision]
+      properties:
+        id: { $ref: "#/components/schemas/ExternalId" }
+        displayName: { type: string }
+        battingSide:
+          { type: [string, "null"], enum: [LEFT, RIGHT, SWITCH, null] }
+        throwingHand: { type: [string, "null"], enum: [LEFT, RIGHT, null] }
+        archived: { type: boolean }
+        revision: { type: integer, minimum: 0 }
+    GameSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          seasonId,
+          accountTeamId,
+          scheduledAt,
+          reportStatus,
+          sourceRevision,
+          verificationState,
+          correctionState,
+          freshness,
+          derivationVersion,
+          privacyOverlayRevision,
+        ]
+      properties:
+        id: { $ref: "#/components/schemas/ExternalId" }
+        seasonId: { $ref: "#/components/schemas/ExternalId" }
+        accountTeamId: { $ref: "#/components/schemas/ExternalId" }
+        scheduledAt: { type: [string, "null"], format: date-time }
+        reportStatus: { $ref: "#/components/schemas/ReportStatus" }
+        sourceRevision: { type: integer, minimum: 0 }
+        verificationState: { $ref: "#/components/schemas/VerificationState" }
+        correctionState: { type: string, enum: [UNCHANGED, CORRECTED] }
+        freshness: { type: string, enum: [CURRENT, STALE, INCOMPLETE] }
+        derivationVersion: { type: [integer, "null"], minimum: 1 }
+        privacyOverlayRevision: { type: [integer, "null"], minimum: 0 }
+    TeamDirectoryEnvelope:
+      $ref: "#/components/schemas/TeamPageEnvelope"
+    TeamPageEnvelope:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, data, page]
+      properties:
+        apiVersion: { $ref: "#/components/schemas/ApiVersion" }
+        data: { type: array, items: { $ref: "#/components/schemas/Team" } }
+        page: { $ref: "#/components/schemas/Page" }
+    SeasonDirectoryEnvelope:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, data, page]
+      properties:
+        apiVersion: { $ref: "#/components/schemas/ApiVersion" }
+        data: { type: array, items: { $ref: "#/components/schemas/Season" } }
+        page: { $ref: "#/components/schemas/Page" }
+    PlayerDirectoryEnvelope:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, data, page]
+      properties:
+        apiVersion: { $ref: "#/components/schemas/ApiVersion" }
+        data: { type: array, items: { $ref: "#/components/schemas/Player" } }
+        page: { $ref: "#/components/schemas/Page" }
+    GameDirectoryEnvelope:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, data, page]
+      properties:
+        apiVersion: { $ref: "#/components/schemas/ApiVersion" }
+        data:
+          { type: array, items: { $ref: "#/components/schemas/GameSummary" } }
+        page: { $ref: "#/components/schemas/Page" }
+    ExactRate:
+      type: [object, "null"]
+      additionalProperties: false
+      required: [numerator, denominator]
+      properties:
+        numerator: { type: integer, minimum: 0 }
+        denominator: { type: integer, minimum: 1 }
+    Counters:
+      type: object
+      additionalProperties: { type: integer, minimum: 0 }
+    Rates:
+      type: object
+      additionalProperties:
+        oneOf:
+          - { $ref: "#/components/schemas/ExactRate" }
+          - { type: integer, minimum: 0 }
+    StatisticLine:
+      type: object
+      additionalProperties: false
+      required: [playerId, counters, rates]
+      properties:
+        playerId: { $ref: "#/components/schemas/ExternalId" }
+        side: { type: string, enum: [AWAY, HOME] }
+        counters: { $ref: "#/components/schemas/Counters" }
+        rates: { $ref: "#/components/schemas/Rates" }
+    Leader:
+      type: object
+      additionalProperties: false
+      required: [playerId, displayName, sampleSize, qualified, rate, counters]
+      properties:
+        playerId: { $ref: "#/components/schemas/ExternalId" }
+        displayName: { type: string }
+        sampleSize: { type: integer, minimum: 0 }
+        qualified: { type: boolean }
+        rate: { $ref: "#/components/schemas/ExactRate" }
+        counters: { $ref: "#/components/schemas/Counters" }
+    Leaderboards:
+      type: object
+      additionalProperties: false
+      required: [batting, pitching, fielding]
+      properties:
+        batting: { type: array, items: { $ref: "#/components/schemas/Leader" } }
+        pitching:
+          { type: array, items: { $ref: "#/components/schemas/Leader" } }
+        fielding:
+          { type: array, items: { $ref: "#/components/schemas/Leader" } }
+    RecentGame:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          gameId,
+          scheduledAt,
+          opponentDisplayName,
+          status,
+          verificationState,
+          confidence,
+          scoreFor,
+          scoreAgainst,
+          result,
+          sourceRevision,
+        ]
+      properties:
+        gameId: { $ref: "#/components/schemas/ExternalId" }
+        scheduledAt: { type: [string, "null"], format: date-time }
+        opponentDisplayName: { type: string }
+        status: { $ref: "#/components/schemas/ReportStatus" }
+        verificationState: { $ref: "#/components/schemas/VerificationState" }
+        confidence: { $ref: "#/components/schemas/Confidence" }
+        scoreFor: { type: integer, minimum: 0 }
+        scoreAgainst: { type: integer, minimum: 0 }
+        result: { type: string, enum: [WIN, LOSS, TIE, INCOMPLETE] }
+        sourceRevision: { type: integer, minimum: 0 }
+    PlayerSourceGame:
+      type: object
+      additionalProperties: false
+      required: [gameId, scheduledAt, verificationState]
+      properties:
+        gameId: { $ref: "#/components/schemas/ExternalId" }
+        scheduledAt: { type: [string, "null"], format: date-time }
+        verificationState: { $ref: "#/components/schemas/VerificationState" }
+    PlayerSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [playerId, displayName, batting, pitching, fielding, sourceGames]
+      properties:
+        playerId: { $ref: "#/components/schemas/ExternalId" }
+        displayName: { type: string }
+        batting:
+          {
+            oneOf:
+              [
+                { $ref: "#/components/schemas/StatisticLine" },
+                { type: "null" },
+              ],
+          }
+        pitching:
+          {
+            oneOf:
+              [
+                { $ref: "#/components/schemas/StatisticLine" },
+                { type: "null" },
+              ],
+          }
+        fielding:
+          {
+            oneOf:
+              [
+                { $ref: "#/components/schemas/StatisticLine" },
+                { type: "null" },
+              ],
+          }
+        sourceGames:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/PlayerSourceGame" },
+          }
+    SeasonReport:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          seasonId,
+          teamId,
+          freshness,
+          derivationVersion,
+          statisticRulesVersion,
+          privacyOverlayRevision,
+          selection,
+          inclusionPolicy,
+          record,
+          recentGames,
+          leaders,
+          players,
+        ]
+      properties:
+        seasonId: { $ref: "#/components/schemas/ExternalId" }
+        teamId: { $ref: "#/components/schemas/ExternalId" }
+        freshness: { type: string, const: CURRENT_SOURCE_DERIVED }
+        derivationVersion: { type: integer, minimum: 1 }
+        statisticRulesVersion: { type: integer, minimum: 1 }
+        privacyOverlayRevision: { type: integer, minimum: 0 }
+        selection:
+          type: object
+          additionalProperties: false
+          required: [seasonDisplayName, teamDisplayName, dateFrom, dateTo]
+          properties:
+            seasonDisplayName: { type: string }
+            teamDisplayName: { type: string }
+            dateFrom: { type: [string, "null"], format: date }
+            dateTo: { type: [string, "null"], format: date }
+        inclusionPolicy: { $ref: "#/components/schemas/InclusionPolicy" }
+        record:
+          type: object
+          required:
+            [
+              wins,
+              losses,
+              ties,
+              incomplete,
+              abandoned,
+              cancelled,
+              correctedAwaitingReverification,
+            ]
+          additionalProperties: { type: integer, minimum: 0 }
+        recentGames:
+          { type: array, items: { $ref: "#/components/schemas/RecentGame" } }
+        leaders: { $ref: "#/components/schemas/Leaderboards" }
+        players:
+          { type: array, items: { $ref: "#/components/schemas/PlayerSummary" } }
+    SeasonReportEnvelope:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, data]
+      properties:
+        apiVersion: { $ref: "#/components/schemas/ApiVersion" }
+        data: { $ref: "#/components/schemas/SeasonReport" }
+    InclusionPolicy:
+      type: object
+      additionalProperties: false
+      required: [official, recentGames, trends, minimums]
+      properties:
+        official: { type: string, const: VERIFIED_ONLY }
+        recentGames: { type: string, const: ALL_CURRENT_LIFECYCLES }
+        trends: { type: string, const: VERIFIED_ONLY }
+        minimums:
+          type: object
+          additionalProperties: false
+          required:
+            [battingPlateAppearances, pitchingOutsRecorded, fieldingChances]
+          properties:
+            battingPlateAppearances: { type: integer, minimum: 0 }
+            pitchingOutsRecorded: { type: integer, minimum: 0 }
+            fieldingChances: { type: integer, minimum: 0 }
+    ReportStatus:
+      type: string
+      enum:
+        [
+          DRAFT,
+          READY,
+          IN_PROGRESS,
+          SUSPENDED,
+          COMPLETED,
+          VERIFIED,
+          CORRECTED,
+          ABANDONED,
+          CANCELLED,
+        ]
+    VerificationState:
+      type: string
+      enum: [VERIFIED, UNVERIFIED]
+    Confidence:
+      type: string
+      enum: [VERIFIED, CURRENT, INCOMPLETE, CORRECTED]
+    BoxScoreReportState:
+      type: string
+      enum:
+        - DRAFT
+        - IN_PROGRESS
+        - SUSPENDED
+        - COMPLETED
+        - CORRECTED
+        - AWAITING_REVERIFICATION
+        - VERIFIED
+        - ABANDONED
+        - CANCELLED
+    BoxScoreVersion:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          sourceRevision,
+          correctionRevision,
+          correctionCount,
+          derivationVersion,
+          statisticRulesVersion,
+          rulesetVersion,
+          privacyOverlayRevision,
+          verificationState,
+          freshness,
+          projectionFreshness,
+          generatedAt,
+        ]
+      properties:
+        sourceRevision: { type: integer, minimum: 0 }
+        correctionRevision: { type: [integer, "null"], minimum: 0 }
+        correctionCount: { type: integer, minimum: 0 }
+        derivationVersion: { type: integer, minimum: 1 }
+        statisticRulesVersion: { type: integer, minimum: 1 }
+        rulesetVersion: { type: string, pattern: "^ruleset_" }
+        privacyOverlayRevision: { type: integer, minimum: 0 }
+        verificationState: { $ref: "#/components/schemas/VerificationState" }
+        freshness: { type: string, const: CURRENT_SOURCE_DERIVED }
+        projectionFreshness: { type: string, enum: [CURRENT, NOT_USED] }
+        generatedAt: { type: string, format: date-time }
+    BoxScoreTeam:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          displayName,
+          opponentDisplayName,
+          lineup,
+          batting,
+          pitching,
+          fielding,
+          totals,
+        ]
+      properties:
+        id: { type: string, pattern: "^team_snapshot_" }
+        displayName: { type: string }
+        opponentDisplayName: { type: string }
+        lineup:
+          { type: array, items: { $ref: "#/components/schemas/LineupEntry" } }
+        batting:
+          { type: array, items: { $ref: "#/components/schemas/StatisticLine" } }
+        pitching:
+          { type: array, items: { $ref: "#/components/schemas/StatisticLine" } }
+        fielding:
+          { type: array, items: { $ref: "#/components/schemas/StatisticLine" } }
+        totals: { $ref: "#/components/schemas/TeamStatistics" }
+    LineupEntry:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          playerId,
+          displayName,
+          jerseyNumber,
+          battingOrder,
+          startingPosition,
+          currentPosition,
+          started,
+          participated,
+          active,
+        ]
+      properties:
+        playerId: { $ref: "#/components/schemas/ExternalId" }
+        displayName: { type: string }
+        jerseyNumber: { type: [string, "null"] }
+        battingOrder: { type: [integer, "null"], minimum: 1 }
+        startingPosition: { type: [string, "null"] }
+        currentPosition: { type: [string, "null"] }
+        started: { type: boolean }
+        participated: { type: boolean }
+        active: { type: boolean }
+    TeamStatistics:
+      type: object
+      additionalProperties: false
+      required: [side, batting, pitching, fielding]
+      properties:
+        side: { type: string, enum: [AWAY, HOME] }
+        batting: { $ref: "#/components/schemas/StatisticValues" }
+        pitching: { $ref: "#/components/schemas/StatisticValues" }
+        fielding: { $ref: "#/components/schemas/StatisticValues" }
+    StatisticValues:
+      type: object
+      additionalProperties:
+        oneOf:
+          - { $ref: "#/components/schemas/ExactRate" }
+          - { type: integer, minimum: 0 }
+    InningLine:
+      type: object
+      additionalProperties: false
+      required: [inning, side, runs]
+      properties:
+        inning: { type: integer, minimum: 1 }
+        side: { type: string, enum: [AWAY, HOME] }
+        runs: { type: integer, minimum: 0 }
+    BoxScore:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          accountTeamId,
+          version,
+          reportState,
+          scoreKind,
+          correctionStatus,
+          seasonId,
+          score,
+          teams,
+          innings,
+          reconciliation,
+        ]
+      properties:
+        id: { $ref: "#/components/schemas/ExternalId" }
+        accountTeamId: { $ref: "#/components/schemas/ExternalId" }
+        version: { $ref: "#/components/schemas/BoxScoreVersion" }
+        reportState: { $ref: "#/components/schemas/BoxScoreReportState" }
+        scoreKind: { type: string, enum: [CURRENT, FINAL, TERMINATED] }
+        correctionStatus: { type: string, enum: [NONE, CORRECTED_HISTORY] }
+        seasonId: { $ref: "#/components/schemas/ExternalId" }
+        score:
+          type: object
+          additionalProperties: false
+          required: [AWAY, HOME]
+          properties:
+            AWAY: { type: integer, minimum: 0 }
+            HOME: { type: integer, minimum: 0 }
+        teams:
+          type: object
+          additionalProperties: false
+          required: [AWAY, HOME]
+          properties:
+            AWAY: { $ref: "#/components/schemas/BoxScoreTeam" }
+            HOME: { $ref: "#/components/schemas/BoxScoreTeam" }
+        innings:
+          { type: array, items: { $ref: "#/components/schemas/InningLine" } }
+        reconciliation:
+          type: object
+          additionalProperties: false
+          required: [status, confidence, checks]
+          properties:
+            status: { type: string, const: PASSED }
+            confidence: { $ref: "#/components/schemas/Confidence" }
+            checks: { type: array, items: { type: string } }
+    BoxScoreEnvelope:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, data]
+      properties:
+        apiVersion: { $ref: "#/components/schemas/ApiVersion" }
+        data: { $ref: "#/components/schemas/BoxScore" }

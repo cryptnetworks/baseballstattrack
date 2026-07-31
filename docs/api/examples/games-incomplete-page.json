@@ -1,0 +1,22 @@
+{
+  "apiVersion": "v1",
+  "data": [
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "seasonId": "00000000-0000-4000-8000-000000000003",
+      "accountTeamId": "00000000-0000-4000-8000-000000000002",
+      "scheduledAt": "2026-07-31T19:00:00.000Z",
+      "reportStatus": "IN_PROGRESS",
+      "sourceRevision": 7,
+      "verificationState": "UNVERIFIED",
+      "correctionState": "UNCHANGED",
+      "freshness": "INCOMPLETE",
+      "derivationVersion": null,
+      "privacyOverlayRevision": null
+    }
+  ],
+  "page": {
+    "limit": 1,
+    "nextCursor": "eyJleHRlcm5hbElkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDA1IiwiZGlyZWN0aW9uIjoiYXNjIn0"
+  }
+}

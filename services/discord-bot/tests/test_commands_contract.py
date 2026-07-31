@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -18,6 +20,15 @@ TEAM = "00000000-0000-4000-8000-000000000002"
 SEASON = "00000000-0000-4000-8000-000000000003"
 PLAYER = "00000000-0000-4000-8000-000000000004"
 GAME = "00000000-0000-4000-8000-000000000005"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+
+
+def contract_example(name: str) -> dict[str, Any]:
+    payload = json.loads(
+        (REPOSITORY_ROOT / "docs" / "api" / "examples" / name).read_text()
+    )
+    assert payload["apiVersion"] == "v1"
+    return payload["data"]
 
 
 class RepresentativeApi:
@@ -25,70 +36,11 @@ class RepresentativeApi:
         self, account_id: str, season_id: str, team_id: str
     ) -> dict[str, Any]:
         assert (account_id, season_id, team_id) == (ACCOUNT, SEASON, TEAM)
-        return {
-            "seasonId": SEASON,
-            "teamId": TEAM,
-            "freshness": "CURRENT_SOURCE_DERIVED",
-            "selection": {"teamDisplayName": "Stars", "seasonDisplayName": "2026"},
-            "record": {
-                "wins": 8,
-                "losses": 2,
-                "ties": 1,
-                "incomplete": 1,
-                "correctedAwaitingReverification": 1,
-            },
-            "leaders": {
-                "batting": [
-                    {
-                        "playerId": PLAYER,
-                        "displayName": "Jordan",
-                        "sampleSize": 22,
-                        "rate": {"formatted": ".412"},
-                    }
-                ]
-            },
-            "players": [
-                {
-                    "playerId": PLAYER,
-                    "displayName": "Jordan",
-                    "batting": {
-                        "playerId": PLAYER,
-                        "counters": {"hits": 9, "plateAppearances": 22},
-                        "rates": {"battingAverage": {"formatted": ".412"}},
-                    },
-                    "pitching": None,
-                    "fielding": None,
-                    "sourceGames": [{"gameId": GAME, "verificationState": "VERIFIED"}],
-                }
-            ],
-            "recentGames": [
-                {
-                    "gameId": GAME,
-                    "scheduledAt": "2026-07-30T19:00:00.000Z",
-                    "opponentDisplayName": "Comets",
-                    "status": "CORRECTED",
-                    "verificationState": "UNVERIFIED",
-                    "confidence": "CORRECTED",
-                    "scoreFor": 6,
-                    "scoreAgainst": 4,
-                }
-            ],
-        }
+        return contract_example("season-leaders-corrected.json")
 
     async def game(self, account_id: str, game_id: str) -> dict[str, Any]:
         assert (account_id, game_id) == (ACCOUNT, GAME)
-        return {
-            "id": GAME,
-            "accountTeamId": TEAM,
-            "seasonId": SEASON,
-            "reportState": "CORRECTED",
-            "correctionStatus": "CORRECTED_HISTORY",
-            "score": {"AWAY": 4, "HOME": 6},
-            "teams": {
-                "AWAY": {"displayName": "Comets"},
-                "HOME": {"displayName": "Stars"},
-            },
-        }
+        return contract_example("game-box-score-corrected.json")
 
 
 def service() -> CommandService:

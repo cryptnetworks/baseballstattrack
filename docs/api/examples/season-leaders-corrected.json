@@ -1,0 +1,87 @@
+{
+  "apiVersion": "v1",
+  "data": {
+    "seasonId": "00000000-0000-4000-8000-000000000003",
+    "teamId": "00000000-0000-4000-8000-000000000002",
+    "freshness": "CURRENT_SOURCE_DERIVED",
+    "derivationVersion": 2,
+    "statisticRulesVersion": 1,
+    "privacyOverlayRevision": 0,
+    "selection": {
+      "seasonDisplayName": "2026",
+      "teamDisplayName": "Stars",
+      "dateFrom": null,
+      "dateTo": null
+    },
+    "inclusionPolicy": {
+      "official": "VERIFIED_ONLY",
+      "recentGames": "ALL_CURRENT_LIFECYCLES",
+      "trends": "VERIFIED_ONLY",
+      "minimums": {
+        "battingPlateAppearances": 10,
+        "pitchingOutsRecorded": 9,
+        "fieldingChances": 5
+      }
+    },
+    "record": {
+      "wins": 8,
+      "losses": 2,
+      "ties": 1,
+      "incomplete": 1,
+      "abandoned": 0,
+      "cancelled": 0,
+      "correctedAwaitingReverification": 1
+    },
+    "recentGames": [
+      {
+        "gameId": "00000000-0000-4000-8000-000000000005",
+        "scheduledAt": "2026-07-30T19:00:00.000Z",
+        "opponentDisplayName": "Comets",
+        "status": "CORRECTED",
+        "verificationState": "UNVERIFIED",
+        "confidence": "CORRECTED",
+        "scoreFor": 6,
+        "scoreAgainst": 4,
+        "result": "WIN",
+        "sourceRevision": 12
+      }
+    ],
+    "leaders": {
+      "batting": [
+        {
+          "playerId": "00000000-0000-4000-8000-000000000004",
+          "displayName": "Jordan",
+          "sampleSize": 22,
+          "qualified": true,
+          "rate": { "numerator": 7, "denominator": 17 },
+          "counters": { "hits": 9, "plateAppearances": 22 }
+        }
+      ],
+      "pitching": [],
+      "fielding": []
+    },
+    "players": [
+      {
+        "playerId": "00000000-0000-4000-8000-000000000004",
+        "displayName": "Jordan",
+        "batting": {
+          "playerId": "00000000-0000-4000-8000-000000000004",
+          "side": "HOME",
+          "counters": { "hits": 9, "plateAppearances": 22 },
+          "rates": {
+            "battingAverage": { "numerator": 7, "denominator": 17 }
+          }
+        },
+        "pitching": null,
+        "fielding": null,
+        "sourceGames": [
+          {
+            "gameId": "00000000-0000-4000-8000-000000000005",
+            "scheduledAt": "2026-07-30T19:00:00.000Z",
+            "verificationState": "VERIFIED"
+          }
+        ]
+      }
+    ]
+  }
+}
