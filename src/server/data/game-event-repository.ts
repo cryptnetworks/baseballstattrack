@@ -949,6 +949,21 @@ export class PrismaGameEventRepository {
               });
             }
           }
+          if (body.eventType === "GameCompleted") {
+            await enqueueWebhookEvent(tx, {
+              accountId: command.accountId,
+              eventName: "GAME_COMPLETED",
+              deduplicationKey: `game.completed:${command.eventId}`,
+              payload: {
+                gameId: game.externalId,
+                seasonId: game.season.externalId,
+                teamId: game.teamSeason.team.externalId,
+                sourceRevision: acceptedRevision,
+                completionState: "COMPLETED",
+              },
+              occurredAt: acceptedAt,
+            });
+          }
           if (
             body.eventType === "GameVerified" ||
             body.eventType === "CorrectionApplied"

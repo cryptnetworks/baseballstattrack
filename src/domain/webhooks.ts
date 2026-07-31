@@ -4,18 +4,22 @@ import { isIP } from "node:net";
 import { z } from "zod";
 
 export const webhookEventNames = [
+  "GAME_COMPLETED",
   "GAME_VERIFIED",
   "GAME_CORRECTED",
   "REPORT_READY",
   "SEASON_REPORT_UPDATED",
+  "OPERATIONAL_FAILURE",
 ] as const;
 export type WebhookEventName = (typeof webhookEventNames)[number];
 
 export const webhookPublicEventNames = {
+  GAME_COMPLETED: "game.completed",
   GAME_VERIFIED: "game.verified",
   GAME_CORRECTED: "game.corrected",
   REPORT_READY: "report.ready",
   SEASON_REPORT_UPDATED: "season.report.updated",
+  OPERATIONAL_FAILURE: "operational.failure",
 } as const satisfies Record<WebhookEventName, string>;
 
 export const WEBHOOK_PAYLOAD_VERSION = 1;
@@ -41,6 +45,9 @@ const baseGamePayload = z
   .strict();
 
 export const webhookPayloadSchemas = {
+  GAME_COMPLETED: baseGamePayload
+    .extend({ completionState: z.literal("COMPLETED") })
+    .strict(),
   GAME_VERIFIED: baseGamePayload
     .extend({ verificationState: z.literal("VERIFIED") })
     .strict(),
@@ -67,6 +74,24 @@ export const webhookPayloadSchemas = {
       sourceGameId: externalId,
       sourceRevision: z.int().nonnegative(),
       reason: z.enum(["GAME_VERIFIED", "GAME_CORRECTED"]),
+    })
+    .strict(),
+  OPERATIONAL_FAILURE: z
+    .object({
+      service: z
+        .string()
+        .trim()
+        .regex(/^[a-z][a-z0-9._-]{2,63}$/u),
+      failureCode: z
+        .string()
+        .trim()
+        .regex(/^[A-Z][A-Z0-9_]{2,63}$/u),
+      correlationId: z
+        .string()
+        .trim()
+        .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/u),
+      severity: z.enum(["WARNING", "CRITICAL"]),
+      teamId: externalId.optional(),
     })
     .strict(),
 } as const;

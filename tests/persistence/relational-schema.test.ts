@@ -35,9 +35,45 @@ describe("relational domain schema", () => {
       "RateLimitCounter",
       "RateLimitCharge",
       "RateLimitOverride",
+      "NotificationPreference",
+      "NotificationDelivery",
+      "NotificationDeliveryAttempt",
     ]) {
       expect(model(name).name).toBe(name);
     }
+  });
+
+  it("keeps notification rules and delivery evidence separate from analytics", () => {
+    const preferenceFields = new Set(
+      model("NotificationPreference").fields.map((field) => field.name),
+    );
+    const deliveryFields = new Set(
+      model("NotificationDelivery").fields.map((field) => field.name),
+    );
+    for (const required of [
+      "accountId",
+      "membershipId",
+      "teamId",
+      "channel",
+      "destinationReference",
+      "subscribedEvents",
+      "status",
+    ]) {
+      expect(preferenceFields).toContain(required);
+    }
+    for (const required of [
+      "accountId",
+      "preferenceId",
+      "eventId",
+      "messageVersion",
+      "attemptCount",
+      "leaseOwner",
+      "retentionUntil",
+    ]) {
+      expect(deliveryFields).toContain(required);
+    }
+    expect(preferenceFields).not.toContain("analyticsObservationId");
+    expect(deliveryFields).not.toContain("insightId");
   });
 
   it("keeps prohibited MVP player fields out of persistence", () => {
