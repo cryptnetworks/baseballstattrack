@@ -52,6 +52,9 @@ Discord control-plane delivery is tracked by [#108](https://github.com/cryptnetw
 
 Add optional, explainable analytics such as batted-ball and pitch-location views, lineup and matchup insights, and trend analysis.
 
+The observation-stream feasibility decision and M6 implementation gates are in
+[Spray-chart and pitch-chart discovery](SPRAY_AND_PITCH_CHART_DISCOVERY.md).
+
 Exit criteria: advanced insights are reproducible from versioned source data, disclose sample-size and ruleset assumptions, respect privacy, and never become required for core scoring.
 
 Owner: `@cryptnetworks` repository maintainers. Target date: 2027-05-28.
