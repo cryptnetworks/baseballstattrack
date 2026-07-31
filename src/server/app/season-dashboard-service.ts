@@ -2,6 +2,11 @@ import { z } from "zod";
 
 import { buildSeasonDashboard, type SeasonDashboard } from "@/domain/reports";
 import { deriveGameStatistics } from "@/domain/statistics";
+import {
+  getRateLimitService,
+  noRateLimit,
+  type RateLimitEnforcer,
+} from "@/server/app/rate-limit-service";
 import type { TrustedActorContext } from "@/server/auth/types";
 import { requireTrustedActor } from "@/server/auth/types";
 import { PrismaGameEventRepository } from "@/server/data/game-event-repository";
@@ -33,6 +38,7 @@ export class SeasonDashboardService {
       PrismaGameEventRepository,
       "loadAcceptedHistories"
     >,
+    private readonly rateLimits: RateLimitEnforcer = noRateLimit,
   ) {}
 
   async listChoices(
@@ -43,6 +49,10 @@ export class SeasonDashboardService {
     if (actor.target.kind !== "ACCOUNT") {
       throw new Error("Account report authorization is required.");
     }
+    await this.rateLimits.enforce(
+      { accountId, endpointClass: "REPORT_READ" },
+      actor,
+    );
     return this.repository.listChoices(accountId);
   }
 
@@ -63,6 +73,14 @@ export class SeasonDashboardService {
     ) {
       throw new Error("Exact team-season report authorization is required.");
     }
+    await this.rateLimits.enforce(
+      {
+        accountId: query.accountId,
+        endpointClass: "REPORT_GENERATION",
+        cost: 2,
+      },
+      actor,
+    );
     const choices = await this.repository.listChoices(query.accountId);
     const choice = choices.find(
       (candidate) =>
@@ -135,5 +153,6 @@ export function getSeasonDashboardService(): SeasonDashboardService {
   return new SeasonDashboardService(
     new PrismaSeasonDashboardRepository(prisma),
     new PrismaGameEventRepository(prisma),
+    getRateLimitService(),
   );
 }

@@ -11,6 +11,7 @@ import {
   type CorrectionWorkflowResult,
 } from "@/domain/corrections";
 import { GameEventError, parseEventBody } from "@/domain/events/event-log";
+import { RateLimitError } from "@/domain/rate-limits";
 import {
   ScoringCorrectionError,
   buildCorrectionPayload,
@@ -179,6 +180,16 @@ async function authorizeGameAction(
 }
 
 function safeCorrectionFailure(error: unknown) {
+  if (error instanceof RateLimitError) {
+    return {
+      status: "ERROR" as const,
+      code: error.code,
+      message:
+        error.code === "IDEMPOTENCY_CONFLICT"
+          ? "This correction retry identity was used for different content. Reload before submitting again."
+          : `Too many correction requests. Retry in ${error.retryAfterSeconds} seconds.`,
+    };
+  }
   if (error instanceof ScoringCorrectionError) {
     return {
       status: "ERROR" as const,
@@ -242,6 +253,16 @@ function safeCorrectionFailure(error: unknown) {
 function safeFailure(
   error: unknown,
 ): Extract<RunnerPlayActionResult, { status: "ERROR" }> {
+  if (error instanceof RateLimitError) {
+    return {
+      status: "ERROR" as const,
+      code: error.code,
+      message:
+        error.code === "IDEMPOTENCY_CONFLICT"
+          ? "This scoring retry identity was used for a different play. Reload before submitting again."
+          : `Scoring is temporarily rate limited. Keep this play and retry it in ${error.retryAfterSeconds} seconds.`,
+    };
+  }
   if (error instanceof GameEventError) {
     const messages: Partial<Record<GameEventError["code"], string>> = {
       STALE_SOURCE_REVISION:

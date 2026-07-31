@@ -168,13 +168,18 @@ public CI logs.
 3. Assess Account scope, authorization/privacy exposure, data integrity,
    replay/projection effects, backup currency, and notification/escalation
    obligations. Use the private security route when applicable.
-4. A P0 emergency change may shorten normal lead time but still needs a linked
+4. For verified quota exhaustion, follow
+   `docs/RATE_LIMITS_AND_ABUSE_PREVENTION.md`: use only the same-origin audited
+   override endpoint, keep the change within its bounded policy and 24-hour
+   expiry, monitor decisions, and revoke it as soon as the incident ends. Never
+   edit limiter tables or accept a caller-supplied bypass header.
+5. A P0 emergency change may shorten normal lead time but still needs a linked
    issue or private incident reference, focused diff, explicit operator
    approval, exact-head verification, rollback/roll-forward plan, and
    exact-main or exact-deployment verification. Never mask or waive a failed
    safety gate. If a required native control is unavailable, record the
    limitation and the human approval evidence.
-5. Verify recovery through readiness and safe user/invariant checks, monitor
+6. Verify recovery through readiness and safe user/invariant checks, monitor
    for recurrence, and record containment end time. Follow with root cause,
    timeline, impact, detection gap, regression proof, owner, and dated systemic
    actions using only safely publishable information.

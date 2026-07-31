@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { getRateLimitService } from "@/server/app/rate-limit-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import { authenticatePageSession } from "@/server/auth/next-session";
 import { authorizeProtectedAction } from "@/server/auth/protected-boundary";
@@ -15,7 +16,7 @@ const accountIdSchema = z.string().trim().min(1).max(128);
 export async function selectAccount(formData: FormData): Promise<never> {
   const requestHeaders = await headers();
   const accountId = accountIdSchema.parse(formData.get("accountId"));
-  await authorizeProtectedAction({
+  const actor = await authorizeProtectedAction({
     origin: requestHeaders.get("origin"),
     host: requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
     authenticate: authenticatePageSession,
@@ -23,6 +24,10 @@ export async function selectAccount(formData: FormData): Promise<never> {
     target: { kind: "ACCOUNT", accountId },
     capability: "account.view",
   });
+  await getRateLimitService().enforce(
+    { accountId, endpointClass: "ACCOUNT_SELECTION" },
+    actor,
+  );
   const store = await cookies();
   store.set(
     selectedAccountCookie.name,

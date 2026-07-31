@@ -1,7 +1,15 @@
 import { z } from "zod";
 
 import { PrivacyLifecycleError } from "@/domain/privacy-lifecycle";
+import {
+  RateLimitError,
+  rateLimitFingerprint,
+  rateLimitHeaders,
+  rateLimitStatus,
+  safeRateLimitMessage,
+} from "@/domain/rate-limits";
 import { getPrivacyLifecycleService } from "@/server/app/privacy-lifecycle-service";
+import { getRateLimitService } from "@/server/app/rate-limit-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import {
   safeAuthorizationMessage,
@@ -57,6 +65,12 @@ function errorResponse(error: unknown) {
       { status: 404, headers: { "Cache-Control": "no-store" } },
     );
   }
+  if (error instanceof RateLimitError) {
+    return Response.json(
+      { error: safeRateLimitMessage(error) },
+      { status: rateLimitStatus(error), headers: rateLimitHeaders(error) },
+    );
+  }
   return Response.json(
     { error: safeAuthorizationMessage(error) },
     {
@@ -71,6 +85,16 @@ export async function POST(request: Request) {
     requireSameOrigin(request);
     const input = prepareSchema.parse(await request.json());
     const actor = await exportActor(request, input.accountId);
+    await getRateLimitService().enforce(
+      {
+        accountId: input.accountId,
+        endpointClass: "EXPORT",
+        cost: 2,
+        operationKey: input.clientRequestId,
+        fingerprint: rateLimitFingerprint(input.accountId, "prepare"),
+      },
+      actor,
+    );
     const prepared = await getPrivacyLifecycleService().prepareExport(
       input,
       actor,
@@ -88,6 +112,10 @@ export async function GET(request: Request) {
   try {
     const input = accessInput(request);
     const actor = await exportActor(request, input.accountId);
+    await getRateLimitService().enforce(
+      { accountId: input.accountId, endpointClass: "EXPORT", cost: 5 },
+      actor,
+    );
     const artifact = await getPrivacyLifecycleService().downloadExport(
       input,
       actor,
@@ -113,6 +141,10 @@ export async function DELETE(request: Request) {
     requireSameOrigin(request);
     const input = accessInput(request);
     const actor = await exportActor(request, input.accountId);
+    await getRateLimitService().enforce(
+      { accountId: input.accountId, endpointClass: "EXPORT" },
+      actor,
+    );
     await getPrivacyLifecycleService().cancelExport(input, actor);
     return new Response(null, {
       status: 204,

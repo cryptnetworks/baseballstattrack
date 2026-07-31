@@ -1,7 +1,14 @@
 import { z } from "zod";
 
 import { MAX_PORTABLE_BYTES, PortableDataError } from "@/domain/portable-data";
+import {
+  RateLimitError,
+  rateLimitHeaders,
+  rateLimitStatus,
+  safeRateLimitMessage,
+} from "@/domain/rate-limits";
 import { getPortableDataService } from "@/server/app/portable-data-service";
+import { getRateLimitService } from "@/server/app/rate-limit-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import {
   safeAuthorizationMessage,
@@ -53,6 +60,14 @@ export async function POST(request: Request) {
       target: { kind: "ACCOUNT", accountId },
       capability: "account.manage",
     });
+    await getRateLimitService().enforce(
+      {
+        accountId,
+        endpointClass: "REPORT_GENERATION",
+        cost: Math.max(1, Math.ceil(contentLength / (1024 * 1024))),
+      },
+      actor,
+    );
     const bytes = new Uint8Array(await request.arrayBuffer());
     const plan = await getPortableDataService().validateImport(
       accountId,
@@ -85,6 +100,12 @@ export async function POST(request: Request) {
           status: validationStatus(error),
           headers: { "Cache-Control": "no-store" },
         },
+      );
+    }
+    if (error instanceof RateLimitError) {
+      return Response.json(
+        { error: safeRateLimitMessage(error) },
+        { status: rateLimitStatus(error), headers: rateLimitHeaders(error) },
       );
     }
     return Response.json(
