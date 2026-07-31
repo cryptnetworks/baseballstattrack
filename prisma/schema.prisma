@@ -236,6 +236,31 @@ enum ProductAnalyticsConsentStatus {
   OPTED_OUT
 }
 
+enum ExternalDataSourceStatus {
+  DISABLED
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum ExternalIngestionRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum ExternalProviderRecordStatus {
+  PUBLISHED
+  QUARANTINED
+  SUPERSEDED
+}
+
+enum ExternalQuarantineStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
 model Account {
   id          String        @id @default(cuid())
   externalId  String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -246,35 +271,39 @@ model Account {
   updatedAt   DateTime      @updatedAt
   archivedAt  DateTime?
 
-  memberships           AccountMembership[]
-  invitations           MembershipInvitation[]
-  teams                 Team[]
-  seasons               Season[]
-  teamSeasons           TeamSeason[]
-  players               Player[]
-  rosterEntries         RosterEntry[]
-  rulesetVersions       RulesetVersion[]
-  games                 Game[]
-  gameTeams             GameTeamSnapshot[]
-  setupSnapshots        GameSetupSnapshot[]
-  lineupSlots           LineupSlotSnapshot[]
-  playTransactions      PlayTransaction[]
-  sourceEvents          SourceEvent[]
-  eventCorrections      EventCorrection[]
-  projectionCheckpoints ProjectionCheckpoint[]
-  securityAuditRecords  SecurityAuditRecord[]
-  privacyOverlays       PrivacyOverlay[]
-  privacyOverlayFields  PrivacyOverlayField[]
-  dataExportArtifacts   DataExportArtifact[]
-  privacyRequests       PrivacyLifecycleRequest[]
-  privacyHolds          PrivacyHold[]
-  rateLimitCounters     RateLimitCounter[]
-  rateLimitCharges      RateLimitCharge[]
-  rateLimitOverrides    RateLimitOverride[]
-  webhookEndpoints      WebhookEndpoint[]
-  webhookEvents         WebhookEvent[]
-  webhookDeliveries     WebhookDelivery[]
-  webhookAttempts       WebhookDeliveryAttempt[]
+  memberships             AccountMembership[]
+  invitations             MembershipInvitation[]
+  teams                   Team[]
+  seasons                 Season[]
+  teamSeasons             TeamSeason[]
+  players                 Player[]
+  rosterEntries           RosterEntry[]
+  rulesetVersions         RulesetVersion[]
+  games                   Game[]
+  gameTeams               GameTeamSnapshot[]
+  setupSnapshots          GameSetupSnapshot[]
+  lineupSlots             LineupSlotSnapshot[]
+  playTransactions        PlayTransaction[]
+  sourceEvents            SourceEvent[]
+  eventCorrections        EventCorrection[]
+  projectionCheckpoints   ProjectionCheckpoint[]
+  securityAuditRecords    SecurityAuditRecord[]
+  privacyOverlays         PrivacyOverlay[]
+  privacyOverlayFields    PrivacyOverlayField[]
+  dataExportArtifacts     DataExportArtifact[]
+  privacyRequests         PrivacyLifecycleRequest[]
+  privacyHolds            PrivacyHold[]
+  rateLimitCounters       RateLimitCounter[]
+  rateLimitCharges        RateLimitCharge[]
+  rateLimitOverrides      RateLimitOverride[]
+  webhookEndpoints        WebhookEndpoint[]
+  webhookEvents           WebhookEvent[]
+  webhookDeliveries       WebhookDelivery[]
+  webhookAttempts         WebhookDeliveryAttempt[]
+  externalDataSources     ExternalDataSource[]
+  externalIngestionRuns   ExternalIngestionRun[]
+  externalProviderRecords ExternalProviderRecord[]
+  externalQuarantines     ExternalIngestionQuarantine[]
 }
 
 model AppUser {
@@ -310,6 +339,123 @@ model ProductAnalyticsConsent {
   appUser AppUser @relation(fields: [appUserId], references: [id], onDelete: Cascade)
 
   @@index([status, expiresAt])
+}
+
+model ExternalDataSource {
+  id                  String                   @id @default(cuid())
+  externalId          String                   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId           String
+  providerKey         String
+  status              ExternalDataSourceStatus @default(DISABLED)
+  approvalReference   String?
+  termsVersion        String?
+  attribution         String?
+  cadenceSeconds      Int
+  backfillDays        Int
+  checkpoint          Json?
+  lastSuccessAt       DateTime?
+  lastFailureAt       DateTime?
+  lastFailureCode     String?
+  consecutiveFailures Int                      @default(0)
+  nextAttemptAt       DateTime?
+  quotaRemaining      Int?
+  quotaResetAt        DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  account     Account                       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  runs        ExternalIngestionRun[]
+  records     ExternalProviderRecord[]
+  quarantines ExternalIngestionQuarantine[]
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@unique([accountId, providerKey])
+  @@index([status, lastSuccessAt])
+}
+
+model ExternalIngestionRun {
+  id               String                     @id @default(cuid())
+  accountId        String
+  sourceId         String
+  runKey           String
+  mode             String
+  status           ExternalIngestionRunStatus @default(RUNNING)
+  windowStartedAt  DateTime
+  windowEndedAt    DateTime
+  checkpointBefore Json?
+  checkpointAfter  Json?
+  attemptCount     Int                        @default(1)
+  pageCount        Int                        @default(0)
+  recordCount      Int                        @default(0)
+  publishedCount   Int                        @default(0)
+  quarantinedCount Int                        @default(0)
+  failureCode      String?
+  startedAt        DateTime                   @default(now())
+  completedAt      DateTime?
+
+  account Account                  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  source  ExternalDataSource       @relation(fields: [accountId, sourceId], references: [accountId, id], onDelete: Restrict)
+  records ExternalProviderRecord[]
+
+  @@unique([accountId, id])
+  @@unique([sourceId, runKey])
+  @@index([sourceId, status, startedAt])
+}
+
+model ExternalProviderRecord {
+  id                  String                       @id @default(cuid())
+  externalId          String                       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId           String
+  sourceId            String
+  runId               String
+  recordType          String
+  providerRecordId    String
+  providerVersion     String
+  payloadVersion      Int
+  payloadDigest       String
+  normalizedPayload   Json
+  status              ExternalProviderRecordStatus
+  canonicalType       String?
+  canonicalExternalId String?                      @db.Uuid
+  correctionOfId      String?
+  retrievedAt         DateTime
+  effectiveAt         DateTime?
+  createdAt           DateTime                     @default(now())
+
+  account      Account                      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  source       ExternalDataSource           @relation(fields: [accountId, sourceId], references: [accountId, id], onDelete: Restrict)
+  run          ExternalIngestionRun         @relation(fields: [accountId, runId], references: [accountId, id], onDelete: Restrict)
+  correctionOf ExternalProviderRecord?      @relation("ExternalRecordCorrection", fields: [accountId, correctionOfId], references: [accountId, id], onDelete: Restrict)
+  corrections  ExternalProviderRecord[]     @relation("ExternalRecordCorrection")
+  quarantine   ExternalIngestionQuarantine?
+
+  @@unique([accountId, id])
+  @@unique([sourceId, recordType, providerRecordId, providerVersion])
+  @@index([accountId, recordType, status, effectiveAt])
+  @@index([sourceId, providerRecordId, retrievedAt])
+}
+
+model ExternalIngestionQuarantine {
+  id              String                   @id @default(cuid())
+  accountId       String
+  sourceId        String
+  recordId        String                   @unique
+  status          ExternalQuarantineStatus @default(OPEN)
+  diagnosticCodes String[]
+  reviewNote      String?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  account Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  source  ExternalDataSource     @relation(fields: [accountId, sourceId], references: [accountId, id], onDelete: Restrict)
+  record  ExternalProviderRecord @relation(fields: [accountId, recordId], references: [accountId, id], onDelete: Restrict)
+
+  @@unique([accountId, id])
+  @@unique([accountId, recordId])
+  @@index([accountId, status, createdAt])
 }
 
 model AccountMembership {

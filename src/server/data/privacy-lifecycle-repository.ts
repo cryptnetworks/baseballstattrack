@@ -631,6 +631,13 @@ export class PrismaPrivacyLifecycleRepository {
               lastFailureCode: "ACCOUNT_ARCHIVED",
             },
           });
+          await tx.externalDataSource.updateMany({
+            where: {
+              accountId: input.accountId,
+              status: { in: ["ACTIVE", "SUSPENDED", "DISABLED"] },
+            },
+            data: { status: "REVOKED", nextAttemptAt: null },
+          });
           await tx.rateLimitCharge.deleteMany({
             where: { accountId: input.accountId },
           });
