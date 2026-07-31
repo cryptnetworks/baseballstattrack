@@ -1,6 +1,6 @@
 # Production Docker Compose deployment
 
-`compose.production.yaml` runs the production application, its one-shot
+`docker-compose.yml` is the repository's only Compose manifest. It runs the production application, its one-shot
 migration runner, PostgreSQL 17, and the read-only Discord bot. It pulls three
 matching images from public GHCR packages:
 
@@ -44,9 +44,11 @@ dedicated identity with only the exact-team `report.view` grant. The bot's API
 and web URLs must be the public HTTPS application origin; the bot never joins
 the database network or reads database credentials.
 
-For reproducible deployments, set `IMAGE_TAG` to `sha-<full source SHA>` after
-the initial publication. The moving `latest` tag is provided for convenience,
-but it is not an immutable release reference.
+For reproducible deployments, set `APP_IMAGE`, `MIGRATION_IMAGE`, and
+`DISCORD_BOT_IMAGE` to the same `sha-<full source SHA>` tag after initial
+publication. The moving `latest` tag is provided for convenience, but it is not
+an immutable release reference. Compose never builds from the checkout; each
+application service is sourced only from its configured image.
 
 ## Deploy
 
@@ -55,12 +57,10 @@ Pull and start the complete dependency-ordered stack:
 ```sh
 docker compose \
   --env-file /etc/baseballstattrack/production.env \
-  --file compose.production.yaml \
   pull
 
 docker compose \
   --env-file /etc/baseballstattrack/production.env \
-  --file compose.production.yaml \
   up --detach --wait
 ```
 
@@ -74,7 +74,6 @@ Confirm the deployed services and safe health endpoints:
 ```sh
 docker compose \
   --env-file /etc/baseballstattrack/production.env \
-  --file compose.production.yaml \
   ps
 
 curl --fail http://127.0.0.1:3000/api/ready
@@ -86,7 +85,7 @@ health check reports Discord gateway readiness through Compose.
 ## Upgrade and rollback
 
 1. Record a current, restorable database backup.
-2. Change all services together by updating the single `IMAGE_TAG` value.
+2. Change all three application image variables to the same exact-SHA tag.
 3. Pull and run `up --detach --wait` again.
 4. Preserve migration and service logs and record the resolved image digests.
 

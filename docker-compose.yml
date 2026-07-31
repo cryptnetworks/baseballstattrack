@@ -1,4 +1,8 @@
-name: baseballstattrack-production
+name: baseballstattrack
+
+x-database-url-environment: &database-url-environment
+  DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+  DIRECT_URL: ${DIRECT_URL:-${DATABASE_URL}}
 
 x-application-environment: &application-environment
   NODE_ENV: production
@@ -7,10 +11,12 @@ x-application-environment: &application-environment
   NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set NEXT_PUBLIC_SUPABASE_URL}
   NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set NEXT_PUBLIC_SUPABASE_ANON_KEY}
   SUPABASE_OAUTH_PROVIDER: ${SUPABASE_OAUTH_PROVIDER:-google}
-  DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
-  DIRECT_URL: ${DIRECT_URL:-${DATABASE_URL}}
+  <<: *database-url-environment
   WEBHOOK_SIGNING_MASTER_KEY: ${WEBHOOK_SIGNING_MASTER_KEY:?set WEBHOOK_SIGNING_MASTER_KEY}
   WEBHOOK_WORKER_TOKEN: ${WEBHOOK_WORKER_TOKEN:?set WEBHOOK_WORKER_TOKEN}
+  EXTERNAL_INGESTION_WORKER_TOKEN: ${EXTERNAL_INGESTION_WORKER_TOKEN:?set EXTERNAL_INGESTION_WORKER_TOKEN}
+  EXTERNAL_DATA_PROVIDER_BASE_URL: ${EXTERNAL_DATA_PROVIDER_BASE_URL:?set EXTERNAL_DATA_PROVIDER_BASE_URL}
+  EXTERNAL_DATA_PROVIDER_API_KEY: ${EXTERNAL_DATA_PROVIDER_API_KEY:?set EXTERNAL_DATA_PROVIDER_API_KEY}
 
 x-service-defaults: &service-defaults
   init: true
@@ -52,10 +58,11 @@ services:
 
   migrate:
     <<: *service-defaults
-    image: ghcr.io/cryptnetworks/baseballstattrack-migration:${IMAGE_TAG:-latest}
-    pull_policy: always
+    image: ${MIGRATION_IMAGE:-ghcr.io/cryptnetworks/baseballstattrack-migration:latest}
+    pull_policy: ${IMAGE_PULL_POLICY:-always}
     environment:
-      <<: *application-environment
+      <<: *database-url-environment
+      NODE_ENV: production
     depends_on:
       db:
         condition: service_healthy
@@ -68,8 +75,8 @@ services:
 
   app:
     <<: *service-defaults
-    image: ghcr.io/cryptnetworks/baseballstattrack:${IMAGE_TAG:-latest}
-    pull_policy: always
+    image: ${APP_IMAGE:-ghcr.io/cryptnetworks/baseballstattrack:latest}
+    pull_policy: ${IMAGE_PULL_POLICY:-always}
     environment:
       <<: *application-environment
       PORT: 3000
@@ -91,8 +98,8 @@ services:
 
   discord-bot:
     <<: *service-defaults
-    image: ghcr.io/cryptnetworks/baseballstattrack-discord-bot:${IMAGE_TAG:-latest}
-    pull_policy: always
+    image: ${DISCORD_BOT_IMAGE:-ghcr.io/cryptnetworks/baseballstattrack-discord-bot:latest}
+    pull_policy: ${IMAGE_PULL_POLICY:-always}
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN:?set DISCORD_TOKEN}
       BST_API_TOKEN: ${BST_API_TOKEN:?set BST_API_TOKEN}

@@ -46,6 +46,7 @@ Thumbs.db
 
 compose*.yml
 compose*.yaml
+docker-compose.yml
 README.md
 CONTRIBUTING.md
 SECURITY.md

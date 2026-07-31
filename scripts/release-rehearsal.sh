@@ -20,13 +20,30 @@ rollback_revision="${ROLLBACK_REVISION:-HEAD^}"
 rollback_directory="$(mktemp -d)"
 compose=(docker compose --project-name "${project_name}")
 
-export APP_ENV=local
 export APP_IMAGE="${candidate_image}"
 export MIGRATION_IMAGE="${migration_image}"
+export DISCORD_BOT_IMAGE="${project_name}-discord-bot:local"
+export IMAGE_PULL_POLICY=never
 export APP_PORT="${app_port}"
 export POSTGRES_DB=baseballstattrack_release_rehearsal
 export POSTGRES_USER=release_rehearsal
 export POSTGRES_PASSWORD=synthetic-release-rehearsal-only
+export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public"
+export DIRECT_URL="${DATABASE_URL}"
+export NEXT_PUBLIC_SITE_URL=https://app.example.test
+export NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co
+export NEXT_PUBLIC_SUPABASE_ANON_KEY=synthetic-public-anonymous-key
+export SUPABASE_OAUTH_PROVIDER=google
+export WEBHOOK_SIGNING_MASTER_KEY=synthetic_webhook_signing_master_key_1234567890
+export WEBHOOK_WORKER_TOKEN=synthetic-webhook-worker-token-1234567890
+export EXTERNAL_INGESTION_WORKER_TOKEN=synthetic-ingestion-worker-token-1234567890
+export EXTERNAL_DATA_PROVIDER_BASE_URL=https://provider.example.test
+export EXTERNAL_DATA_PROVIDER_API_KEY=synthetic-provider-api-key
+export DISCORD_TOKEN=synthetic-discord-token-long-enough-for-validation
+export BST_API_TOKEN=synthetic-api-token-long-enough-for-validation
+export BST_API_BASE_URL=https://app.example.test
+export BST_WEB_BASE_URL=https://app.example.test
+export DISCORD_TEAM_BINDINGS='[{"guildId":"100","accountId":"00000000-0000-4000-8000-000000000001","teamId":"00000000-0000-4000-8000-000000000002","channelIds":["200"],"roleIds":["300"]}]'
 export VCS_REF="$(git rev-parse HEAD)"
 
 cleanup() {
@@ -72,7 +89,16 @@ rollback_sha="$(git rev-parse "${rollback_revision}^{commit}")"
 git archive "${rollback_sha}" | tar -x -C "${rollback_directory}"
 
 echo "Building candidate and matching migration artifacts from ${VCS_REF}."
-"${compose[@]}" build app migrate
+docker build \
+  --target runtime \
+  --build-arg "VCS_REF=${VCS_REF}" \
+  --tag "${candidate_image}" \
+  .
+docker build \
+  --target migration \
+  --build-arg "VCS_REF=${VCS_REF}" \
+  --tag "${migration_image}" \
+  .
 
 echo "Building rollback artifact from ${rollback_sha}."
 docker build \

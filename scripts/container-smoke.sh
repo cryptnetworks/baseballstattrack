@@ -5,23 +5,37 @@ set -Eeuo pipefail
 project_name="bst-container-$$_${RANDOM}"
 app_image="${project_name}-app:local"
 migration_image="${project_name}-migration:local"
-development_image="${project_name}-development:local"
+discord_bot_image="${project_name}-discord-bot:local"
 app_port="$((32000 + ($$ % 1000)))"
-development_port="$((34000 + ($$ % 1000)))"
 unavailable_database_port="$((36000 + ($$ % 1000)))"
 unavailable_database_container="${project_name}-unavailable-database"
 occupied_port_container="${project_name}-occupied-port"
 compose=(docker compose --project-name "${project_name}")
 
-export APP_ENV=local
 export APP_IMAGE="${app_image}"
 export MIGRATION_IMAGE="${migration_image}"
-export DEV_IMAGE="${development_image}"
+export DISCORD_BOT_IMAGE="${discord_bot_image}"
+export IMAGE_PULL_POLICY=never
 export APP_PORT="${app_port}"
-export DEV_PORT="${development_port}"
 export POSTGRES_DB=baseballstattrack_smoke
 export POSTGRES_USER=baseballstattrack_smoke
 export POSTGRES_PASSWORD=synthetic-container-smoke-only
+export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public"
+export DIRECT_URL="${DATABASE_URL}"
+export NEXT_PUBLIC_SITE_URL=https://app.example.test
+export NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co
+export NEXT_PUBLIC_SUPABASE_ANON_KEY=synthetic-public-anonymous-key
+export SUPABASE_OAUTH_PROVIDER=google
+export WEBHOOK_SIGNING_MASTER_KEY=synthetic_webhook_signing_master_key_1234567890
+export WEBHOOK_WORKER_TOKEN=synthetic-webhook-worker-token-1234567890
+export EXTERNAL_INGESTION_WORKER_TOKEN=synthetic-ingestion-worker-token-1234567890
+export EXTERNAL_DATA_PROVIDER_BASE_URL=https://provider.example.test
+export EXTERNAL_DATA_PROVIDER_API_KEY=synthetic-provider-api-key
+export DISCORD_TOKEN=synthetic-discord-token-long-enough-for-validation
+export BST_API_TOKEN=synthetic-api-token-long-enough-for-validation
+export BST_API_BASE_URL=https://app.example.test
+export BST_WEB_BASE_URL=https://app.example.test
+export DISCORD_TEAM_BINDINGS='[{"guildId":"100","accountId":"00000000-0000-4000-8000-000000000001","teamId":"00000000-0000-4000-8000-000000000002","channelIds":["200"],"roleIds":["300"]}]'
 export VCS_REF="${GITHUB_SHA:-local-smoke}"
 
 cleanup() {
@@ -40,8 +54,7 @@ cleanup() {
   "${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
   docker image rm \
     "${app_image}" \
-    "${migration_image}" \
-    "${development_image}" >/dev/null 2>&1 || true
+    "${migration_image}" >/dev/null 2>&1 || true
 
   exit "${exit_code}"
 }
@@ -87,14 +100,20 @@ latest_migration="$(
 [[ -n "${latest_migration}" ]] || fail "no Prisma migration was found"
 [[ "$(grep --fixed-strings --count "${latest_migration}" Dockerfile)" == "1" ]] ||
   fail "Dockerfile readiness pin is not the latest migration"
-[[ "$(grep --fixed-strings --count "${latest_migration}" compose.yaml)" == "1" ]] ||
-  fail "Compose readiness pin is not the latest migration"
-
 echo "Validating Compose configuration."
 "${compose[@]}" config --quiet
 
-echo "Building production, migration, and development targets."
-"${compose[@]}" build app migrate app-dev
+echo "Building production and migration images outside Compose."
+docker build \
+  --target runtime \
+  --build-arg "VCS_REF=${VCS_REF}" \
+  --tag "${app_image}" \
+  .
+docker build \
+  --target migration \
+  --build-arg "VCS_REF=${VCS_REF}" \
+  --tag "${migration_image}" \
+  .
 
 image_configuration="$(
   docker image inspect "${app_image}" \
@@ -181,13 +200,7 @@ echo "Starting a clean database volume."
 [[ "$(database_query "SELECT to_regclass('public.\"_prisma_migrations\"') IS NULL;")" == "t" ]] ||
   fail "clean database unexpectedly contains the migration table"
 
-echo "Proving startup is live but not ready before explicit migration."
-"${compose[@]}" up --detach app
-wait_for_status "http://127.0.0.1:${app_port}/api/health" "200"
-wait_for_status "http://127.0.0.1:${app_port}/api/ready" "503"
-
-echo "Applying migrations explicitly and waiting for readiness."
-"${compose[@]}" run --rm migrate
+echo "Applying the one-shot migration and waiting for application readiness."
 "${compose[@]}" up --detach --wait app
 wait_for_status "http://127.0.0.1:${app_port}/api/ready" "200"
 wait_for_status "http://127.0.0.1:${app_port}/" "200"
@@ -264,7 +277,6 @@ echo "Resetting local data explicitly and rebuilding schema."
 "${compose[@]}" up --detach --wait db
 [[ "$(database_query "SELECT to_regclass('public.\"_prisma_migrations\"') IS NULL;")" == "t" ]] ||
   fail "volume reset did not remove the local schema"
-"${compose[@]}" run --rm migrate
 "${compose[@]}" up --detach --wait app
 wait_for_status "http://127.0.0.1:${app_port}/api/ready" "200"
 
