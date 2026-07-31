@@ -14,6 +14,7 @@ const prefix = `issue93-${process.pid}-${Date.now()}`;
 const GAME = "00000000-0000-4000-8000-000000000031";
 const SEASON = "00000000-0000-4000-8000-000000000032";
 const TEAM = "00000000-0000-4000-8000-000000000033";
+const scenarioStartedAt = new Date();
 
 integration("durable webhook persistence", () => {
   const prisma = new PrismaClient({
@@ -35,7 +36,7 @@ integration("durable webhook persistence", () => {
       membershipId: null,
       capability: "account.manage",
       scope: { kind: "ACCOUNT" },
-      authorizedAt: "2026-07-31T19:00:00.000Z",
+      authorizedAt: scenarioStartedAt.toISOString(),
     });
 
   beforeAll(async () => {
@@ -53,7 +54,7 @@ integration("durable webhook persistence", () => {
             url: `https://${suffix}.example.test/webhook`,
             status: "ACTIVE",
             subscribedEvents: ["GAME_VERIFIED"],
-            verifiedAt: new Date("2026-07-31T18:00:00.000Z"),
+            verifiedAt: scenarioStartedAt,
           },
         }),
       ),
@@ -67,7 +68,7 @@ integration("durable webhook persistence", () => {
   });
 
   it("fans out idempotently and enforces per-endpoint order across workers", async () => {
-    const occurredAt = new Date("2026-07-31T19:00:00.000Z");
+    const occurredAt = scenarioStartedAt;
     const eventInput = (revision: number) => ({
       accountId: accountA,
       eventName: "GAME_VERIFIED" as const,
@@ -95,11 +96,15 @@ integration("durable webhook persistence", () => {
       await prisma.webhookDelivery.count({ where: { accountId: accountA } }),
     ).toBe(4);
 
-    const claimed = await repository.claimDue(
-      "worker-order-one",
-      new Date("2026-07-31T20:00:00.000Z"),
-      10,
-    );
+    const deliverySchedule = await prisma.webhookDelivery.aggregate({
+      where: { accountId: accountA },
+      _max: { nextAttemptAt: true },
+    });
+    const nextAttemptAt = deliverySchedule._max.nextAttemptAt;
+    expect(nextAttemptAt).not.toBeNull();
+    const claimAt = new Date(nextAttemptAt!.getTime() + 1);
+    const firstAttemptCompletedAt = new Date(claimAt.getTime() + 1_000);
+    const claimed = await repository.claimDue("worker-order-one", claimAt, 10);
     expect(claimed).toHaveLength(2);
     expect(new Set(claimed.map(({ endpointId }) => endpointId))).toEqual(
       new Set([firstEndpointId, secondEndpointId]),
@@ -118,8 +123,8 @@ integration("durable webhook persistence", () => {
       accountId: accountA,
       deliveryId: firstEndpointDelivery.id,
       workerId: "worker-order-one",
-      startedAt: new Date("2026-07-31T20:00:00.000Z"),
-      completedAt: new Date("2026-07-31T20:00:01.000Z"),
+      startedAt: claimAt,
+      completedAt: firstAttemptCompletedAt,
       durationMs: 1_000,
       responseStatus: 503,
       failureCode: "HTTP_503",
@@ -130,8 +135,8 @@ integration("durable webhook persistence", () => {
       accountId: accountA,
       deliveryId: secondEndpointDelivery.id,
       workerId: "worker-order-one",
-      startedAt: new Date("2026-07-31T20:00:00.000Z"),
-      completedAt: new Date("2026-07-31T20:00:01.000Z"),
+      startedAt: claimAt,
+      completedAt: firstAttemptCompletedAt,
       durationMs: 1_000,
       responseStatus: 204,
       failureCode: null,
@@ -141,7 +146,7 @@ integration("durable webhook persistence", () => {
 
     const independent = await repository.claimDue(
       "worker-order-two",
-      new Date("2026-07-31T20:00:02.000Z"),
+      new Date(firstAttemptCompletedAt.getTime() + 1_000),
       10,
     );
     expect(independent).toHaveLength(1);
@@ -155,7 +160,7 @@ integration("durable webhook persistence", () => {
       endpointId: firstEndpointId,
       eventExternalId: firstEventExternalId,
       actor: serviceActor(accountB),
-      requestedAt: new Date("2026-08-01T00:00:00.000Z"),
+      requestedAt: new Date(scenarioStartedAt.getTime() + 86_400_000),
     });
     expect(wrongAccount).toBeNull();
 
@@ -168,7 +173,7 @@ integration("durable webhook persistence", () => {
       endpointId: firstEndpointId,
       eventExternalId: firstEventExternalId,
       actor: serviceActor(accountA),
-      requestedAt: new Date("2026-08-01T00:00:00.000Z"),
+      requestedAt: new Date(scenarioStartedAt.getTime() + 86_400_000),
     });
     expect(replay).toMatchObject({ replayNumber: 1, secretVersion: 2 });
   });
@@ -180,7 +185,7 @@ integration("durable webhook persistence", () => {
         endpointId: firstEndpointId,
         actor: serviceActor(accountA),
         reasonCode: "CONSUMER_REVOKED",
-        revokedAt: new Date("2026-08-01T01:00:00.000Z"),
+        revokedAt: new Date(scenarioStartedAt.getTime() + 90_000_000),
       }),
     ).resolves.toBe(true);
     expect(
