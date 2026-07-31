@@ -44,6 +44,12 @@ dedicated identity with only the exact-team `report.view` grant. The bot's API
 and web URLs must be the public HTTPS application origin; the bot never joins
 the database network or reads database credentials.
 
+`CALENDAR_SYNC_WORKER_TOKEN` authenticates the private calendar worker route.
+`CALENDAR_PROVIDER_TOKENS_JSON` is a managed-secret JSON object keyed by the
+non-secret credential references stored on calendar connections. Restrict both
+values to the application and scheduler; never put provider tokens in a
+connection row, request body, log, or support artifact.
+
 For reproducible deployments, set `APP_IMAGE`, `MIGRATION_IMAGE`, and
 `DISCORD_BOT_IMAGE` to the same `sha-<full source SHA>` tag after initial
 publication. The moving `latest` tag is provided for convenience, but it is not
