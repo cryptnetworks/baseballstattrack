@@ -261,6 +261,30 @@ enum ExternalQuarantineStatus {
   DISMISSED
 }
 
+enum CalendarProvider {
+  GOOGLE
+}
+
+enum CalendarConnectionStatus {
+  ACTIVE
+  DISCONNECTING
+  DISCONNECTED
+}
+
+enum CalendarDetailLevel {
+  PRIVATE
+  OPPONENT
+  FULL
+}
+
+enum CalendarEventSyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+  CONFLICT
+  CANCELLED
+}
+
 enum AnalyticsObservationType {
   BATTED_BALL_LOCATION
   PITCH_LOCATION
@@ -319,6 +343,8 @@ model Account {
   externalProviderRecords ExternalProviderRecord[]
   externalQuarantines     ExternalIngestionQuarantine[]
   analyticsObservations   AnalyticsObservation[]
+  calendarConnections     CalendarConnection[]
+  calendarEventLinks      CalendarEventLink[]
 }
 
 model AppUser {
@@ -738,12 +764,69 @@ model Game {
   projectionCheckpoints ProjectionCheckpoint[]
   roleAssignments       MembershipRoleAssignment[] @relation("RoleAssignmentGame")
   capabilityGrants      CapabilityGrant[]          @relation("CapabilityGrantGame")
+  calendarEventLinks    CalendarEventLink[]
 
   @@unique([accountId, id])
   @@unique([accountId, externalId])
   @@unique([accountId, id, readySetupSnapshotId])
   @@index([accountId, seasonId, status])
   @@index([accountId, teamSeasonId, scheduledAt])
+}
+
+model CalendarConnection {
+  id                  String                   @id @default(cuid())
+  externalId          String                   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId           String
+  provider            CalendarProvider
+  providerCalendarId  String
+  credentialReference String
+  timeZone            String
+  detailLevel         CalendarDetailLevel      @default(PRIVATE)
+  status              CalendarConnectionStatus @default(ACTIVE)
+  syncLeaseOwner      String?
+  syncLeaseExpiresAt  DateTime?
+  lastSyncAt          DateTime?
+  lastFailureAt       DateTime?
+  lastFailureCode     String?
+  disconnectedAt      DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  account Account             @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  events  CalendarEventLink[]
+
+  @@unique([accountId, id])
+  @@unique([accountId, provider, providerCalendarId])
+  @@index([status, syncLeaseExpiresAt])
+  @@index([accountId, status])
+}
+
+model CalendarEventLink {
+  id                String                  @id @default(cuid())
+  accountId         String
+  connectionId      String
+  gameId            String
+  providerEventId   String
+  providerVersion   String?
+  sourceFingerprint String?
+  status            CalendarEventSyncStatus @default(PENDING)
+  attemptCount      Int                     @default(0)
+  lastFailureCode   String?
+  lastAttemptAt     DateTime?
+  lastSyncedAt      DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  account    Account            @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  connection CalendarConnection @relation(fields: [accountId, connectionId], references: [accountId, id], onDelete: Restrict)
+  game       Game               @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+
+  @@unique([accountId, id])
+  @@unique([connectionId, gameId])
+  @@unique([connectionId, providerEventId])
+  @@index([accountId, status, updatedAt])
+  @@index([accountId, gameId])
 }
 
 model GameTeamSnapshot {

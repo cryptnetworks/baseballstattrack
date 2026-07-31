@@ -2,6 +2,34 @@
 
 set -Eeuo pipefail
 
+migration_root="${MIGRATION_ROOT:-prisma/migrations}"
+
+repository_migration_manifest() {
+  local root=$1
+  local migration_name
+  while IFS= read -r migration_name; do
+    [[ -f "${root}/${migration_name}/migration.sql" ]] || {
+      echo "Migration directory ${migration_name} has no migration.sql." >&2
+      return 1
+    }
+    printf '%s\n' "${migration_name}"
+  done < <(
+    find "${root}" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; |
+      LC_ALL=C sort
+  )
+}
+
+if [[ "${MIGRATION_INVENTORY_ONLY:-0}" == "1" ]]; then
+  repository_migration_manifest "${migration_root}"
+  exit
+fi
+
+expected_migrations="$(repository_migration_manifest "${migration_root}")"
+[[ -n "${expected_migrations}" ]] || {
+  echo "No checked-in migrations were found." >&2
+  exit 1
+}
+
 restore_project="bst-restore-$$_${RANDOM}"
 source_container="${restore_project}-source"
 target_container="${restore_project}-target"
@@ -60,7 +88,7 @@ docker run --rm --network "${restore_network}" \
   --env NODE_ENV=production \
   --env NEXT_PUBLIC_APP_ENV=local \
   --env "DATABASE_URL=postgresql://${restore_user}:${restore_password}@${source_container}:5432/${restore_database}?schema=public" \
-  --env REQUIRED_DATABASE_MIGRATION=20260731190000_external_ingestion \
+  --env REQUIRED_DATABASE_MIGRATION=20260731213000_calendar_sync \
   "${migration_image}" npm run db:migrate:deploy >/dev/null
 
 docker exec --interactive "${source_container}" psql \
@@ -106,7 +134,25 @@ target_signature="$(
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "EventCorrection";')" == "1" ]]
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "SecurityAuditRecord";')" == "1" ]]
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "ProjectionCheckpoint" WHERE "status" = '\''CURRENT'\'';')" == "1" ]]
-[[ "$(database_query "${target_container}" 'SELECT count(*) FROM "_prisma_migrations" WHERE "finished_at" IS NOT NULL AND "rolled_back_at" IS NULL;')" == "11" ]]
+applied_migrations="$(
+  database_query "${target_container}" \
+    'SELECT "migration_name" FROM "_prisma_migrations" WHERE "finished_at" IS NOT NULL AND "rolled_back_at" IS NULL ORDER BY "migration_name";'
+)"
+inconsistent_migrations="$(
+  database_query "${target_container}" \
+    'SELECT count(*) FROM "_prisma_migrations" WHERE "finished_at" IS NULL OR "rolled_back_at" IS NOT NULL;'
+)"
+if [[ "${applied_migrations}" != "${expected_migrations}" ]]; then
+  echo "Restored migration inventory does not match the repository." >&2
+  diff -u \
+    <(printf '%s\n' "${expected_migrations}") \
+    <(printf '%s\n' "${applied_migrations}") >&2 || true
+  exit 1
+fi
+[[ "${inconsistent_migrations}" == "0" ]] || {
+  echo "Restored migration history contains incomplete or rolled-back rows." >&2
+  exit 1
+}
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "Team" t JOIN "Account" a ON a."id" = t."accountId" WHERE t."accountId" <> a."id";')" == "0" ]]
 
 cp "${backup_archive}" "${backup_archive}.corrupt"
