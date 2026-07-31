@@ -12,6 +12,12 @@ import {
   requireTrustedActor,
   type TrustedActorContext,
 } from "@/server/auth/types";
+import {
+  emitOperationalEvent,
+  getOperationalEventSink,
+  safeOperationalErrorCode,
+  type OperationalEventSink,
+} from "@/server/observability/operational-events";
 
 export type EventAcceptanceInput = Omit<
   AcceptEventCommand,
@@ -64,31 +70,64 @@ function requireGameTarget(
 }
 
 export class GameEventService {
-  constructor(private readonly repository: PrismaGameEventRepository) {}
+  constructor(
+    private readonly repository: PrismaGameEventRepository,
+    private readonly operationalEvents: OperationalEventSink = getOperationalEventSink(),
+  ) {}
 
   async accept(input: EventAcceptanceInput, actor: TrustedActorContext) {
-    const command = eventAcceptanceSchema.parse(input);
-    const body = parseEventBody(command.body);
-    const capability = capabilityForEvent(body.eventType, actor);
-    const trusted = requireGameTarget(
-      actor,
-      command.accountId,
-      command.gameId,
-      capability,
-    );
-    return this.repository.accept({
-      ...command,
-      body,
-      actor: {
-        accountId: trusted.accountId,
-        actorId: trusted.actorId,
-        actorKind: trusted.actorKind,
-        actorUserId: trusted.actorUserId,
+    const startedAt = performance.now();
+    try {
+      const command = eventAcceptanceSchema.parse(input);
+      const body = parseEventBody(command.body);
+      const capability = capabilityForEvent(body.eventType, actor);
+      const trusted = requireGameTarget(
+        actor,
+        command.accountId,
+        command.gameId,
         capability,
-        scope: { kind: "GAME", gameId: command.gameId },
-        authorizedAt: trusted.authorizedAt,
-      },
-    });
+      );
+      const result = await this.repository.accept({
+        ...command,
+        body,
+        actor: {
+          accountId: trusted.accountId,
+          actorId: trusted.actorId,
+          actorKind: trusted.actorKind,
+          actorUserId: trusted.actorUserId,
+          capability,
+          scope: { kind: "GAME", gameId: command.gameId },
+          authorizedAt: trusted.authorizedAt,
+        },
+      });
+      emitOperationalEvent(this.operationalEvents, {
+        severity: "info",
+        category: "scoring",
+        name: "event_acceptance",
+        outcome: "succeeded",
+        accountId: command.accountId,
+        capability,
+        targetType: "GAME",
+        durationMs: Math.round((performance.now() - startedAt) * 1000) / 1000,
+        metadata: { eventType: body.eventType },
+      });
+      return result;
+    } catch (error) {
+      emitOperationalEvent(this.operationalEvents, {
+        severity: error instanceof AuthorizationError ? "info" : "warning",
+        category:
+          error instanceof AuthorizationError ? "authorization" : "scoring",
+        name: "event_acceptance",
+        outcome: error instanceof AuthorizationError ? "rejected" : "failed",
+        ...(typeof input.accountId === "string"
+          ? { accountId: input.accountId }
+          : {}),
+        targetType: "GAME",
+        code: safeOperationalErrorCode(error),
+        durationMs: Math.round((performance.now() - startedAt) * 1000) / 1000,
+      });
+      throw error;
+    }
   }
 
   async loadAcceptedHistory(
