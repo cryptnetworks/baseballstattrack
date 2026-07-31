@@ -251,6 +251,49 @@ try {
     ["P0001"],
   );
 
+  await client.query(`
+    INSERT INTO "AnalyticsObservation"
+      ("id", "accountId", "gameId", "setupSnapshotId", "sourceEventId", "type", "version", "ordinal", "captureSource", "confidence", "payload", "actorId", "recordedAt")
+    VALUES
+      ('fixture-observation', 'fixture-account-a', 'fixture-game', 'fixture-setup', 'fixture-event-replacement', 'PITCH_LOCATION', 1, 0, 'MANUAL', 'OBSERVED', '{"zoneCell":"MID_MIDDLE","result":"CALLED_STRIKE","pitchType":null}'::jsonb, 'fixture-scorekeeper-service', CURRENT_TIMESTAMP);
+  `);
+
+  await rejectWrite(
+    "duplicate_active_observation",
+    `INSERT INTO "AnalyticsObservation"
+      ("id", "accountId", "gameId", "setupSnapshotId", "sourceEventId", "type", "version", "ordinal", "captureSource", "confidence", "payload", "actorId")
+     VALUES
+      ('fixture-observation-duplicate', 'fixture-account-a', 'fixture-game', 'fixture-setup', 'fixture-event-replacement', 'PITCH_LOCATION', 1, 0, 'MANUAL', 'OBSERVED', '{"zoneCell":"MID_MIDDLE","result":"BALL","pitchType":null}'::jsonb, 'fixture-scorekeeper-service')`,
+    ["P0001"],
+  );
+
+  await rejectWrite(
+    "analytics_observation_identity_rewrite",
+    `UPDATE "AnalyticsObservation"
+        SET "payload" = '{"zoneCell":"UP_LEFT","result":"BALL","pitchType":null}'::jsonb
+      WHERE "id" = 'fixture-observation'`,
+    ["P0001"],
+  );
+
+  await client.query(`
+    INSERT INTO "AnalyticsObservation"
+      ("id", "accountId", "gameId", "setupSnapshotId", "sourceEventId", "type", "version", "ordinal", "captureSource", "confidence", "payload", "actorId", "supersedesObservationId", "recordedAt")
+    VALUES
+      ('fixture-observation-replacement', 'fixture-account-a', 'fixture-game', 'fixture-setup', 'fixture-event-replacement', 'PITCH_LOCATION', 1, 0, 'MANUAL', 'OBSERVED', '{"zoneCell":"UP_LEFT","result":"BALL","pitchType":null}'::jsonb, 'fixture-scorekeeper-service', 'fixture-observation', CURRENT_TIMESTAMP);
+  `);
+
+  const observationShape = await client.query(
+    `SELECT
+       count(*)::integer AS observations,
+       count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM "AnalyticsObservation" AS newer WHERE newer."supersedesObservationId" = observation."id"))::integer AS current_observations
+       FROM "AnalyticsObservation" AS observation
+      WHERE "gameId" = 'fixture-game'`,
+  );
+  assert.deepEqual(observationShape.rows[0], {
+    observations: 2,
+    current_observations: 1,
+  });
+
   const accounts = await client.query(
     `SELECT count(*)::integer AS count FROM "Account" WHERE "id" LIKE 'fixture-account-%'`,
   );

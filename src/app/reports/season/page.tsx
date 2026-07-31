@@ -324,6 +324,130 @@ function Dashboard({ dashboard }: { dashboard: SeasonDashboard }) {
         </ol>
       </section>
 
+      <section aria-labelledby="analytics-heading" className="mt-10">
+        <h2 className="text-2xl font-semibold" id="analytics-heading">
+          Explainable analytics
+        </h2>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          These are descriptive, verified-game insights. Every card identifies
+          its sample and keeps sparse evidence neutral.
+        </p>
+        <div className="mt-4 grid gap-5 lg:grid-cols-3">
+          {dashboard.analytics.insights.map((insight) => (
+            <article
+              className="rounded-xl border border-[var(--line)] bg-white p-5"
+              key={insight.id}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="font-semibold">{insight.title}</h3>
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium">
+                  {insight.confidence.toLowerCase()}
+                </span>
+              </div>
+              <p className="mt-3 text-sm">{insight.summary}</p>
+              <dl className="mt-4 grid gap-2 text-xs text-[var(--muted)]">
+                <div className="flex justify-between gap-3">
+                  <dt>Verified games</dt>
+                  <dd>{insight.sampleSize.games}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt>Opportunities</dt>
+                  <dd>{insight.sampleSize.opportunities}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt>Ruleset / derivation</dt>
+                  <dd>
+                    {insight.rulesetVersion.join(", ")} /{" "}
+                    {insight.derivationVersion}
+                  </dd>
+                </div>
+              </dl>
+              <p className="mt-4 text-xs text-[var(--muted)]">
+                {insight.limitations[0]}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="contact-analytics-heading" className="mt-10">
+        <h2 className="text-2xl font-semibold" id="contact-analytics-heading">
+          Contact and location observations
+        </h2>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Optional observations are separate from canonical scoring facts. A
+          missing location is not treated as a zero or an inferred position.
+        </p>
+        <div className="mt-4 grid gap-5 md:grid-cols-3">
+          <div className="rounded-xl border border-[var(--line)] bg-white p-5">
+            <h3 className="font-semibold">Batted-ball type</h3>
+            <p className="mt-2 text-sm">
+              {dashboard.analytics.contact.battedBall.observed} observed of{" "}
+              {dashboard.analytics.contact.battedBall.eligiblePlateAppearances}{" "}
+              plate appearances
+            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              {dashboard.analytics.contact.battedBall.missing} missing
+              observations
+            </p>
+          </div>
+          <div className="rounded-xl border border-[var(--line)] bg-white p-5">
+            <h3 className="font-semibold">Spray sectors</h3>
+            <p className="mt-2 text-sm">
+              {dashboard.analytics.contact.battedBallLocations.observed} manual
+              location observations
+            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              {dashboard.analytics.contact.battedBallLocations.missing} eligible
+              balls in play without a location
+            </p>
+          </div>
+          <div className="rounded-xl border border-[var(--line)] bg-white p-5">
+            <h3 className="font-semibold">Pitch locations</h3>
+            <p className="mt-2 text-sm">
+              {dashboard.analytics.contact.pitchLocations.observed} manually
+              observed pitches
+            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              Only explicit observations are charted; omitted pitches are not
+              reconstructed.
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <div className="rounded-xl border border-[var(--line)] bg-white p-5">
+            <h3 className="font-semibold">Observed spray sectors</h3>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+              {Object.entries(
+                dashboard.analytics.contact.battedBallLocations.bySector,
+              ).map(([sector, count]) => (
+                <div className="rounded-lg bg-slate-50 p-3" key={sector}>
+                  <div className="text-xs text-[var(--muted)]">
+                    {sector.replaceAll("_", " ").toLowerCase()}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold">{count}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl border border-[var(--line)] bg-white p-5">
+            <h3 className="font-semibold">Observed pitch-zone cells</h3>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+              {Object.entries(
+                dashboard.analytics.contact.pitchLocations.byZoneCell,
+              ).map(([cell, count]) => (
+                <div className="rounded-lg bg-slate-50 p-3" key={cell}>
+                  <div className="text-xs text-[var(--muted)]">
+                    {cell.replaceAll("_", " ").toLowerCase()}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold">{count}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section aria-labelledby="players-heading" className="mt-10">
         <h2 className="text-2xl font-semibold" id="players-heading">
           Player season summaries

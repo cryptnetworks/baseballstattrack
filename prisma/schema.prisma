@@ -261,6 +261,20 @@ enum ExternalQuarantineStatus {
   DISMISSED
 }
 
+enum AnalyticsObservationType {
+  BATTED_BALL_LOCATION
+  PITCH_LOCATION
+}
+
+enum AnalyticsCaptureSource {
+  MANUAL
+}
+
+enum AnalyticsObservationConfidence {
+  OBSERVED
+  ESTIMATED
+}
+
 model Account {
   id          String        @id @default(cuid())
   externalId  String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -304,6 +318,7 @@ model Account {
   externalIngestionRuns   ExternalIngestionRun[]
   externalProviderRecords ExternalProviderRecord[]
   externalQuarantines     ExternalIngestionQuarantine[]
+  analyticsObservations   AnalyticsObservation[]
 }
 
 model AppUser {
@@ -320,6 +335,7 @@ model AppUser {
   invitationsSent         MembershipInvitation[]   @relation("InvitationInviter")
   recordedPlays           PlayTransaction[]        @relation("PlayTransactionActor")
   recordedEvents          SourceEvent[]            @relation("SourceEventActor")
+  analyticsObservations   AnalyticsObservation[]   @relation("AnalyticsObservationActor")
   auditRecords            SecurityAuditRecord[]    @relation("AuditActor")
   privacyOverlays         PrivacyOverlay[]         @relation("PrivacyOverlayActor")
   productAnalyticsConsent ProductAnalyticsConsent?
@@ -718,6 +734,7 @@ model Game {
   setupSnapshots        GameSetupSnapshot[]
   playTransactions      PlayTransaction[]
   sourceEvents          SourceEvent[]
+  analyticsObservations AnalyticsObservation[]
   projectionCheckpoints ProjectionCheckpoint[]
   roleAssignments       MembershipRoleAssignment[] @relation("RoleAssignmentGame")
   capabilityGrants      CapabilityGrant[]          @relation("CapabilityGrantGame")
@@ -778,6 +795,7 @@ model GameSetupSnapshot {
   teamSnapshots    GameTeamSnapshot[]
   playTransactions PlayTransaction[]
   sourceEvents     SourceEvent[]
+  analyticsObservations AnalyticsObservation[]
 
   @@unique([accountId, id])
   @@unique([gameId, setupRevision])
@@ -879,6 +897,7 @@ model SourceEvent {
   correctionsAuthored    EventCorrection[] @relation("CorrectionEvent")
   correctionTargets      EventCorrection[] @relation("CorrectionTarget")
   correctionReplacements EventCorrection[] @relation("CorrectionReplacement")
+  analyticsObservations   AnalyticsObservation[]
 
   @@unique([accountId, id])
   @@unique([accountId, gameId, id])
@@ -888,6 +907,38 @@ model SourceEvent {
   @@index([accountId, gameId, recordedAt])
   @@index([accountId, rulesetVersionId])
   @@index([accountId, gameId, actorId, clientSubmissionId])
+}
+
+model AnalyticsObservation {
+  id                    String                         @id @default(cuid())
+  externalId            String                         @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId             String
+  gameId                String
+  setupSnapshotId       String
+  sourceEventId         String
+  type                  AnalyticsObservationType
+  version               Int                            @default(1)
+  ordinal               Int
+  captureSource         AnalyticsCaptureSource
+  confidence            AnalyticsObservationConfidence
+  payload               Json
+  actorId               String
+  actorUserId           String?
+  supersedesObservationId String?
+  recordedAt            DateTime                       @default(now())
+
+  account       Account          @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  game          Game             @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  setupSnapshot GameSetupSnapshot @relation(fields: [accountId, gameId, setupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
+  sourceEvent   SourceEvent      @relation(fields: [accountId, gameId, sourceEventId], references: [accountId, gameId, id], onDelete: Restrict)
+  actorUser     AppUser?         @relation("AnalyticsObservationActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  supersedes    AnalyticsObservation? @relation("AnalyticsObservationSupersession", fields: [accountId, supersedesObservationId], references: [accountId, id], onDelete: Restrict)
+  supersededBy  AnalyticsObservation[] @relation("AnalyticsObservationSupersession")
+
+  @@unique([accountId, id])
+  @@index([accountId, gameId, sourceEventId, type, ordinal])
+  @@index([accountId, gameId, recordedAt])
+  @@index([accountId, supersedesObservationId])
 }
 
 model EventCorrection {
