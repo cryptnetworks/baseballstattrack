@@ -8,12 +8,6 @@ on:
         required: true
         default: latest
         type: string
-      make_public:
-        description: Make all three GHCR packages public after publication
-        required: true
-        default: true
-        type: boolean
-
 permissions:
   contents: read
 
@@ -78,21 +72,6 @@ jobs:
             docker push "${image}:sha-${GITHUB_SHA}"
           done
 
-      - name: Make GHCR packages public
-        if: ${{ inputs.make_public }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          for package in \
-            baseballstattrack \
-            baseballstattrack-migration \
-            baseballstattrack-discord-bot; do
-            gh api \
-              --method PATCH \
-              "/users/${GITHUB_REPOSITORY_OWNER}/packages/container/${package}" \
-              --field visibility=public
-          done
-
       - name: Record image digests
         run: |
           {
@@ -105,5 +84,5 @@ jobs:
               echo "- \`${digest}\`"
             done
             echo "- Source: \`${GITHUB_SHA}\`"
-            echo "- Packages public: \`${{ inputs.make_public }}\`"
+            echo "- Visibility: retained from each package's GitHub settings"
           } >> "${GITHUB_STEP_SUMMARY}"
