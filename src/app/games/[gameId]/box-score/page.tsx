@@ -565,6 +565,9 @@ export default async function GameBoxScorePage({ params }: PageProps) {
           <p className="mt-5 font-semibold text-emerald-300">
             Reconciliation {words(report.reconciliation.status)}
           </p>
+          <p className="mt-1 text-sm text-slate-300">
+            Confidence {words(report.reconciliation.confidence)}
+          </p>
           <ul className="mt-2 grid gap-1 text-sm text-slate-300 sm:grid-cols-2">
             {report.reconciliation.checks.map((check) => (
               <li key={check}>✓ {check}</li>

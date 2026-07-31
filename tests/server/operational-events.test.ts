@@ -142,6 +142,28 @@ describe("operational event contract", () => {
       severity: "warning",
       page: false,
     });
+    expect(
+      classifyOperationalAlert({
+        category: "data_quality",
+        name: "reconciliation_integrity_failure",
+        outcome: "failed",
+      }),
+    ).toEqual({
+      key: "data-integrity-failure",
+      severity: "critical",
+      page: true,
+    });
+    expect(
+      classifyOperationalAlert({
+        category: "data_quality",
+        name: "reconciliation_expected_recalculation",
+        outcome: "degraded",
+      }),
+    ).toEqual({
+      key: "data-recalculation-pending",
+      severity: "warning",
+      page: false,
+    });
   });
 
   it("keeps Account-scoped events distinguishable without private payloads", () => {

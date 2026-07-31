@@ -446,13 +446,18 @@ export function PrintableSeasonReport({
           <table className="print-table w-full border-collapse text-sm">
             <thead>
               <tr>
-                {["Date", "Opponent", "Score", "Result", "Status"].map(
-                  (label) => (
-                    <th key={label} scope="col">
-                      {label}
-                    </th>
-                  ),
-                )}
+                {[
+                  "Date",
+                  "Opponent",
+                  "Score",
+                  "Result",
+                  "Status",
+                  "Confidence",
+                ].map((label) => (
+                  <th key={label} scope="col">
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -465,6 +470,7 @@ export function PrintableSeasonReport({
                   </td>
                   <td>{words(game.result)}</td>
                   <td>{words(game.status)}</td>
+                  <td>{words(game.confidence)}</td>
                 </tr>
               ))}
             </tbody>

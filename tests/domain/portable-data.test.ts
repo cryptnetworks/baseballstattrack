@@ -1,4 +1,8 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
+
+import { canonicalJson } from "@/domain/events/event-log";
 
 import {
   MAX_PORTABLE_BYTES,
@@ -160,6 +164,26 @@ describe("portable data export and import validation", () => {
     });
     expect(plan.documentChecksum).toBe(first.manifest.checksum);
     expect(validate().documentChecksum).toBe(plan.documentChecksum);
+
+    const legacy = structuredClone(first) as unknown as {
+      manifest: { version: number; checksum: string };
+      data: ReturnType<typeof fixtureData>;
+    };
+    legacy.manifest.version = 1;
+    for (const game of legacy.data.games) {
+      if (game.history) {
+        delete (game.history.summary as { confidence?: string }).confidence;
+      }
+    }
+    legacy.manifest.checksum = `sha256:${createHash("sha256")
+      .update(canonicalJson(legacy.data))
+      .digest("hex")}`;
+    expect(
+      validatePortableImport({
+        bytes: new TextEncoder().encode(JSON.stringify(legacy)),
+        targetAccountId: "legacy-target",
+      }),
+    ).toMatchObject({ gamesReplayed: 1, summariesMatched: 1 });
   });
 
   it("rejects unsupported, malformed, corrupt, oversized, and invalid UTF-8 input", () => {

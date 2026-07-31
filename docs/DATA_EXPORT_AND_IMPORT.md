@@ -78,7 +78,7 @@ The primary format is UTF-8 JSON:
 {
   "manifest": {
     "format": "baseballstattrack.account-export",
-    "version": 1,
+    "version": 2,
     "encoding": "utf-8",
     "exportedAt": "2026-07-30T20:00:00.000Z",
     "logicalAccount": "current-authorized-account",
@@ -90,6 +90,10 @@ The primary format is UTF-8 JSON:
   "data": {}
 }
 ```
+
+Version 2 adds the deterministic game confidence state to each derived game
+summary. Import validation remains backward-compatible with version 1 summaries
+and derives the same replay evidence before comparison.
 
 Object keys and entity arrays use deterministic ordering. A trailing newline is
 included. The SHA-256 digest covers canonicalized `data`; it detects accidental
@@ -115,7 +119,7 @@ conflicts rather than silently overwriting or applying last-write-wins.
 | Accepted setup  | setup revision, ruleset, innings, side lineups and starting pitchers                                                                                                                                      |
 | Event           | canonical baseball event identity, order, version, timing, body, and portable evidence; source actor/transaction/idempotency fields are replaced during validation by deterministic non-user placeholders |
 | Correction      | canonical `CorrectionApplied` event and its target/replacement graph                                                                                                                                      |
-| Derived summary | source/derivation versions, lifecycle/verification/outcome, score, and batting/pitching/fielding/team lines                                                                                               |
+| Derived summary | confidence, source/derivation versions, lifecycle/verification/outcome, score, and batting/pitching/fielding/team lines                                                                                   |
 
 Historical team and lineup display fields use the current effective privacy
 overlay. Current player identity uses the latest player-level overlay. Overlay

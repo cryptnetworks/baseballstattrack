@@ -13,6 +13,7 @@ export type OperationalCategory =
   | "scoring"
   | "projection"
   | "report"
+  | "data_quality"
   | "background_job"
   | "migration"
   | "health"
@@ -167,6 +168,28 @@ export function classifyOperationalAlert(
     event.outcome === "degraded"
   ) {
     return { key: "derived-data-stale", severity: "warning", page: false };
+  }
+  if (
+    event.category === "data_quality" &&
+    event.name === "reconciliation_integrity_failure" &&
+    event.outcome === "failed"
+  ) {
+    return {
+      key: "data-integrity-failure",
+      severity: "critical",
+      page: true,
+    };
+  }
+  if (
+    event.category === "data_quality" &&
+    event.name === "reconciliation_expected_recalculation" &&
+    event.outcome === "degraded"
+  ) {
+    return {
+      key: "data-recalculation-pending",
+      severity: "warning",
+      page: false,
+    };
   }
   if (event.category === "background_job" && event.outcome === "failed") {
     return { key: "background-job-failure", severity: "warning", page: false };

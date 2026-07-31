@@ -163,6 +163,7 @@ function seasonDashboard() {
         scoreAgainst: 4,
         result: "WIN",
         status: "VERIFIED",
+        confidence: "VERIFIED",
       },
       {
         gameId: "game-2",
@@ -172,6 +173,7 @@ function seasonDashboard() {
         scoreAgainst: 2,
         result: "INCOMPLETE",
         status: "CORRECTED_AWAITING_REVERIFICATION",
+        confidence: "CORRECTED",
       },
     ],
     players: [player],
@@ -217,7 +219,7 @@ describe("printable report presentation", () => {
     });
     expect(structuralSnapshot(season)).toEqual({
       captions: 3,
-      columnHeaders: 17,
+      columnHeaders: 18,
       rowHeaders: 5,
       sections: 3,
       tables: 4,
