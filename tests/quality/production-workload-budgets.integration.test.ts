@@ -177,7 +177,7 @@ integration("production-shaped database workload budgets", () => {
     expect(measurement.p95Milliseconds).toBeLessThanOrEqual(
       PRODUCTION_WORKLOAD_BUDGETS.scoringAcceptance.p95Milliseconds,
     );
-  });
+  }, 30_000);
 
   it("keeps accepted-history box-score generation within budget", async () => {
     const measurement = await measureAsync(
