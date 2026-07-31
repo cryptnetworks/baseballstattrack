@@ -86,6 +86,7 @@ export type SeasonDashboard = {
     opponentDisplayName: string;
     status: string;
     verificationState: "VERIFIED" | "UNVERIFIED";
+    confidence: "VERIFIED" | "CURRENT" | "INCOMPLETE" | "CORRECTED";
     scoreFor: number;
     scoreAgainst: number;
     result: "WIN" | "LOSS" | "TIE" | "INCOMPLETE";
@@ -196,6 +197,21 @@ function gameStatus(projection: GameStatisticsProjection): string {
   return projection.metadata.lifecycleStatus;
 }
 
+function gameConfidence(
+  projection: GameStatisticsProjection,
+): "VERIFIED" | "CURRENT" | "INCOMPLETE" | "CORRECTED" {
+  if (projection.metadata.verificationStatus === "VERIFIED") return "VERIFIED";
+  if (projection.metadata.lifecycleStatus === "CORRECTED") return "CORRECTED";
+  if (
+    ["READY", "IN_PROGRESS", "SUSPENDED"].includes(
+      projection.metadata.lifecycleStatus,
+    )
+  ) {
+    return "INCOMPLETE";
+  }
+  return "CURRENT";
+}
+
 export function buildSeasonDashboard(
   input: SeasonDashboardInput,
 ): SeasonDashboard {
@@ -259,6 +275,7 @@ export function buildSeasonDashboard(
         opponentDisplayName: game.opponentDisplayName,
         status: gameStatus(game.projection),
         verificationState: game.projection.metadata.verificationStatus,
+        confidence: gameConfidence(game.projection),
         scoreFor: game.projection.finalScore[game.side],
         scoreAgainst: game.projection.finalScore[opponent],
         result: outcomeFor(game.projection, game.side),

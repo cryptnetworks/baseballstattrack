@@ -246,6 +246,7 @@ function Dashboard({ dashboard }: { dashboard: SeasonDashboard }) {
                   "Score",
                   "Result",
                   "Status",
+                  "Confidence",
                   "Source",
                 ].map((label) => (
                   <th className="p-3" key={label} scope="col">
@@ -257,7 +258,7 @@ function Dashboard({ dashboard }: { dashboard: SeasonDashboard }) {
             <tbody>
               {dashboard.recentGames.length === 0 ? (
                 <tr>
-                  <td className="p-4 text-[var(--muted)]" colSpan={6}>
+                  <td className="p-4 text-[var(--muted)]" colSpan={7}>
                     No games are available for this selection.
                   </td>
                 </tr>
@@ -280,6 +281,7 @@ function Dashboard({ dashboard }: { dashboard: SeasonDashboard }) {
                     <td className="p-3">
                       {game.status.replaceAll("_", " ").toLowerCase()}
                     </td>
+                    <td className="p-3">{game.confidence.toLowerCase()}</td>
                     <td className="p-3">
                       <Link
                         className="underline"

@@ -17,7 +17,8 @@ import {
 } from "@/domain/statistics";
 
 export const PORTABLE_DATA_FORMAT = "baseballstattrack.account-export";
-export const PORTABLE_DATA_VERSION = 1;
+export const PORTABLE_DATA_VERSION = 2;
+const SUPPORTED_PORTABLE_DATA_VERSIONS = [1, PORTABLE_DATA_VERSION] as const;
 export const MAX_PORTABLE_BYTES = 5 * 1024 * 1024;
 export const MAX_PORTABLE_RECORDS = 10_000;
 const PORTABLE_LOGICAL_ACCOUNT = "portable-logical-account";
@@ -187,7 +188,7 @@ const dataSchema = z
 const manifestSchema = z
   .object({
     format: z.literal(PORTABLE_DATA_FORMAT),
-    version: z.literal(PORTABLE_DATA_VERSION),
+    version: z.union([z.literal(1), z.literal(PORTABLE_DATA_VERSION)]),
     encoding: z.literal("utf-8"),
     exportedAt: z.iso.datetime({ offset: true }),
     logicalAccount: z.literal("current-authorized-account"),
@@ -329,7 +330,18 @@ function counts(data: PortableData): Record<string, number> {
 }
 
 export function portableGameSummary(projection: GameStatisticsProjection) {
+  const confidence =
+    projection.metadata.verificationStatus === "VERIFIED"
+      ? "VERIFIED"
+      : ["READY", "IN_PROGRESS", "SUSPENDED"].includes(
+            projection.metadata.lifecycleStatus,
+          )
+        ? "INCOMPLETE"
+        : projection.metadata.lifecycleStatus === "CORRECTED"
+          ? "CORRECTED"
+          : "CURRENT";
   return {
+    confidence,
     sourceRevision: projection.metadata.sourceRevision,
     derivationVersion: projection.metadata.derivationVersion,
     statisticRulesVersion: projection.metadata.statisticRulesVersion,
@@ -565,7 +577,9 @@ export function validatePortableImport(input: {
     typeof raw.manifest === "object" &&
     raw.manifest !== null &&
     "version" in raw.manifest &&
-    raw.manifest.version !== PORTABLE_DATA_VERSION
+    !SUPPORTED_PORTABLE_DATA_VERSIONS.includes(
+      raw.manifest.version as (typeof SUPPORTED_PORTABLE_DATA_VERSIONS)[number],
+    )
   ) {
     throw new PortableDataError(
       "UNSUPPORTED_VERSION",
@@ -788,7 +802,16 @@ export function validatePortableImport(input: {
         { section: "games", recordId: game.id, field: "status" },
       );
     }
-    if (canonicalJson(derived) !== canonicalJson(game.history.summary)) {
+    const comparableDerived =
+      document.manifest.version === 1
+        ? (({ confidence: _confidence, ...legacy }) => {
+            void _confidence;
+            return legacy;
+          })(derived)
+        : derived;
+    if (
+      canonicalJson(comparableDerived) !== canonicalJson(game.history.summary)
+    ) {
       throw new PortableDataError(
         "SUMMARY_MISMATCH",
         "Derived game summary does not match replay.",

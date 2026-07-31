@@ -95,6 +95,7 @@ export type GameBoxScore = {
   innings: GameStatisticsProjection["inningLines"];
   reconciliation: {
     status: "PASSED";
+    confidence: "VERIFIED" | "CURRENT" | "INCOMPLETE" | "CORRECTED";
     checks: string[];
   };
 };
@@ -391,6 +392,14 @@ export function buildGameBoxScore(input: {
     ({ eventType }) => eventType === "CorrectionApplied",
   );
   const state = reportState(replay.state.status, input.events);
+  const confidence =
+    state === "VERIFIED"
+      ? "VERIFIED"
+      : state === "DRAFT" || state === "IN_PROGRESS" || state === "SUSPENDED"
+        ? "INCOMPLETE"
+        : correctionEvents.length > 0
+          ? "CORRECTED"
+          : "CURRENT";
   return {
     version: {
       accountId: input.setup.accountId,
@@ -417,6 +426,6 @@ export function buildGameBoxScore(input: {
     score: { ...statistics.finalScore },
     teams: { AWAY: team("AWAY"), HOME: team("HOME") },
     innings: statistics.inningLines,
-    reconciliation: { status: "PASSED", checks },
+    reconciliation: { status: "PASSED", confidence, checks },
   };
 }
