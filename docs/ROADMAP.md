@@ -44,6 +44,10 @@ Exit criteria: at least one external consumer uses a documented read contract; c
 Owner: `@cryptnetworks` repository maintainers. Target date: 2027-04-02.
 Primary epic: [#97](https://github.com/cryptnetworks/baseballstattrack/issues/97).
 
+The accepted production trust tiers, surface ownership, onboarding,
+credentials, quotas, compatibility, deprecation, and support contract are in
+[Integrations and partner API program](INTEGRATIONS_AND_PARTNER_API_PROGRAM.md).
+
 Primary issues: #73, #91–#99, #108–#121.
 
 Discord control-plane delivery is tracked by [#108](https://github.com/cryptnetworks/baseballstattrack/issues/108) and its child issues covering settings, installation, web UI, routing, cadence, delivery, permissions, previews, health, testing, and deployment.
