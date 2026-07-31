@@ -72,7 +72,9 @@ export class PrismaStatisticsApiRepository {
         readySetupSnapshotId: true,
         seasonId: true,
         season: { select: { externalId: true } },
-        teamSeason: { select: { teamId: true } },
+        teamSeason: {
+          select: { teamId: true, team: { select: { externalId: true } } },
+        },
       },
     });
   }

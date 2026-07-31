@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling==1.28.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "baseballstattrack-discord"
+version = "0.1.0"
+description = "Read-only Discord statistics client for Baseball Stat Track"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+  "discord.py==2.7.1",
+  "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "ruff==0.16.1",
+]
+
+[project.scripts]
+baseballstattrack-discord = "baseballstattrack_discord.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/baseballstattrack_discord"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+asyncio_mode = "auto"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "ASYNC", "S"]
+ignore = ["S101"]

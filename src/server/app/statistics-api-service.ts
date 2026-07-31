@@ -285,6 +285,7 @@ export class StatisticsApiService {
     });
     return statisticsApiEnvelope({
       id: externalGameId,
+      accountTeamId: game.teamSeason.team.externalId,
       version: {
         sourceRevision: report.version.sourceRevision,
         correctionRevision: report.version.correctionRevision,
@@ -326,8 +327,7 @@ export class StatisticsApiService {
     if (!scope) throw new StatisticsApiError("RESOURCE_UNAVAILABLE");
     const actor = requireTrustedActor(actorInput, accountId, "report.view");
     if (
-      actor.target.kind !== "SEASON" ||
-      actor.target.seasonId !== scope.seasonId ||
+      actor.target.kind !== "TEAM" ||
       !actor.target.teamIds.includes(scope.teamId)
     ) {
       throw new StatisticsApiError("RESOURCE_UNAVAILABLE");
@@ -344,18 +344,26 @@ export class StatisticsApiService {
       ...dashboard.leaders.batting.map(({ playerId }) => playerId),
       ...dashboard.leaders.pitching.map(({ playerId }) => playerId),
       ...dashboard.leaders.fielding.map(({ playerId }) => playerId),
+      ...dashboard.players.map(({ playerId }) => playerId),
     ];
-    const players = await this.repository.externalPlayerIds(
-      accountId,
-      internalPlayers,
-    );
+    const [players, games] = await Promise.all([
+      this.repository.externalPlayerIds(accountId, internalPlayers),
+      this.repository.externalGameIds(
+        accountId,
+        dashboard.recentGames.map(({ gameId }) => gameId),
+      ),
+    ]);
+    const externalPlayerId = (internal: string) =>
+      players.get(internal) ?? opaqueReference("participant", internal);
+    const externalGameId = (internal: string) =>
+      games.get(internal) ?? opaqueReference("game_snapshot", internal);
     const convert = <T extends { playerId: string }>(rows: T[]) =>
       rows.map((row) => ({
         ...row,
-        playerId:
-          players.get(row.playerId) ??
-          opaqueReference("participant", row.playerId),
+        playerId: externalPlayerId(row.playerId),
       }));
+    const playerLine = <T extends { playerId: string }>(line: T | null) =>
+      line ? { ...line, playerId: externalPlayerId(line.playerId) } : null;
     return statisticsApiEnvelope({
       seasonId: seasonExternalId,
       teamId: teamExternalId,
@@ -363,13 +371,38 @@ export class StatisticsApiService {
       derivationVersion: dashboard.version.derivationVersion,
       statisticRulesVersion: dashboard.version.statisticRulesVersion,
       privacyOverlayRevision: dashboard.version.privacyOverlayRevision,
+      selection: dashboard.selection,
       inclusionPolicy: dashboard.inclusionPolicy,
       record: dashboard.record,
+      recentGames: dashboard.recentGames.map((game) => ({
+        gameId: externalGameId(game.gameId),
+        scheduledAt: game.scheduledAt,
+        opponentDisplayName: game.opponentDisplayName,
+        status: game.status,
+        verificationState: game.verificationState,
+        confidence: game.confidence,
+        scoreFor: game.scoreFor,
+        scoreAgainst: game.scoreAgainst,
+        result: game.result,
+        sourceRevision: game.sourceRevision,
+      })),
       leaders: {
         batting: convert(dashboard.leaders.batting),
         pitching: convert(dashboard.leaders.pitching),
         fielding: convert(dashboard.leaders.fielding),
       },
+      players: dashboard.players.map((player) => ({
+        playerId: externalPlayerId(player.playerId),
+        displayName: player.displayName,
+        batting: playerLine(player.batting),
+        pitching: playerLine(player.pitching),
+        fielding: playerLine(player.fielding),
+        sourceGames: player.sourceGames.map((game) => ({
+          gameId: externalGameId(game.gameId),
+          scheduledAt: game.scheduledAt,
+          verificationState: game.verificationState,
+        })),
+      })),
     });
   }
 }

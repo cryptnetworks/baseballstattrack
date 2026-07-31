@@ -61,8 +61,11 @@ derivation version match current game state. Missing derived data is
 
 Box scores expose current/final/terminated state, correction and verification
 metadata, statistic/rules versions, reconciliation confidence, and exact
-derived lines. Leaders retain the verified-only inclusion policy. Corrected or
-incomplete data is labeled; it is never silently promoted to verified data.
+derived lines. The season leaders response also carries team record, all-player
+summaries, and recent games for read-only clients; their player and game
+references are external IDs and setup lineage remains private. Leaders retain
+the verified-only inclusion policy. Corrected or incomplete data is labeled; it
+is never silently promoted to verified data.
 
 The v1 contract is additive-only within its major version. Removing or changing
 field meaning requires a new API version. Issue #92 owns the machine-readable

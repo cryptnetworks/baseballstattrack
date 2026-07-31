@@ -34,7 +34,7 @@ describe("season dashboard presentation", () => {
   });
 
   it("provides an authorized, versioned player-season summary", () => {
-    expect(playerPage).toContain('kind: "SEASON"');
+    expect(playerPage).toContain('kind: "TEAM"');
     expect(playerPage).toContain('"report.view"');
     expect(playerPage).toContain("Verified games only");
     expect(playerPage).toContain("Source games");
