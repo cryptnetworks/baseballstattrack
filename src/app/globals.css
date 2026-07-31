@@ -6,6 +6,7 @@
   --foreground: #162018;
   --panel: #ffffff;
   --muted: #5f6b63;
+  --accent-soft: #e8f2ed;
   --accent: #176b4d;
   --accent-strong: #0f5138;
   --line: #d8ddd7;
@@ -28,6 +29,96 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.pwa-connection-status {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem max(1rem, env(safe-area-inset-left)) 0.5rem
+    max(1rem, env(safe-area-inset-right));
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.pwa-connection-status--online {
+  background: var(--accent-soft);
+}
+
+.pwa-connection-status--offline {
+  background: #fff3d6;
+}
+
+.pwa-connection-status__dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.pwa-connection-status--offline .pwa-connection-status__dot {
+  background: #9a6200;
+}
+
+.pwa-install-prompt {
+  display: flex;
+  max-width: 72rem;
+  margin: 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem max(1rem, env(safe-area-inset-left));
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.pwa-install-prompt__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pwa-install-prompt__install,
+.pwa-install-prompt__dismiss {
+  min-height: 2.75rem;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.pwa-install-prompt__install {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.pwa-install-prompt__dismiss {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--foreground);
+}
+
+@media (max-width: 36rem) {
+  .pwa-install-prompt {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pwa-install-prompt__actions {
+    width: 100%;
+  }
+
+  .pwa-install-prompt__install,
+  .pwa-install-prompt__dismiss {
+    flex: 1;
+  }
 }
 
 a {

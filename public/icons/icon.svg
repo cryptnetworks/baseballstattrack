@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Baseball Stat Track</title>
+  <desc id="desc">A white baseball over a deep green field with a gold accent</desc>
+  <rect width="1024" height="1024" rx="224" fill="#0f5138"/>
+  <path d="M0 742c150-108 319-163 512-163s362 55 512 163v282H0Z" fill="#176b4d"/>
+  <circle cx="512" cy="454" r="242" fill="#fffdf7"/>
+  <path d="M355 291c55 70 72 136 51 198-19 58-13 123 23 194" fill="none" stroke="#c44f4f" stroke-linecap="round" stroke-width="22"/>
+  <path d="M669 291c-55 70-72 136-51 198 19 58 13 123-23 194" fill="none" stroke="#c44f4f" stroke-linecap="round" stroke-width="22"/>
+  <path d="M384 327l-37-27M411 365l-43-20M427 410l-45-12M433 458l-46-4M429 507l-45 7M417 554l-42 17M401 597l-37 26M640 327l37-27M613 365l43-20M597 410l45-12M591 458l46-4M595 507l45 7M607 554l42 17M623 597l37 26" fill="none" stroke="#c44f4f" stroke-linecap="round" stroke-width="13"/>
+  <path d="M230 787h564" stroke="#e7bc58" stroke-linecap="round" stroke-width="24"/>
+  <path d="M294 843h436" stroke="#fffdf7" stroke-linecap="round" stroke-width="16" opacity=".92"/>
+</svg>

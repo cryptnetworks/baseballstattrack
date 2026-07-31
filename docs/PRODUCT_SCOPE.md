@@ -80,6 +80,16 @@ dependency of core scoring or reports.
 - Pending saves, retry states, and unresolved failures must be visible and actionable before a game is treated as verified.
 - Full offline game scoring, cross-device conflict resolution, and later synchronization are deferred and require a separate product and architecture decision.
 
+## Progressive web experience
+
+The M7 experience may be installed from a supported browser and launched as a
+standalone online-first web application. The PWA service worker may cache only
+versioned static assets and public icons; navigations, API responses,
+authentication routes, private Account data, and scoring commands remain
+network-backed and server-authoritative. Installation does not imply offline
+scoring, offline authentication, background synchronization, or a local event
+queue.
+
 ## Ruleset Assumptions
 
 - The baseline scoring model follows standard baseball semantics for plate appearances, baserunning, pitching, fielding, substitutions, outs, innings, and earned or unearned outcomes.
