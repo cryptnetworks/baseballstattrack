@@ -47,6 +47,9 @@
     "verify": "npm run format && npm run lint && npm run typecheck && npm run test && npm run policy:validate && npm run api:contract && npm run db:validate && npm run build && npm run experience:verify && npm run pwa:verify && npm run audit:prod"
   },
   "overrides": {
+    "minimatch@3.1.5": {
+      "brace-expansion": "1.1.18"
+    },
     "find-my-way": "9.7.0",
     "postcss": "8.5.23",
     "sharp": "0.35.3",
