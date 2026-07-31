@@ -7,6 +7,7 @@ if (!databaseUrl) {
 }
 
 const expectedConstraints = [
+  "Account_externalId_key",
   "AccountMembership_active_user_key",
   "DataExportArtifact_token_state_check",
   "DataExportArtifact_terminal_time_check",
@@ -17,6 +18,7 @@ const expectedConstraints = [
   "Game_accountId_id_readySetupSnapshotId_fkey",
   "Game_accountId_id_readySetupSnapshotId_key",
   "Game_setup_state_check",
+  "Game_accountId_externalId_key",
   "LineupSlotSnapshot_fielding_position_key",
   "LineupSlotSnapshot_player_key",
   "LineupSlotSnapshot_roster_entry_key",
@@ -41,8 +43,11 @@ const expectedConstraints = [
   "RosterEntry_accountId_playerId_startsAt_id_idx",
   "RosterEntry_accountId_teamSeasonId_startsAt_id_idx",
   "Player_accountId_displayName_id_idx",
+  "Player_accountId_externalId_key",
   "Season_accountId_displayName_id_idx",
+  "Season_accountId_externalId_key",
   "Team_accountId_displayName_id_idx",
+  "Team_accountId_externalId_key",
   "Season_revision_nonnegative_check",
   "Team_revision_nonnegative_check",
   "TeamSeason_revision_nonnegative_check",
