@@ -361,6 +361,15 @@ integration("privacy lifecycle persistence boundary", () => {
       },
       requestingUser,
     );
+    await prisma.productAnalyticsConsent.create({
+      data: {
+        appUserId: detachedUserId,
+        status: "OPTED_IN",
+        policyVersion: "2026-07-31",
+        grantedAt: current,
+        expiresAt: new Date("2027-08-01T01:00:00.000Z"),
+      },
+    });
     current = new Date("2026-08-09T01:00:00.000Z");
     await service.executeRequest(
       { accountId: ids.account, requestId: created.request.id },
@@ -380,6 +389,11 @@ integration("privacy lifecycle persistence boundary", () => {
         where: { id: detachedMembershipId },
       }),
     ).toMatchObject({ status: "DISABLED", disabledAt: current });
+    expect(
+      await prisma.productAnalyticsConsent.count({
+        where: { appUserId: detachedUserId },
+      }),
+    ).toBe(0);
     expect(
       await prisma.appUser.findUniqueOrThrow({ where: { id: userId } }),
     ).toMatchObject({ status: "ACTIVE", detachedAt: null });

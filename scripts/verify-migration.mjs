@@ -46,6 +46,8 @@ const expectedConstraints = [
   "WebhookDelivery_lifecycle_check",
   "WebhookDelivery_values_check",
   "WebhookDeliveryAttempt_values_check",
+  "ProductAnalyticsConsent_lifecycle_check",
+  "ProductAnalyticsConsent_policy_check",
   "RosterEntry_active_player_key",
   "RosterEntry_no_overlapping_periods",
   "RosterEntry_period_revision_check",

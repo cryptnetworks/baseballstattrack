@@ -654,6 +654,9 @@ export class PrismaPrivacyLifecycleRepository {
             },
           });
         } else if (request.target === "USER") {
+          await tx.productAnalyticsConsent.deleteMany({
+            where: { appUserId: request.targetId },
+          });
           await tx.rateLimitCharge.deleteMany({
             where: { actorKind: "USER", actorId: request.targetId },
           });

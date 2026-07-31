@@ -8,7 +8,7 @@ x-database-environment: &database-environment
 x-application-environment: &application-environment
   NEXT_PUBLIC_APP_ENV: ${APP_ENV:-local}
   DATABASE_URL: postgresql://${POSTGRES_USER:-baseballstattrack}:${POSTGRES_PASSWORD:-local-development-only}@db:5432/${POSTGRES_DB:-baseballstattrack}?schema=public
-  REQUIRED_DATABASE_MIGRATION: 20260731163523_durable_webhooks
+  REQUIRED_DATABASE_MIGRATION: 20260731173000_product_analytics_consent
   WEBHOOK_SIGNING_MASTER_KEY: ${WEBHOOK_SIGNING_MASTER_KEY:-}
   WEBHOOK_WORKER_TOKEN: ${WEBHOOK_WORKER_TOKEN:-}
 

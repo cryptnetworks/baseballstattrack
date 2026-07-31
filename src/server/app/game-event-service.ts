@@ -1,12 +1,22 @@
 import { z } from "zod";
 
 import { parseEventBody } from "@/domain/events/event-log";
+import {
+  PRODUCT_ANALYTICS_SCHEMA_VERSION,
+  analyticsDurationBucket,
+  classifyScoringAnalyticsError,
+  scoringEventFamily,
+} from "@/domain/product-analytics";
 import { rateLimitFingerprint } from "@/domain/rate-limits";
 import {
   getRateLimitService,
   noRateLimit,
   type RateLimitEnforcer,
 } from "@/server/app/rate-limit-service";
+import {
+  ProductAnalyticsService,
+  getProductAnalyticsService,
+} from "@/server/app/product-analytics-service";
 import {
   type AcceptEventCommand,
   PrismaGameEventRepository,
@@ -80,10 +90,20 @@ export class GameEventService {
     private readonly repository: PrismaGameEventRepository,
     private readonly operationalEvents: OperationalEventSink = getOperationalEventSink(),
     private readonly rateLimits: RateLimitEnforcer = noRateLimit,
+    private readonly productAnalytics: Pick<
+      ProductAnalyticsService,
+      "emitForUser"
+    > = { emitForUser: async () => false },
   ) {}
 
   async accept(input: EventAcceptanceInput, actor: TrustedActorContext) {
     const startedAt = performance.now();
+    let analyticsContext:
+      | Readonly<{
+          appUserId: string;
+          eventFamily: ReturnType<typeof scoringEventFamily>;
+        }>
+      | undefined;
     try {
       const command = eventAcceptanceSchema.parse(input);
       const body = parseEventBody(command.body);
@@ -94,6 +114,12 @@ export class GameEventService {
         command.gameId,
         capability,
       );
+      if (trusted.actorKind === "USER") {
+        analyticsContext = {
+          appUserId: trusted.appUserId,
+          eventFamily: scoringEventFamily(body.eventType),
+        };
+      }
       await this.rateLimits.enforce(
         {
           accountId: command.accountId,
@@ -137,6 +163,19 @@ export class GameEventService {
         durationMs: Math.round((performance.now() - startedAt) * 1000) / 1000,
         metadata: { eventType: body.eventType },
       });
+      if (analyticsContext) {
+        await this.productAnalytics.emitForUser(analyticsContext.appUserId, {
+          schemaVersion: PRODUCT_ANALYTICS_SCHEMA_VERSION,
+          name: "scoring.submission_succeeded",
+          workflow: "LIVE_SCORING",
+          result: "SUCCEEDED",
+          eventFamily: analyticsContext.eventFamily,
+          durationBucket: analyticsDurationBucket(
+            performance.now() - startedAt,
+          ),
+          failureCategory: null,
+        });
+      }
       return result;
     } catch (error) {
       emitOperationalEvent(this.operationalEvents, {
@@ -152,6 +191,18 @@ export class GameEventService {
         code: safeOperationalErrorCode(error),
         durationMs: Math.round((performance.now() - startedAt) * 1000) / 1000,
       });
+      if (analyticsContext) {
+        const classification = classifyScoringAnalyticsError(error);
+        await this.productAnalytics.emitForUser(analyticsContext.appUserId, {
+          schemaVersion: PRODUCT_ANALYTICS_SCHEMA_VERSION,
+          ...classification,
+          workflow: "LIVE_SCORING",
+          eventFamily: analyticsContext.eventFamily,
+          durationBucket: analyticsDurationBucket(
+            performance.now() - startedAt,
+          ),
+        });
+      }
       throw error;
     }
   }
@@ -186,5 +237,6 @@ export function getGameEventService() {
     new PrismaGameEventRepository(getPrismaClient()),
     getOperationalEventSink(),
     getRateLimitService(),
+    getProductAnalyticsService(),
   );
 }
