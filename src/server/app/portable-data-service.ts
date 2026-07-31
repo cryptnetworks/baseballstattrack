@@ -45,7 +45,7 @@ export class PortableDataService {
     >,
     private readonly boxScores: Pick<
       PrismaGameBoxScoreRepository,
-      "loadPresentationSource"
+      "loadPresentationSources"
     >,
   ) {}
 
@@ -81,14 +81,11 @@ export class PortableDataService {
             setupSnapshotId,
           })),
         );
-        const presentations = await Promise.all(
-          ready.map(async (game) => ({
+        const presentations = await this.boxScores.loadPresentationSources(
+          accountId,
+          ready.map((game) => ({
             gameId: game.id,
-            source: await this.boxScores.loadPresentationSource(
-              accountId,
-              game.id,
-              game.setupSnapshotId,
-            ),
+            setupSnapshotId: game.setupSnapshotId,
           })),
         );
         const data = this.assembleData(

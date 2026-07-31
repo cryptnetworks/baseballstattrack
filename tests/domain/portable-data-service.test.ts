@@ -60,7 +60,7 @@ describe("portable data application boundary", () => {
     const service = new PortableDataService(
       repository,
       { loadAcceptedHistories: vi.fn() },
-      { loadPresentationSource: vi.fn() },
+      { loadPresentationSources: vi.fn() },
     );
     await expect(
       service.exportAccount("target-account", actor("account.manage")),
@@ -93,7 +93,7 @@ describe("portable data application boundary", () => {
     const service = new PortableDataService(
       repository,
       { loadAcceptedHistories: vi.fn() },
-      { loadPresentationSource: vi.fn() },
+      { loadPresentationSources: vi.fn() },
     );
     const artifact = await service.exportAccount(
       "target-account",
@@ -127,7 +127,7 @@ describe("portable data application boundary", () => {
     const service = new PortableDataService(
       repository,
       { loadAcceptedHistories: vi.fn() },
-      { loadPresentationSource: vi.fn() },
+      { loadPresentationSources: vi.fn() },
     );
     const bytes = emptyDocument();
     const first = await service.validateImport(
@@ -160,7 +160,7 @@ describe("portable data application boundary", () => {
     const service = new PortableDataService(
       repository,
       { loadAcceptedHistories: vi.fn() },
-      { loadPresentationSource: vi.fn() },
+      { loadPresentationSources: vi.fn() },
     );
     await expect(
       service.validateImport(

@@ -33,6 +33,10 @@ integration("PrismaGameBoxScoreRepository", () => {
       ids.game,
       ids.setup,
     );
+    const [initialBatch] = await reports.loadPresentationSources(ids.account, [
+      { gameId: ids.game, setupSnapshotId: ids.setup },
+    ]);
+    expect(initialBatch).toEqual({ gameId: ids.game, source: initial });
     expect(initial).toMatchObject({
       sourceRevision: 0,
       privacyOverlayRevision: 0,

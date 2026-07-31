@@ -20,7 +20,9 @@ npm run verify
 5. `npm run policy:validate` — defect-policy issue-form YAML, required process files, safety invariants, and internal links.
 6. `npm run db:validate` — Prisma schema validation only.
 7. `npm run build` — production Next.js build.
-8. `npm run audit:prod` — high-or-critical production dependency audit.
+8. `npm run experience:verify` — deterministic client-route, CSS, and
+   route-isolation budgets against the fresh production build.
+9. `npm run audit:prod` — high-or-critical production dependency audit.
 
 The independently runnable commands above are the local reproduction commands for a failed CI step. `npm run format:write` is intentionally separate because it changes files. `npm run db:migrate`, seeding, and any destructive database command are not part of verification.
 
@@ -67,6 +69,8 @@ Run the named failing command locally after `npm ci`. Common cases:
 - Prisma validation: inspect `prisma/schema.prisma` and `prisma.config.ts`; do not run migrations merely to satisfy CI.
 - Migration/representability: reproduce only against an isolated disposable PostgreSQL database; inspect the named constraint or synthetic invariant before changing a migration.
 - Build: reproduce with `npm run build` without adding credentials. Investigate only documented build-time environment requirements.
+- Experience budgets: run `npm run build && npm run experience:verify`; inspect
+  route ownership and measured chunk growth before changing an explicit budget.
 - Audit: determine whether the advisory reaches production dependencies and remediate without broad, unrelated upgrades.
 
 If a run is superseded by a newer commit, GitHub cancels it by design. Re-run a failed network-dependent check only after the underlying service is available; do not hide failures with automatic success fallbacks.
@@ -75,4 +79,8 @@ If a run is superseded by a newer commit, GitHub cancels it by design. Re-run a 
 
 When GitHub plan/settings permit it, protect `main` with required pull requests, an approving review, resolved conversations, up-to-date branches, and the exact `verify` check. Current plan limitations are recorded in `.github/branch-protection.md`; this repository does not claim that protection is already configured.
 
-Deferred improvements include broader database integration tests, dependency provenance policy, action commit-SHA pinning if repository policy requires it, performance budgets, accessibility checks, and release/deployment gates.
+Deferred improvements include broader browser accessibility automation,
+hosted web-vital measurements, dependency provenance policy, action commit-SHA
+pinning if repository policy requires it, and release/deployment gates. Current
+M3 performance and accessibility evidence is documented in
+[`RESPONSIVE_PERFORMANCE_AND_ACCESSIBILITY.md`](RESPONSIVE_PERFORMANCE_AND_ACCESSIBILITY.md).

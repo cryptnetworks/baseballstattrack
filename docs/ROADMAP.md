@@ -22,7 +22,10 @@ Exit criteria: a scorekeeper can complete a representative game on a touch devic
 
 ## M3 — Season experience
 
-Add season dashboards, batting, pitching, and fielding summaries, game history, printable reports, exports, accessibility polish, and responsive performance.
+Add season dashboards, batting, pitching, and fielding summaries, game history,
+printable reports, exports, accessibility polish, and responsive performance.
+The measured engineering baseline is documented in
+[RESPONSIVE_PERFORMANCE_AND_ACCESSIBILITY.md](RESPONSIVE_PERFORMANCE_AND_ACCESSIBILITY.md).
 
 Exit criteria: a coach can answer common season questions and share a trustworthy game report.
 

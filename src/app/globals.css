@@ -115,6 +115,28 @@ textarea {
   border: 1px solid #475569;
 }
 
+.route-loading-bar {
+  transform-origin: left;
+  animation: route-loading-progress 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes route-loading-progress {
+  from {
+    transform: scaleX(0.2);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-bar {
+    transform: scaleX(1);
+    animation: none;
+  }
+}
+
 @page report-portrait {
   size: letter portrait;
   margin: 0.55in;
