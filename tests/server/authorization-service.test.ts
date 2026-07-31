@@ -75,7 +75,14 @@ class MutableStore implements AuthorizationStore {
   }
 
   async listAvailableAccounts() {
-    return [{ id: "account-a", slug: "a", displayName: "Account A" }];
+    return [
+      {
+        id: "account-a",
+        externalId: "00000000-0000-4000-8000-000000000001",
+        slug: "a",
+        displayName: "Account A",
+      },
+    ];
   }
 
   async loadActiveAuthority(_userId: string, accountId: string) {

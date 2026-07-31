@@ -11,6 +11,7 @@ import type {
 
 export type AvailableAccount = Readonly<{
   id: string;
+  externalId: string;
   slug: string;
   displayName: string;
 }>;
@@ -153,7 +154,14 @@ export class PrismaAuthorizationStore implements AuthorizationStore {
         account: { status: "ACTIVE" },
       },
       select: {
-        account: { select: { id: true, slug: true, displayName: true } },
+        account: {
+          select: {
+            id: true,
+            externalId: true,
+            slug: true,
+            displayName: true,
+          },
+        },
       },
       orderBy: { account: { displayName: "asc" } },
     });
