@@ -9,9 +9,14 @@ const importRoute = readFileSync(
 );
 
 describe("portable data HTTP boundaries", () => {
-  it("reauthorizes export download and returns safe ephemeral headers", () => {
-    expect(exportRoute.match(/authorizeProtectedRequest/g)).toHaveLength(3);
+  it("reauthorizes one-time export preparation, download, and cancellation", () => {
+    expect(exportRoute).toContain("exportActor(request, input.accountId)");
     expect(exportRoute).toContain('"report.export"');
+    expect(exportRoute).toContain("export async function POST");
+    expect(exportRoute).toContain("export async function GET");
+    expect(exportRoute).toContain("export async function DELETE");
+    expect(exportRoute).toContain('"x-export-token"');
+    expect(exportRoute).toContain("requireSameOrigin(request)");
     expect(exportRoute).toContain('"Content-Disposition"');
     expect(exportRoute).toContain("application/json; charset=utf-8");
     expect(exportRoute).toContain("private, no-store");

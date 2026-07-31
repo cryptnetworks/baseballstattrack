@@ -28,6 +28,9 @@ describe("relational domain schema", () => {
       "EventCorrection",
       "ProjectionCheckpoint",
       "PrivacyOverlay",
+      "DataExportArtifact",
+      "PrivacyLifecycleRequest",
+      "PrivacyHold",
     ]) {
       expect(model(name).name).toBe(name);
     }

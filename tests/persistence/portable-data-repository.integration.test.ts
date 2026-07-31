@@ -87,7 +87,7 @@ integration("portable data persistence boundary", () => {
     });
     await repository.audit({
       actor,
-      action: "data.export.download",
+      action: "data.export.generate",
       outcome: "SUCCEEDED",
       metadata: {
         checksum: "sha256:test",
@@ -98,7 +98,7 @@ integration("portable data persistence boundary", () => {
     const audit = await prisma.securityAuditRecord.findFirstOrThrow({
       where: {
         accountId: ids.account,
-        action: "data.export.download",
+        action: "data.export.generate",
         actorId: actor.actorId,
       },
     });

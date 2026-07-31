@@ -8,7 +8,7 @@ x-database-environment: &database-environment
 x-application-environment: &application-environment
   NEXT_PUBLIC_APP_ENV: ${APP_ENV:-local}
   DATABASE_URL: postgresql://${POSTGRES_USER:-baseballstattrack}:${POSTGRES_PASSWORD:-local-development-only}@db:5432/${POSTGRES_DB:-baseballstattrack}?schema=public
-  REQUIRED_DATABASE_MIGRATION: 20260729220000_game_lineup_pitching_setup
+  REQUIRED_DATABASE_MIGRATION: 20260731131500_privacy_lifecycle
 
 services:
   db:
