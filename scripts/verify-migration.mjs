@@ -48,6 +48,12 @@ const expectedConstraints = [
   "WebhookDeliveryAttempt_values_check",
   "ProductAnalyticsConsent_lifecycle_check",
   "ProductAnalyticsConsent_policy_check",
+  "ExternalDataSource_values_check",
+  "ExternalDataSource_approval_check",
+  "ExternalIngestionRun_values_check",
+  "ExternalIngestionRun_lifecycle_check",
+  "ExternalProviderRecord_values_check",
+  "ExternalIngestionQuarantine_lifecycle_check",
   "RosterEntry_active_player_key",
   "RosterEntry_no_overlapping_periods",
   "RosterEntry_period_revision_check",
@@ -91,6 +97,7 @@ const expectedTriggers = [
   "TeamSeason_identity_immutable",
   "WebhookEndpoint_identity_immutable",
   "WebhookEvent_immutable",
+  "ExternalProviderRecord_evidence_immutable",
 ];
 
 const client = new pg.Client({ connectionString: databaseUrl });
