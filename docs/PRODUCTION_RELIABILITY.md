@@ -28,6 +28,11 @@ even if the request metric is green. Disaster recovery retains the separate
 backup objectives: logical-backup RPO 24 hours, PITR target RPO 15 minutes, and
 restore-verification RTO four hours.
 
+The synthetic database profiles and release regression thresholds for scoring,
+box-score generation, and season-dashboard queries are defined in
+`PERFORMANCE_AND_LOAD_BUDGETS.md`. They provide controlled evidence for this
+SLO; hosted telemetry remains the production authority.
+
 Instrument counters for eligible/good/bad events, latency histograms,
 source-to-checkpoint age, incident recovery duration, readiness, version, and
 environment. Expected domain/authorization rejections have their own safe

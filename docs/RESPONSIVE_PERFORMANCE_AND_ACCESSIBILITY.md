@@ -346,12 +346,15 @@ container smoke test, exact-head CI, and final diff review. M3 can close after
 #27 is reviewed and merged if exact post-merge `main` CI remains green and no
 regression is found. M3 is not complete while #27 remains open.
 
-## M4 monitoring deferrals
+## M4 monitoring handoff
 
-M4 owns production-readiness work that is intentionally absent here:
+M4 database release budgets, representative scoring/report/dashboard datasets,
+and highest-cost query paths are now defined in
+`PERFORMANCE_AND_LOAD_BUDGETS.md`. Production monitoring still must collect:
 
 - hosted real-user web-vital and interaction monitoring;
-- server/database latency percentiles and query telemetry;
+- server/database latency percentiles and sanitized query telemetry using the
+  established workload boundaries;
 - production `EXPLAIN` evidence and index changes where justified;
 - error-rate, timeout, export-size, and validation-duration dashboards;
 - tested deployment rollback, alerting, and incident response;

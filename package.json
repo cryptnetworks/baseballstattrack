@@ -39,6 +39,7 @@
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "experience:measure": "EXPERIENCE_MEASURE=1 vitest run tests/quality/experience-measurement.test.ts --reporter=verbose",
     "experience:verify": "node scripts/verify-experience-budgets.mjs",
+    "performance:measure": "EXPERIENCE_MEASURE=1 PERFORMANCE_MEASURE=1 vitest run tests/quality/experience-measurement.test.ts tests/quality/production-workload-budgets.integration.test.ts --reporter=verbose",
     "verify": "npm run format && npm run lint && npm run typecheck && npm run test && npm run policy:validate && npm run db:validate && npm run build && npm run experience:verify && npm run audit:prod"
   },
   "overrides": {
