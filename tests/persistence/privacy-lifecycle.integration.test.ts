@@ -488,6 +488,51 @@ integration("privacy lifecycle persistence boundary", () => {
         retentionUntil: new Date(current.getTime() + 30 * 86_400_000),
       },
     });
+    await prisma.$transaction(async (tx) => {
+      const discordInstallation = await tx.discordInstallation.create({
+        data: {
+          id: `${prefix}-privacy-discord-installation`,
+          accountId: ids.account,
+          guildId: "323456789012345678",
+          credentialReference: "discord/installations/privacy",
+          status: "ACTIVE",
+          installedAt: current,
+        },
+      });
+      const discordDestination = await tx.discordChannelDestination.create({
+        data: {
+          id: `${prefix}-privacy-discord-destination`,
+          accountId: ids.account,
+          installationId: discordInstallation.id,
+          channelId: "423456789012345678",
+          channelReference: "discord/channels/privacy",
+        },
+      });
+      const discordSettings = await tx.discordIntegrationSettings.create({
+        data: {
+          id: `${prefix}-privacy-discord-settings`,
+          accountId: ids.account,
+          installationId: discordInstallation.id,
+          enabled: true,
+          triggers: ["GAME_COMPLETED"],
+        },
+      });
+      await tx.discordSettingsScope.create({
+        data: {
+          accountId: ids.account,
+          settingsId: discordSettings.id,
+          teamSeasonId: ids.home.teamSeason,
+        },
+      });
+      await tx.discordSettingsDestination.create({
+        data: {
+          accountId: ids.account,
+          settingsId: discordSettings.id,
+          destinationId: discordDestination.id,
+          purpose: "LIVE_UPDATES",
+        },
+      });
+    });
     const created = await service.createRequest(
       {
         accountId: ids.account,
@@ -616,6 +661,16 @@ integration("privacy lifecycle persistence boundary", () => {
       cancelledAt: current,
       lastFailureCode: "ACCOUNT_ARCHIVED",
     });
+    expect(
+      await prisma.discordInstallation.findUniqueOrThrow({
+        where: { id: `${prefix}-privacy-discord-installation` },
+      }),
+    ).toMatchObject({ status: "DISCONNECTED", disconnectedAt: current });
+    expect(
+      await prisma.discordIntegrationSettings.findUniqueOrThrow({
+        where: { id: `${prefix}-privacy-discord-settings` },
+      }),
+    ).toMatchObject({ enabled: false, revision: 2 });
     const completionAudit = await prisma.securityAuditRecord.findFirstOrThrow({
       where: {
         accountId: ids.account,

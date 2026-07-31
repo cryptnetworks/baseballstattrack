@@ -655,6 +655,18 @@ export class PrismaPrivacyLifecycleRepository {
               lastFailureCode: "ACCOUNT_ARCHIVED",
             },
           });
+          await tx.discordIntegrationSettings.updateMany({
+            where: { accountId: input.accountId, enabled: true },
+            data: { enabled: false, revision: { increment: 1 } },
+          });
+          await tx.discordInstallation.updateMany({
+            where: { accountId: input.accountId, status: "ACTIVE" },
+            data: { status: "DISCONNECTED", disconnectedAt: input.now },
+          });
+          await tx.discordInstallation.updateMany({
+            where: { accountId: input.accountId, status: "PENDING" },
+            data: { status: "REVOKED", revokedAt: input.now },
+          });
           await tx.externalDataSource.updateMany({
             where: {
               accountId: input.accountId,
