@@ -32,7 +32,9 @@
     "container:verify": "bash scripts/container-smoke.sh",
     "container:scan": "docker scout cves --exit-code --only-severity critical,high local://baseballstattrack:local",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
-    "verify": "npm run format && npm run lint && npm run typecheck && npm run test && npm run policy:validate && npm run db:validate && npm run build && npm run audit:prod"
+    "experience:measure": "EXPERIENCE_MEASURE=1 vitest run tests/quality/experience-measurement.test.ts --reporter=verbose",
+    "experience:verify": "node scripts/verify-experience-budgets.mjs",
+    "verify": "npm run format && npm run lint && npm run typecheck && npm run test && npm run policy:validate && npm run db:validate && npm run build && npm run experience:verify && npm run audit:prod"
   },
   "overrides": {
     "find-my-way": "9.7.0",
@@ -45,7 +47,6 @@
     "@prisma/adapter-pg": "7.9.0",
     "@supabase/ssr": "0.12.3",
     "@supabase/supabase-js": "2.110.8",
-    "@tanstack/react-query": "5.101.4",
     "next": "16.2.11",
     "pg": "8.22.0",
     "react": "19.2.8",
