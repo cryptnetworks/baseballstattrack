@@ -42,6 +42,10 @@ A change is complete when acceptance criteria are met, tests cover important beh
 - Container build and smoke test: `npm run container:verify`
 
 Use [docs/CI_QUALITY_GATES.md](docs/CI_QUALITY_GATES.md) for the canonical `npm run verify` chain, CI behavior, and local failure triage.
+Maintainers use
+[docs/REPOSITORY_OPERATIONS_CHECKLIST.md](docs/REPOSITORY_OPERATIONS_CHECKLIST.md)
+for issue intake, pull requests, migrations, releases, incidents, emergency
+changes, and deprecations from clean checkout through post-merge evidence.
 
 Changes to the Dockerfile, Compose configuration, runtime startup, readiness, or migration workflow must also pass `npm run container:verify`. Use [docs/CONTAINER_OPERATIONS.md](docs/CONTAINER_OPERATIONS.md) as the canonical container and operations contract.
 
