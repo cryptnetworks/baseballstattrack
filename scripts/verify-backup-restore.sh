@@ -60,7 +60,7 @@ docker run --rm --network "${restore_network}" \
   --env NODE_ENV=production \
   --env NEXT_PUBLIC_APP_ENV=local \
   --env "DATABASE_URL=postgresql://${restore_user}:${restore_password}@${source_container}:5432/${restore_database}?schema=public" \
-  --env REQUIRED_DATABASE_MIGRATION=20260731163523_durable_webhooks \
+  --env REQUIRED_DATABASE_MIGRATION=20260731173000_product_analytics_consent \
   "${migration_image}" npm run db:migrate:deploy >/dev/null
 
 docker exec --interactive "${source_container}" psql \
@@ -106,7 +106,7 @@ target_signature="$(
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "EventCorrection";')" == "1" ]]
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "SecurityAuditRecord";')" == "1" ]]
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "ProjectionCheckpoint" WHERE "status" = '\''CURRENT'\'';')" == "1" ]]
-[[ "$(database_query "${target_container}" 'SELECT count(*) FROM "_prisma_migrations" WHERE "finished_at" IS NOT NULL AND "rolled_back_at" IS NULL;')" == "9" ]]
+[[ "$(database_query "${target_container}" 'SELECT count(*) FROM "_prisma_migrations" WHERE "finished_at" IS NOT NULL AND "rolled_back_at" IS NULL;')" == "10" ]]
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "Team" t JOIN "Account" a ON a."id" = t."accountId" WHERE t."accountId" <> a."id";')" == "0" ]]
 
 cp "${backup_archive}" "${backup_archive}.corrupt"

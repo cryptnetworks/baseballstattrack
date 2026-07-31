@@ -143,6 +143,10 @@ have dedicated implementation evidence. Provider enforcement and future
 service-worker controls remain explicit production/future-work gates, not
 approval to bypass this model.
 
+The approved issue #94 product-event catalog, consent lifecycle, strict
+no-identifier allowlist, provider release gate, and bounded retention are in
+[Consent-aware product analytics and privacy review](PRODUCT_ANALYTICS_AND_PRIVACY.md).
+
 ## Issue #8 acceptance mapping and deferrals
 
 | Criterion                                                  | Coverage                                                                                         |

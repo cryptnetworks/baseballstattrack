@@ -231,6 +231,11 @@ enum WebhookAttemptOutcome {
   CANCELLED
 }
 
+enum ProductAnalyticsConsentStatus {
+  OPTED_IN
+  OPTED_OUT
+}
+
 model Account {
   id          String        @id @default(cuid())
   externalId  String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -281,15 +286,30 @@ model AppUser {
   updatedAt       DateTime   @updatedAt
   detachedAt      DateTime?
 
-  memberships         AccountMembership[]
-  invitationsReceived MembershipInvitation[] @relation("InvitationRecipient")
-  invitationsSent     MembershipInvitation[] @relation("InvitationInviter")
-  recordedPlays       PlayTransaction[]      @relation("PlayTransactionActor")
-  recordedEvents      SourceEvent[]          @relation("SourceEventActor")
-  auditRecords        SecurityAuditRecord[]  @relation("AuditActor")
-  privacyOverlays     PrivacyOverlay[]       @relation("PrivacyOverlayActor")
+  memberships             AccountMembership[]
+  invitationsReceived     MembershipInvitation[]   @relation("InvitationRecipient")
+  invitationsSent         MembershipInvitation[]   @relation("InvitationInviter")
+  recordedPlays           PlayTransaction[]        @relation("PlayTransactionActor")
+  recordedEvents          SourceEvent[]            @relation("SourceEventActor")
+  auditRecords            SecurityAuditRecord[]    @relation("AuditActor")
+  privacyOverlays         PrivacyOverlay[]         @relation("PrivacyOverlayActor")
+  productAnalyticsConsent ProductAnalyticsConsent?
 
   @@unique([provider, providerSubject])
+}
+
+model ProductAnalyticsConsent {
+  appUserId     String                        @id
+  status        ProductAnalyticsConsentStatus
+  policyVersion String
+  grantedAt     DateTime?
+  withdrawnAt   DateTime?
+  expiresAt     DateTime?
+  updatedAt     DateTime                      @updatedAt
+
+  appUser AppUser @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+
+  @@index([status, expiresAt])
 }
 
 model AccountMembership {

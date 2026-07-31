@@ -2,8 +2,12 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { selectAccount } from "@/app/accounts/actions";
+import {
+  selectAccount,
+  updateProductAnalyticsPreference,
+} from "@/app/accounts/actions";
 import { signOut } from "@/app/login/actions";
+import { getProductAnalyticsService } from "@/server/app/product-analytics-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import { AuthorizationError } from "@/server/auth/errors";
 import { authenticatePageSession } from "@/server/auth/next-session";
@@ -22,6 +26,17 @@ export default async function AccountsPage() {
   const accounts =
     await getAuthorizationService().listAvailableAccounts(identity);
   const selected = (await cookies()).get(selectedAccountCookie.name)?.value;
+  const selectedAccount = accounts.find(({ id }) => id === selected);
+  const analyticsPreference = selectedAccount
+    ? await getProductAnalyticsService().preference(
+        selectedAccount.id,
+        await getAuthorizationService().authorize(
+          identity,
+          { kind: "ACCOUNT", accountId: selectedAccount.id },
+          "account.view",
+        ),
+      )
+    : null;
 
   return (
     <main className="mx-auto max-w-2xl p-8" id="main-content" tabIndex={-1}>
@@ -73,6 +88,58 @@ export default async function AccountsPage() {
           ))}
         </ul>
       )}
+      {selectedAccount && analyticsPreference ? (
+        <section
+          aria-labelledby="analytics-preference-heading"
+          className="mt-8 rounded border border-slate-200 p-4"
+        >
+          <h2
+            className="text-lg font-semibold"
+            id="analytics-preference-heading"
+          >
+            Privacy-safe product analytics
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Optional analytics measures coarse scoring success, baseball-rule
+            rejections, and workflow failures. It never includes names, game or
+            Account identifiers, raw scoring input, reports, tokens, or contact
+            data. Consent expires after one year and can be withdrawn anytime.
+          </p>
+          <p className="mt-2 text-sm font-medium" aria-live="polite">
+            Current choice: {analyticsPreference.effectiveOptIn ? "On" : "Off"}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <form action={updateProductAnalyticsPreference}>
+              <input
+                name="accountId"
+                type="hidden"
+                value={selectedAccount.id}
+              />
+              <input name="status" type="hidden" value="OPTED_IN" />
+              <button
+                className="min-h-11 rounded bg-slate-900 px-4 text-sm font-medium text-white"
+                type="submit"
+              >
+                Allow analytics
+              </button>
+            </form>
+            <form action={updateProductAnalyticsPreference}>
+              <input
+                name="accountId"
+                type="hidden"
+                value={selectedAccount.id}
+              />
+              <input name="status" type="hidden" value="OPTED_OUT" />
+              <button
+                className="min-h-11 rounded border border-slate-400 px-4 text-sm font-medium"
+                type="submit"
+              >
+                Turn off analytics
+              </button>
+            </form>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { GameEventError } from "@/domain/events/event-log";
 import { GameEventService } from "@/server/app/game-event-service";
 import type { PrismaGameEventRepository } from "@/server/data/game-event-repository";
 import { trustedActorForTest } from "../fixtures/trusted-actor";
@@ -38,6 +39,17 @@ const scoreActor = () =>
     authorizedAt: "2026-07-29T23:59:59.000Z",
   });
 
+const userStartActor = () =>
+  trustedActorForTest({
+    accountId: "account-a",
+    actorId: "user-a",
+    actorKind: "USER",
+    actorUserId: "user-a",
+    capability: "game.start",
+    scope: { kind: "GAME", gameId: "game-a" },
+    authorizedAt: "2026-07-29T23:59:59.000Z",
+  });
+
 describe("trusted game event application boundary", () => {
   it("keeps the synthetic actor adapter disabled outside tests", () => {
     vi.stubEnv("NODE_ENV", "production");
@@ -69,6 +81,48 @@ describe("trusted game event application boundary", () => {
           scope: { kind: "GAME", gameId: "game-a" },
           authorizedAt: "2026-07-29T23:59:59.000Z",
         },
+      }),
+    );
+  });
+
+  it("emits consent-gated success and rule-rejection product metrics for users", async () => {
+    const analytics = { emitForUser: vi.fn().mockResolvedValue(true) };
+    const accept = vi
+      .fn()
+      .mockResolvedValueOnce({ idempotentReplay: false })
+      .mockRejectedValueOnce(
+        new GameEventError(
+          "INVALID_LIFECYCLE_TRANSITION",
+          "Game already started.",
+        ),
+      );
+    const service = new GameEventService(
+      { accept } as unknown as PrismaGameEventRepository,
+      undefined,
+      undefined,
+      analytics,
+    );
+    await service.accept(input, userStartActor());
+    expect(analytics.emitForUser).toHaveBeenLastCalledWith(
+      "user-a",
+      expect.objectContaining({
+        name: "scoring.submission_succeeded",
+        result: "SUCCEEDED",
+        eventFamily: "GAME_LIFECYCLE",
+        failureCategory: null,
+      }),
+    );
+    await expect(service.accept(input, userStartActor())).rejects.toMatchObject(
+      {
+        code: "INVALID_LIFECYCLE_TRANSITION",
+      },
+    );
+    expect(analytics.emitForUser).toHaveBeenLastCalledWith(
+      "user-a",
+      expect.objectContaining({
+        name: "scoring.baseball_rule_rejected",
+        result: "BASEBALL_RULE_REJECTED",
+        failureCategory: "BASEBALL_RULES",
       }),
     );
   });
