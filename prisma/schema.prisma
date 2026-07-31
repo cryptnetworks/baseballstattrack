@@ -203,6 +203,34 @@ enum RateLimitOverrideStatus {
   REVOKED
 }
 
+enum WebhookEndpointStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  REVOKED
+}
+
+enum WebhookEventName {
+  GAME_VERIFIED
+  GAME_CORRECTED
+  REPORT_READY
+  SEASON_REPORT_UPDATED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  DEAD_LETTER
+  CANCELLED
+}
+
+enum WebhookAttemptOutcome {
+  SUCCEEDED
+  RETRYABLE_FAILURE
+  TERMINAL_FAILURE
+  CANCELLED
+}
+
 model Account {
   id          String        @id @default(cuid())
   externalId  String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -238,6 +266,10 @@ model Account {
   rateLimitCounters     RateLimitCounter[]
   rateLimitCharges      RateLimitCharge[]
   rateLimitOverrides    RateLimitOverride[]
+  webhookEndpoints      WebhookEndpoint[]
+  webhookEvents         WebhookEvent[]
+  webhookDeliveries     WebhookDelivery[]
+  webhookAttempts       WebhookDeliveryAttempt[]
 }
 
 model AppUser {
@@ -930,4 +962,105 @@ model RateLimitOverride {
   @@unique([accountId, id])
   @@index([accountId, endpointClass, status, expiresAt])
   @@index([accountId, actorKind, actorId, endpointClass, status, expiresAt])
+}
+
+model WebhookEndpoint {
+  id               String                @id @default(cuid())
+  externalId       String                @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId        String
+  url              String
+  status           WebhookEndpointStatus @default(PENDING_VERIFICATION)
+  subscribedEvents WebhookEventName[]
+  secretVersion    Int                   @default(1)
+  verifiedAt       DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  account    Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  deliveries WebhookDelivery[]
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@unique([accountId, url])
+  @@index([accountId, status])
+}
+
+model WebhookEvent {
+  id               String           @id @default(cuid())
+  externalId       String           @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId        String
+  sequence         BigInt           @default(autoincrement())
+  eventName        WebhookEventName
+  payloadVersion   Int              @default(1)
+  deduplicationKey String
+  payload          Json
+  occurredAt       DateTime
+  retentionUntil   DateTime
+  createdAt        DateTime         @default(now())
+
+  account    Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  deliveries WebhookDelivery[]
+
+  @@unique([accountId, id])
+  @@unique([accountId, deduplicationKey])
+  @@unique([accountId, sequence])
+  @@index([accountId, eventName, occurredAt])
+  @@index([retentionUntil])
+}
+
+model WebhookDelivery {
+  id                  String                @id @default(cuid())
+  externalId          String                @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId           String
+  endpointId          String
+  eventId             String
+  replayNumber        Int                   @default(0)
+  secretVersion       Int
+  status              WebhookDeliveryStatus @default(PENDING)
+  attemptCount        Int                   @default(0)
+  nextAttemptAt       DateTime              @default(now())
+  leaseOwner          String?
+  leaseExpiresAt      DateTime?
+  lastFailureCode     String?
+  deliveredAt         DateTime?
+  deadLetteredAt      DateTime?
+  cancelledAt         DateTime?
+  replayRequestedAt   DateTime?
+  replayRequestedById String?
+  retentionUntil      DateTime
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  account  Account                  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  endpoint WebhookEndpoint          @relation(fields: [accountId, endpointId], references: [accountId, id], onDelete: Restrict)
+  event    WebhookEvent             @relation(fields: [accountId, eventId], references: [accountId, id], onDelete: Restrict)
+  attempts WebhookDeliveryAttempt[]
+
+  @@unique([accountId, id])
+  @@unique([endpointId, eventId, replayNumber])
+  @@index([status, nextAttemptAt, leaseExpiresAt])
+  @@index([accountId, endpointId, status, createdAt])
+  @@index([retentionUntil])
+}
+
+model WebhookDeliveryAttempt {
+  id             String                @id @default(cuid())
+  accountId      String
+  deliveryId     String
+  workerId       String
+  attemptNumber  Int
+  outcome        WebhookAttemptOutcome
+  responseStatus Int?
+  failureCode    String?
+  durationMs     Int
+  startedAt      DateTime
+  completedAt    DateTime
+
+  account  Account         @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  delivery WebhookDelivery @relation(fields: [accountId, deliveryId], references: [accountId, id], onDelete: Restrict)
+
+  @@unique([accountId, id])
+  @@unique([deliveryId, attemptNumber])
+  @@index([accountId, completedAt])
 }

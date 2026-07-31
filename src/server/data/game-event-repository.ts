@@ -36,6 +36,7 @@ import {
   STATISTIC_RULES_VERSION,
   deriveGameStatistics,
 } from "@/domain/statistics";
+import { enqueueWebhookEvent } from "@/server/data/webhook-repository";
 
 export type ValidatedActorContext = {
   accountId: string;
@@ -609,6 +610,12 @@ export class PrismaGameEventRepository {
                 id: command.gameId,
               },
             },
+            include: {
+              season: { select: { externalId: true } },
+              teamSeason: {
+                select: { team: { select: { externalId: true } } },
+              },
+            },
           });
           if (!game) {
             throw new GameEventError("GAME_MISMATCH", "Game is unavailable.");
@@ -939,6 +946,60 @@ export class PrismaGameEventRepository {
                     generatedAt: acceptedAt.toISOString(),
                   },
                 },
+              });
+            }
+          }
+          if (
+            body.eventType === "GameVerified" ||
+            body.eventType === "CorrectionApplied"
+          ) {
+            const corrected = body.eventType === "CorrectionApplied";
+            await enqueueWebhookEvent(tx, {
+              accountId: command.accountId,
+              eventName: corrected ? "GAME_CORRECTED" : "GAME_VERIFIED",
+              deduplicationKey: `${corrected ? "game.corrected" : "game.verified"}:${command.eventId}`,
+              payload: {
+                gameId: game.externalId,
+                seasonId: game.season.externalId,
+                teamId: game.teamSeason.team.externalId,
+                sourceRevision: acceptedRevision,
+                verificationState: corrected ? "UNVERIFIED" : "VERIFIED",
+                ...(corrected ? { correctionState: "CORRECTED" } : {}),
+              },
+              occurredAt: acceptedAt,
+            });
+            await enqueueWebhookEvent(tx, {
+              accountId: command.accountId,
+              eventName: "SEASON_REPORT_UPDATED",
+              deduplicationKey: `season.report.updated:${command.eventId}`,
+              payload: {
+                seasonId: game.season.externalId,
+                teamId: game.teamSeason.team.externalId,
+                sourceGameId: game.externalId,
+                sourceRevision: acceptedRevision,
+                reason: corrected ? "GAME_CORRECTED" : "GAME_VERIFIED",
+              },
+              occurredAt: acceptedAt,
+            });
+            if (corrected && correction) {
+              const privacyRevision = await tx.privacyOverlay.aggregate({
+                where: { accountId: command.accountId },
+                _max: { effectiveOrder: true },
+              });
+              await enqueueWebhookEvent(tx, {
+                accountId: command.accountId,
+                eventName: "REPORT_READY",
+                deduplicationKey: `report.ready:correction:${command.eventId}`,
+                payload: {
+                  scope: "GAME",
+                  targetId: game.externalId,
+                  sourceRevision: acceptedRevision,
+                  derivationVersion: STATISTIC_DERIVATION_VERSION,
+                  privacyOverlayRevision:
+                    privacyRevision._max.effectiveOrder ?? 0,
+                  freshness: "CURRENT",
+                },
+                occurredAt: acceptedAt,
               });
             }
           }

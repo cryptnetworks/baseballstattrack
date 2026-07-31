@@ -37,6 +37,15 @@ const expectedConstraints = [
   "RateLimitOverride_actor_shape_check",
   "RateLimitOverride_revoke_check",
   "RateLimitOverride_values_check",
+  "WebhookEndpoint_accountId_externalId_key",
+  "WebhookEndpoint_accountId_url_key",
+  "WebhookEndpoint_lifecycle_check",
+  "WebhookEndpoint_secret_version_check",
+  "WebhookEndpoint_subscriptions_check",
+  "WebhookEvent_version_retention_check",
+  "WebhookDelivery_lifecycle_check",
+  "WebhookDelivery_values_check",
+  "WebhookDeliveryAttempt_values_check",
   "RosterEntry_active_player_key",
   "RosterEntry_no_overlapping_periods",
   "RosterEntry_period_revision_check",
@@ -78,6 +87,8 @@ const expectedTriggers = [
   "RosterEntry_identity_immutable",
   "SourceEvent_append_only",
   "TeamSeason_identity_immutable",
+  "WebhookEndpoint_identity_immutable",
+  "WebhookEvent_immutable",
 ];
 
 const client = new pg.Client({ connectionString: databaseUrl });

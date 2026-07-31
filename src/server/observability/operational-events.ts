@@ -191,6 +191,17 @@ export function classifyOperationalAlert(
       page: false,
     };
   }
+  if (
+    event.category === "background_job" &&
+    event.name === "webhook_delivery" &&
+    event.outcome === "failed"
+  ) {
+    return {
+      key: "webhook-delivery-dead-letter",
+      severity: "warning",
+      page: false,
+    };
+  }
   if (event.category === "background_job" && event.outcome === "failed") {
     return { key: "background-job-failure", severity: "warning", page: false };
   }

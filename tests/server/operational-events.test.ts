@@ -164,6 +164,17 @@ describe("operational event contract", () => {
       severity: "warning",
       page: false,
     });
+    expect(
+      classifyOperationalAlert({
+        category: "background_job",
+        name: "webhook_delivery",
+        outcome: "failed",
+      }),
+    ).toEqual({
+      key: "webhook-delivery-dead-letter",
+      severity: "warning",
+      page: false,
+    });
   });
 
   it("keeps Account-scoped events distinguishable without private payloads", () => {
