@@ -2,14 +2,20 @@
 
 ## Applied settings
 
-As of 2026-07-24:
+As of 2026-07-31:
 
 - Repository remains private.
 - Dependabot vulnerability alerts are enabled.
 - Automated Dependabot security fixes are enabled.
-- Dependabot updates are configured for npm and GitHub Actions.
+- Dependabot updates are grouped and bounded for npm, GitHub Actions, and
+  Docker.
 - CODEOWNERS, issue templates, pull-request checklist, and SECURITY.md are present.
 - Actions default workflow token permissions are restricted to read-only where supported.
+- Every referenced action is a GitHub-owned action pinned to an exact commit.
+- Staging and production GitHub environments exist. The current private plan
+  does not expose environment required-reviewer rules; production dispatches
+  therefore require an exact version-bound confirmation until that native gate
+  becomes available.
 
 ## Plan-limited settings
 
@@ -17,6 +23,7 @@ The following settings could not be enabled because GitHub reports that this pri
 
 - Protected branch rules/rulesets for main
 - Secret scanning and push protection
+- Native environment required reviewers and deployment-branch protection
 
 Private vulnerability reporting is also not exposed by the current repository API response. Revisit it after changing plan or visibility.
 
@@ -45,10 +52,15 @@ The workflow contract and exact check-name rationale are documented in [docs/CI_
 - Enable Dependabot alerts, security updates, and grouped updates.
 - Enable secret scanning and push protection when available.
 - Enable private vulnerability reporting when available.
-- Review Actions permissions and pin third-party actions to trusted versions or commit SHAs.
-- Add environment approvals for production deployments.
+- Keep Actions restricted to approved GitHub-owned actions and exact commit
+  SHAs; review Dependabot SHA changes as executable code.
+- Replace the production dispatch confirmation with a native required-reviewer
+  rule as soon as the repository plan exposes it.
 - Review collaborators and outside access quarterly.
 
 ## Release baseline
 
-A release requires passing CI, reviewed migrations, a rollback plan, an updated changelog or release note, and confirmation that backups and restore procedures work.
+A release requires passing CI, reviewed migrations, a rollback plan, an
+updated changelog or release note, and confirmation that backups and restore
+procedures work. The executable release contract and operator procedure are in
+[docs/RELEASE_AND_WORKFLOW_SECURITY.md](../docs/RELEASE_AND_WORKFLOW_SECURITY.md).

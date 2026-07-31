@@ -1,0 +1,145 @@
+name: Release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment environment
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: Immutable release version (for example v1.2.3-rc.1)
+        required: true
+        type: string
+      production_confirmation:
+        description: For production, enter deploy-<version>; leave blank for staging
+        required: false
+        type: string
+      publish:
+        description: Publish the verified image to GHCR
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate release request
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.request.outputs.version }}
+    steps:
+      - name: Validate immutable version and approval
+        id: request
+        env:
+          RELEASE_TARGET: ${{ inputs.target }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          PRODUCTION_CONFIRMATION: ${{ inputs.production_confirmation }}
+          RELEASE_REF: ${{ github.ref }}
+        run: |
+          set -Eeuo pipefail
+          [[ "${RELEASE_VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || {
+            echo "version must be an immutable semantic version beginning with v" >&2
+            exit 1
+          }
+          [[ "${RELEASE_REF}" == "refs/heads/main" ]] || {
+            echo "release candidates must be dispatched from main" >&2
+            exit 1
+          }
+          if [[ "${RELEASE_TARGET}" == "production" ]]; then
+            [[ "${PRODUCTION_CONFIRMATION}" == "deploy-${RELEASE_VERSION}" ]] || {
+              echo "production confirmation must equal deploy-${RELEASE_VERSION}" >&2
+              exit 1
+            }
+          elif [[ -n "${PRODUCTION_CONFIRMATION}" ]]; then
+            echo "production confirmation must be blank for staging" >&2
+            exit 1
+          fi
+          echo "version=${RELEASE_VERSION}" >> "${GITHUB_OUTPUT}"
+
+  prove:
+    name: Prove candidate and rollback
+    needs: validate
+    environment: ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
+      RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - name: Verify environment boundary
+        env:
+          CONFIGURED_TIER: ${{ vars.DEPLOYMENT_TIER }}
+          REQUESTED_TIER: ${{ inputs.target }}
+        run: |
+          [[ "${CONFIGURED_TIER}" == "${REQUESTED_TIER}" ]] || {
+            echo "environment DEPLOYMENT_TIER does not match the requested target" >&2
+            exit 1
+          }
+
+      - name: Checkout exact release source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci
+
+      - name: Run canonical verification
+        run: npm run verify
+
+      - name: Prove backup and restore
+        run: npm run db:restore:verify
+
+      - name: Rehearse migration, release, and rollback
+        run: npm run release:rehearse
+
+      - name: Build immutable release image
+        run: |
+          docker build \
+            --target runtime \
+            --build-arg "VCS_REF=${GITHUB_SHA}" \
+            --tag "${IMAGE_NAME}:${RELEASE_VERSION}" \
+            --tag "${IMAGE_NAME}:sha-${GITHUB_SHA}" \
+            .
+          [[ "$(docker image inspect "${IMAGE_NAME}:${RELEASE_VERSION}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" == "${GITHUB_SHA}" ]]
+
+      - name: Publish digest-addressable image
+        if: ${{ inputs.publish }}
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "${REGISTRY_TOKEN}" | docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+          docker push "${IMAGE_NAME}:${RELEASE_VERSION}"
+          docker push "${IMAGE_NAME}:sha-${GITHUB_SHA}"
+          docker image inspect "${IMAGE_NAME}:${RELEASE_VERSION}" --format '{{json .RepoDigests}}'
+
+      - name: Record release evidence
+        run: |
+          {
+            echo "### Release candidate"
+            echo "- Environment: \`${{ inputs.target }}\`"
+            echo "- Version: \`${RELEASE_VERSION}\`"
+            echo "- Source: \`${GITHUB_SHA}\`"
+            echo "- Published: \`${{ inputs.publish }}\`"
+            echo "- Verification, restore, migration, readiness, and application rollback passed."
+          } >> "${GITHUB_STEP_SUMMARY}"
