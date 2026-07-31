@@ -108,7 +108,7 @@ describe("portable data application boundary", () => {
     );
     expect(repository.audit).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: "data.export.download",
+        action: "data.export.generate",
         outcome: "SUCCEEDED",
         metadata: expect.objectContaining({ ephemeral: true }),
       }),

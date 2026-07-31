@@ -2,7 +2,8 @@
 
 ## Scope and initial policy
 
-Issue #26 implements:
+Issue #26 implements the canonical format and dry run; issue #88 hardens the
+download lifecycle:
 
 - an authenticated, Account-scoped, full-fidelity JSON download;
 - a canonical versioned manifest and deterministic encoding;
@@ -18,29 +19,38 @@ bounded transaction or a separately approved staged design. This boundary
 proves that a failed import cannot partially corrupt the target Account without
 pretending that production import promotion is already supported.
 
-Print HTML is not an export format. Anonymous links, hosted artifacts, bearer
-tokens, arbitrary Account transfer, ZIP input, CSV archival export, and
-background import jobs are not implemented.
+Print HTML is not an export format. Anonymous links, bearer-only authorization,
+arbitrary Account transfer, ZIP input, CSV archival export, and background
+import jobs are not implemented.
 
 ## HTTP boundaries
 
-### Export download
+### Export preparation and download
 
-`GET /api/data/export?accountId=…`
+`POST /api/data/export` accepts an Account id and client idempotency key. It:
 
-- authenticates the current session;
-- authorizes exact Account-scoped `report.export` before generation;
-- rebuilds accepted histories and summaries from current source;
-- records a successful restricted audit before returning bytes;
+- requires same-origin mutation, authenticates the current session, and
+  authorizes exact Account-scoped `report.export`;
+- stores a one-time grant for no more than five minutes; and
+- returns a grant id and 256-bit token. Only its SHA-256 verifier is stored; no
+  export body is generated or retained by preparation.
+
+`GET /api/data/export?accountId=…&artifactId=…` supplies that token only through
+`X-Export-Token`. It:
+
 - reauthenticates and reauthorizes immediately before download;
+- requires the same requesting actor and consumes the grant atomically;
+- rebuilds accepted histories and summaries from current source and records a
+  restricted generation audit;
 - returns `application/json; charset=utf-8`;
 - sets a server-generated attachment filename;
 - sets private `no-store`, `nosniff`, and no-index headers; and
-- retains no hosted artifact.
+- has already cleared the token verifier before returning the one-time bytes.
 
-Because the response is generated and streamed in one authorized request,
-there is no server-side expiry or cleanup object. The artifact is ephemeral.
-Once a user downloads a file, it cannot be recalled.
+An authorized same-origin `DELETE` cancels and clears a prepared grant. Observed
+expiry, Account deletion, and revocation do the same. Token values never appear
+in URLs or audit/log metadata. Once a user downloads a file, it cannot be
+recalled. See `PRIVACY_LIFECYCLE.md` for retry and retention rules.
 
 ### Import validation
 
@@ -228,16 +238,19 @@ and zero baseball-data mutations after failure.
 
 ## Retention and unsupported scenarios
 
-The server retains no generated file. Audit records contain only checksum,
-byte/count totals, outcome, dry-run mode, and safe reason code. Diagnostic logs
-must not contain export contents or uploaded rows.
+Export preparation stores no export body. Its one-time token grant is valid for
+at most five minutes as defined in `PRIVACY_LIFECYCLE.md`; download,
+cancellation, observed expiry, revocation, or Account deletion clears the
+verifier. Audit records contain only checksum, byte/count totals, expiry,
+outcome, dry-run mode, and safe reason code. Diagnostic logs must not contain
+export contents, tokens, or uploaded rows.
 
 Unsupported until a separately reviewed follow-up:
 
 - import confirmation and database promotion;
 - arbitrary or administrative cross-Account transfer;
 - record overwrite, merge, or conflict-resolution UI;
-- hosted download URLs or public sharing;
+- public sharing or bearer download URLs;
 - CSV as the archival format;
 - compression, encryption, signatures, or authenticity verification;
 - large background jobs; and

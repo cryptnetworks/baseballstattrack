@@ -229,7 +229,7 @@ export class PrismaPortableDataRepository {
 
   async audit(input: {
     actor: TrustedActorContext;
-    action: "data.export.download" | "data.import.validate";
+    action: "data.export.generate" | "data.import.validate";
     outcome: "SUCCEEDED" | "FAILED";
     reasonCode?: string;
     metadata: Prisma.InputJsonObject;

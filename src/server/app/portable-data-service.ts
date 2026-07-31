@@ -114,7 +114,7 @@ export class PortableDataService {
         }
         await this.repository.audit({
           actor,
-          action: "data.export.download",
+          action: "data.export.generate",
           outcome: "SUCCEEDED",
           metadata: {
             checksum: document.manifest.checksum,
@@ -138,7 +138,7 @@ export class PortableDataService {
         error instanceof PortableDataError ? error.code : "EVENT_INTEGRITY";
       await this.repository.audit({
         actor,
-        action: "data.export.download",
+        action: "data.export.generate",
         outcome: "FAILED",
         reasonCode: code,
         metadata: { ephemeral: true },

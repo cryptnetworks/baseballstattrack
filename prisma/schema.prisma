@@ -167,6 +167,32 @@ enum PrivacyDisplayField {
   PLAYER_DISPLAY_NAME
 }
 
+enum DataExportArtifactStatus {
+  AVAILABLE
+  DOWNLOADED
+  CANCELLED
+  EXPIRED
+  REVOKED
+}
+
+enum PrivacyLifecycleTarget {
+  ACCOUNT
+  USER
+  PLAYER
+}
+
+enum PrivacyLifecycleStatus {
+  REQUESTED
+  BLOCKED
+  CANCELLED
+  COMPLETED
+}
+
+enum PrivacyHoldStatus {
+  ACTIVE
+  RELEASED
+}
+
 model Account {
   id          String        @id @default(cuid())
   slug        String        @unique
@@ -195,6 +221,9 @@ model Account {
   securityAuditRecords  SecurityAuditRecord[]
   privacyOverlays       PrivacyOverlay[]
   privacyOverlayFields  PrivacyOverlayField[]
+  dataExportArtifacts   DataExportArtifact[]
+  privacyRequests       PrivacyLifecycleRequest[]
+  privacyHolds          PrivacyHold[]
 }
 
 model AppUser {
@@ -748,4 +777,71 @@ model PrivacyOverlayField {
   @@unique([privacyOverlayId, playerId, lineupSlotSnapshotId, field])
   @@index([accountId, playerId])
   @@index([accountId, lineupSlotSnapshotId])
+}
+
+model DataExportArtifact {
+  id                 String                   @id @default(cuid())
+  accountId          String
+  requestedByActorId String
+  clientRequestId    String
+  status             DataExportArtifactStatus @default(AVAILABLE)
+  tokenVerifier      String?
+  expiresAt          DateTime
+  downloadedAt       DateTime?
+  cancelledAt        DateTime?
+  revokedAt          DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, requestedByActorId, clientRequestId])
+  @@unique([accountId, id])
+  @@index([accountId, status, expiresAt])
+}
+
+model PrivacyLifecycleRequest {
+  id                 String                 @id @default(cuid())
+  accountId          String
+  target             PrivacyLifecycleTarget
+  targetId           String
+  requestedByActorId String
+  clientRequestId    String
+  status             PrivacyLifecycleStatus @default(REQUESTED)
+  reasonCode         String
+  scheduledFor       DateTime
+  confirmedAt        DateTime
+  blockedAt          DateTime?
+  cancelledAt        DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  account Account       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  holds   PrivacyHold[]
+
+  @@unique([accountId, requestedByActorId, clientRequestId])
+  @@unique([accountId, id])
+  @@index([accountId, target, targetId, status])
+  @@index([status, scheduledFor])
+}
+
+model PrivacyHold {
+  id                 String            @id @default(cuid())
+  accountId          String
+  lifecycleRequestId String?
+  status             PrivacyHoldStatus @default(ACTIVE)
+  reasonCode         String
+  requestedByActorId String
+  expiresAt          DateTime?
+  releasedAt         DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  account          Account                  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  lifecycleRequest PrivacyLifecycleRequest? @relation(fields: [accountId, lifecycleRequestId], references: [accountId, id], onDelete: Restrict)
+
+  @@unique([accountId, id])
+  @@index([accountId, status, expiresAt])
+  @@index([accountId, lifecycleRequestId, status])
 }

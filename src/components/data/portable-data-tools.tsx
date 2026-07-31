@@ -26,6 +26,13 @@ type PortableDataToolsProps = {
   maximumBytes: number;
 };
 
+type PreparedExport = {
+  artifactId: string;
+  token: string;
+  expiresAt: string;
+  oneTime: true;
+};
+
 const REQUEST_TIMEOUT_MILLISECONDS = 30_000;
 
 function responseFileName(response: Response) {
@@ -65,6 +72,8 @@ export function PortableDataTools({
 }: PortableDataToolsProps) {
   const [state, setState] = useState<RequestState>({ kind: "IDLE" });
   const activeRequest = useRef<AbortController | null>(null);
+  const activeExport = useRef<PreparedExport | null>(null);
+  const exportRequestId = useRef<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const result = useRef<HTMLDivElement>(null);
   const pending = state.kind === "PENDING";
@@ -97,6 +106,18 @@ export function PortableDataTools({
     const operation = state.kind === "PENDING" ? state.operation : null;
     activeRequest.current?.abort();
     activeRequest.current = null;
+    const prepared = activeExport.current;
+    activeExport.current = null;
+    if (prepared) {
+      void fetch(
+        `/api/data/export?accountId=${encodeURIComponent(accountId)}&artifactId=${encodeURIComponent(prepared.artifactId)}`,
+        {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: { "X-Export-Token": prepared.token },
+        },
+      );
+    }
     setState({
       kind: "ERROR",
       message:
@@ -110,11 +131,30 @@ export function PortableDataTools({
     event.preventDefault();
     const { controller, timeout } = begin("EXPORT");
     try {
+      exportRequestId.current ??= crypto.randomUUID();
+      const preparation = await fetch("/api/data/export", {
+        method: "POST",
+        body: JSON.stringify({
+          accountId,
+          clientRequestId: exportRequestId.current,
+        }),
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+      });
+      if (!preparation.ok) {
+        setState({ kind: "ERROR", ...(await responseError(preparation)) });
+        return;
+      }
+      const prepared = (await preparation.json()) as PreparedExport;
+      activeExport.current = prepared;
       const response = await fetch(
-        `/api/data/export?accountId=${encodeURIComponent(accountId)}`,
+        `/api/data/export?accountId=${encodeURIComponent(accountId)}&artifactId=${encodeURIComponent(prepared.artifactId)}`,
         {
           cache: "no-store",
           credentials: "same-origin",
+          headers: { "X-Export-Token": prepared.token },
           signal: controller.signal,
         },
       );
@@ -122,6 +162,8 @@ export function PortableDataTools({
         setState({ kind: "ERROR", ...(await responseError(response)) });
         return;
       }
+      activeExport.current = null;
+      exportRequestId.current = null;
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");

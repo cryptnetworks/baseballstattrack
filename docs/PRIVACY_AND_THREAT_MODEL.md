@@ -32,7 +32,7 @@ Severity is qualitative: **High** can expose sensitive youth/account data or ten
 
 ## Explicit field and sharing policies
 
-MVP collects no DOB, birth year, age band, player/parent contact, or free-form player notes. It has no public report, bearer sharing link, public player profile, public youth roster, or export. Future sharing requires a separate ADR and threat review.
+MVP collects no DOB, birth year, age band, player/parent contact, or free-form player notes. It has no public report, bearer sharing link, public player profile, or public youth roster. Account-scoped export and the production privacy workflow are documented in [Privacy lifecycle, export, and deletion](PRIVACY_LIFECYCLE.md). Future sharing requires a separate ADR and threat review.
 
 If a future feature needs structured eligibility data or notes, it needs a separate privacy review, private capability, allowed-content and size policy, retention/privacy workflow, audit, and explicit no-snapshot/no-export decision before collection. A note feature must not become a workaround for medical or family data.
 
@@ -79,7 +79,11 @@ implemented.
 
 ## Retention, deletion, and restore categories
 
-Exact periods, legal holds, RPO/RTO, and provider settings are deferred. The following handling categories are mandatory; a legal hold defers deletion or pseudonymization only through a recorded, access-restricted decision and does not restore authorization.
+Repository-selected periods, legal-hold behavior, and deletion execution are now
+defined in `PRIVACY_LIFECYCLE.md`; provider enforcement still requires
+production evidence. The following handling categories remain mandatory. A
+legal hold defers deletion or pseudonymization only through a recorded,
+access-restricted decision and does not restore authorization.
 
 | Category                                           | Handling category                                                                                                                                                                                     |
 | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -134,7 +138,10 @@ Existing mitigations below are design constraints, not claims that code or opera
 | Exports                          | Allowlists, source freshness, formula-injection defenses, limits, manifest, hosted-download recheck/revocation                                         | Dedicated export follow-up before M3 export capability                             |
 | Observability and operations     | Redaction, telemetry access, backup/restore drills, retention schedule, provider settings, RPO/RTO                                                     | M4 plus focused observability and backup/restore follow-ups                        |
 
-The roadmap currently has no dedicated implementation issue for privacy-action/pseudonymization, secure exports, observability redaction, backup/restore, or service-worker controls. These are explicit gaps, not approval to ship; create narrowly scoped issues before the corresponding capability ships.
+Privacy lifecycle, secure export, observability redaction, and backup/restore now
+have dedicated implementation evidence. Provider enforcement and future
+service-worker controls remain explicit production/future-work gates, not
+approval to bypass this model.
 
 ## Issue #8 acceptance mapping and deferrals
 

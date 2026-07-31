@@ -8,6 +8,8 @@ if (!databaseUrl) {
 
 const expectedConstraints = [
   "AccountMembership_active_user_key",
+  "DataExportArtifact_token_state_check",
+  "DataExportArtifact_terminal_time_check",
   "EventCorrection_shape_check",
   "GameTeamSnapshot_internal_team_season_key",
   "GameSetupSnapshot_management_shape_check",
@@ -21,6 +23,10 @@ const expectedConstraints = [
   "LineupSlotSnapshot_starting_pitcher_position_check",
   "MembershipInvitation_shape_check",
   "MembershipRoleAssignment_scope_check",
+  "PrivacyHold_release_check",
+  "PrivacyLifecycleRequest_account_target_check",
+  "PrivacyLifecycleRequest_active_target_key",
+  "PrivacyLifecycleRequest_terminal_time_check",
   "ProjectionCheckpoint_scope_check",
   "RosterEntry_active_player_key",
   "RosterEntry_no_overlapping_periods",
