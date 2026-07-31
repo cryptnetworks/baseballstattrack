@@ -56,6 +56,11 @@ Discord control-plane delivery is tracked by [#108](https://github.com/cryptnetw
 
 Add optional, explainable analytics such as batted-ball and pitch-location views, lineup and matchup insights, and trend analysis.
 
+The M6 analytics charter and future insight contract are defined in
+[Analytics charter](ANALYTICS_CHARTER.md). It establishes evidence,
+uncertainty, privacy, correction, lifecycle, delivery, and disablement gates
+before implementation work begins.
+
 The observation-stream feasibility decision and M6 implementation gates are in
 [Spray-chart and pitch-chart discovery](SPRAY_AND_PITCH_CHART_DISCOVERY.md).
 

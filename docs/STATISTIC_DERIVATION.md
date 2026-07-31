@@ -19,6 +19,22 @@ A game projection uses only:
 
 `STATISTIC_DERIVATION_VERSION` is currently `2`; version 2 adds the schema-v3 runner-play interpretations documented below. It changes when a formula, event interpretation, earned-run rule, fielding rule, or display-independent numeric behavior changes. `STATISTIC_RULES_VERSION` remains `1`; unknown versions fail with `UNSUPPORTED_RULESET`. Database ruleset identity remains separately present as `rulesetVersionId`.
 
+## Analytics boundary
+
+Statistics derived here remain canonical, deterministic outputs of replayable
+events. M6 analytics are optional derived interpretations layered above these
+outputs; they are not new scoring facts, replay inputs, authorization evidence,
+or replacements for corrections and verification. The analytics contract,
+confidence states, sample disclosures, privacy rules, correction behavior, and
+disablement requirements are defined in
+[ANALYTICS_CHARTER.md](ANALYTICS_CHARTER.md).
+
+An analytics feature must retain enough source and version lineage to reproduce
+its result, distinguish missing data from zero, and stop presenting a stale or
+unverified projection as current. Adding an analytics feature does not permit
+guessing unsupported baseball facts or changing the statistic derivation
+version without the ordinary derivation review and fixture requirements.
+
 ## Event schema v2 and earned runs
 
 Issue #10 event schema v1 omitted the earned/unearned fact that the scoring contract requires for exact ERA. Error-only reconstruction was not safe: v1 cannot always distinguish every error-enabled base from later discretionary advancement, and approximating earned runs would make ERA look authoritative when it is not.
