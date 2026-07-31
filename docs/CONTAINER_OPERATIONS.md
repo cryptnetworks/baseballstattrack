@@ -175,8 +175,11 @@ data.
 
 Applied migrations are immutable. Database changes roll forward through a new
 migration. Rolling back an application image is safe only when it remains
-compatible with the already-applied schema. Production backup/restore,
-deployment rollback execution, and release coordination remain issue #31 work.
+compatible with the already-applied schema. Production backup/restore is
+defined in `docs/BACKUP_AND_RESTORE.md`. Deployment rollback execution and
+release coordination are defined in
+`docs/RELEASE_AND_WORKFLOW_SECURITY.md` and exercised by
+`npm run release:rehearse`.
 
 ## Logs, shutdown, and restart
 

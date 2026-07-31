@@ -1,0 +1,16 @@
+changelog:
+  categories:
+    - title: Security and operations
+      labels:
+        - "area:security"
+        - "area:platform"
+    - title: Product changes
+      labels:
+        - "type:feature"
+        - "enhancement"
+    - title: Fixes
+      labels:
+        - "type:bug"
+    - title: Other changes
+      labels:
+        - "*"
