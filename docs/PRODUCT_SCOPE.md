@@ -61,6 +61,11 @@ Players, parents, league administrators, public spectators, and external data pr
 - Third-party data imports, exports, or integrations beyond basic first-party reports.
 - Payment, billing, recruiting, messaging, or scheduling features.
 
+M6 analytics are an optional future layer over verified event-derived data. They
+must follow the [analytics charter](ANALYTICS_CHARTER.md), remain descriptive
+and explainable, disclose sample and data-quality limits, and never become a
+dependency of core scoring or reports.
+
 ## Device and Operating Assumptions
 
 - The MVP is a responsive web application used on modern mobile, tablet, and desktop browsers.
