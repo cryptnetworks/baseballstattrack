@@ -79,8 +79,10 @@ If a run is superseded by a newer commit, GitHub cancels it by design. Re-run a 
 
 When GitHub plan/settings permit it, protect `main` with required pull requests, an approving review, resolved conversations, up-to-date branches, and the exact `verify` check. Current plan limitations are recorded in `.github/branch-protection.md`; this repository does not claim that protection is already configured.
 
-Deferred improvements include broader browser accessibility automation,
-hosted web-vital measurements, dependency provenance policy, action commit-SHA
-pinning if repository policy requires it, and release/deployment gates. Current
-M3 performance and accessibility evidence is documented in
+Actions are restricted to approved GitHub-owned actions and repository policy
+requires full commit-SHA pins. Staging and production release gates, artifact
+identity, and rollback rehearsal are documented in
+[`RELEASE_AND_WORKFLOW_SECURITY.md`](RELEASE_AND_WORKFLOW_SECURITY.md).
+Deferred improvements include broader browser accessibility automation and
+hosted web-vital measurements. Current M3 performance and accessibility evidence is documented in
 [`RESPONSIVE_PERFORMANCE_AND_ACCESSIBILITY.md`](RESPONSIVE_PERFORMANCE_AND_ACCESSIBILITY.md).
