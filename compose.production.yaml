@@ -1,0 +1,125 @@
+name: baseballstattrack-production
+
+x-application-environment: &application-environment
+  NODE_ENV: production
+  NEXT_PUBLIC_APP_ENV: production
+  NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?set NEXT_PUBLIC_SITE_URL}
+  NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set NEXT_PUBLIC_SUPABASE_URL}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set NEXT_PUBLIC_SUPABASE_ANON_KEY}
+  SUPABASE_OAUTH_PROVIDER: ${SUPABASE_OAUTH_PROVIDER:-google}
+  DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+  DIRECT_URL: ${DIRECT_URL:-${DATABASE_URL}}
+  REQUIRED_DATABASE_MIGRATION: 20260731173000_product_analytics_consent
+  WEBHOOK_SIGNING_MASTER_KEY: ${WEBHOOK_SIGNING_MASTER_KEY:?set WEBHOOK_SIGNING_MASTER_KEY}
+  WEBHOOK_WORKER_TOKEN: ${WEBHOOK_WORKER_TOKEN:?set WEBHOOK_WORKER_TOKEN}
+
+x-service-defaults: &service-defaults
+  init: true
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-file: "5"
+      max-size: 10m
+
+services:
+  db:
+    image: postgres:17-bookworm@sha256:4f736ae292687621d4dbe0d499ffd024a36bd2ee7d8ca6f2ccd4c800f047b394
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres-production-data:/var/lib/postgresql/data
+    networks:
+      - database
+    healthcheck:
+      test:
+        ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-file: "5"
+        max-size: 10m
+    restart: unless-stopped
+    stop_grace_period: 60s
+
+  migrate:
+    <<: *service-defaults
+    image: ghcr.io/cryptnetworks/baseballstattrack-migration:${IMAGE_TAG:-latest}
+    pull_policy: always
+    environment:
+      <<: *application-environment
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - database
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    restart: "no"
+
+  app:
+    <<: *service-defaults
+    image: ghcr.io/cryptnetworks/baseballstattrack:${IMAGE_TAG:-latest}
+    pull_policy: always
+    environment:
+      <<: *application-environment
+      PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3000}:3000"
+    networks:
+      - database
+      - outbound
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+  discord-bot:
+    <<: *service-defaults
+    image: ghcr.io/cryptnetworks/baseballstattrack-discord-bot:${IMAGE_TAG:-latest}
+    pull_policy: always
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN:?set DISCORD_TOKEN}
+      BST_API_TOKEN: ${BST_API_TOKEN:?set BST_API_TOKEN}
+      BST_API_BASE_URL: ${BST_API_BASE_URL:?set BST_API_BASE_URL}
+      BST_WEB_BASE_URL: ${BST_WEB_BASE_URL:?set BST_WEB_BASE_URL}
+      DISCORD_TEAM_BINDINGS: ${DISCORD_TEAM_BINDINGS:?set DISCORD_TEAM_BINDINGS}
+      BST_API_TIMEOUT_SECONDS: ${BST_API_TIMEOUT_SECONDS:-8}
+      HEALTH_HOST: 0.0.0.0
+      HEALTH_PORT: 8080
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - outbound
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+networks:
+  database:
+    driver: bridge
+    internal: true
+  outbound:
+    driver: bridge
+
+volumes:
+  postgres-production-data:

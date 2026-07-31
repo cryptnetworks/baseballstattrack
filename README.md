@@ -73,6 +73,11 @@ docker compose up -d --wait app
 
 Container architecture, development usage, readiness, migration, reset, security, and troubleshooting are defined in [docs/CONTAINER_OPERATIONS.md](docs/CONTAINER_OPERATIONS.md).
 
+The deployable production stack, including PostgreSQL and the Discord bot, is
+defined in `compose.production.yaml` and documented in
+[docs/PRODUCTION_COMPOSE.md](docs/PRODUCTION_COMPOSE.md). It pulls matching
+public GHCR images and keeps migrations explicit and dependency ordered.
+
 ## Commands
 
 - Format: `npm run format`
@@ -87,6 +92,8 @@ Container architecture, development usage, readiness, migration, reset, security
 - Database migration: `npm run db:migrate` after `DATABASE_URL` and `DIRECT_URL` are configured
 - Production build: `npm run build`
 - Container configuration: `npm run container:config`
+- Production Compose configuration: `npm run container:production:config`
+- Production image build: `npm run container:production:build`
 - Container build and smoke test: `npm run container:verify`
 - Full verification: `npm run verify`
 
