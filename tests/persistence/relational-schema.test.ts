@@ -38,6 +38,11 @@ describe("relational domain schema", () => {
       "NotificationPreference",
       "NotificationDelivery",
       "NotificationDeliveryAttempt",
+      "DiscordInstallation",
+      "DiscordChannelDestination",
+      "DiscordIntegrationSettings",
+      "DiscordSettingsScope",
+      "DiscordSettingsDestination",
     ]) {
       expect(model(name).name).toBe(name);
     }
@@ -74,6 +79,31 @@ describe("relational domain schema", () => {
     }
     expect(preferenceFields).not.toContain("analyticsObservationId");
     expect(deliveryFields).not.toContain("insightId");
+  });
+
+  it("separates Discord server identity from editable versioned settings", () => {
+    const installationFields = new Set(
+      model("DiscordInstallation").fields.map((field) => field.name),
+    );
+    const settingsFields = new Set(
+      model("DiscordIntegrationSettings").fields.map((field) => field.name),
+    );
+    for (const required of ["guildId", "credentialReference", "status"]) {
+      expect(installationFields).toContain(required);
+    }
+    for (const required of [
+      "schemaVersion",
+      "revision",
+      "enabled",
+      "cadenceSeconds",
+      "triggers",
+      "messageFormat",
+      "quietHoursEnabled",
+    ]) {
+      expect(settingsFields).toContain(required);
+    }
+    expect(settingsFields).not.toContain("guildId");
+    expect(settingsFields).not.toContain("credentialReference");
   });
 
   it("keeps prohibited MVP player fields out of persistence", () => {

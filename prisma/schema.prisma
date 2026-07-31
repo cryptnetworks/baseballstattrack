@@ -259,6 +259,37 @@ enum NotificationAttemptOutcome {
   CANCELLED
 }
 
+enum DiscordInstallationStatus {
+  PENDING
+  ACTIVE
+  DISCONNECTED
+  REVOKED
+}
+
+enum DiscordMessageFormat {
+  COMPACT
+  STANDARD
+  DETAILED
+}
+
+enum DiscordUpdateTrigger {
+  GAME_SCHEDULED
+  GAME_STARTED
+  SCORE_CHANGED
+  INNING_ENDED
+  GAME_COMPLETED
+  GAME_VERIFIED
+  GAME_CORRECTED
+  REPORT_READY
+  OPERATIONAL_FAILURE
+}
+
+enum DiscordDestinationPurpose {
+  LIVE_UPDATES
+  REPORTS
+  OPERATIONS
+}
+
 enum ProductAnalyticsConsentStatus {
   OPTED_IN
   OPTED_OUT
@@ -369,6 +400,11 @@ model Account {
   notificationPreferences NotificationPreference[]
   notificationDeliveries  NotificationDelivery[]
   notificationAttempts    NotificationDeliveryAttempt[]
+  discordInstallations    DiscordInstallation[]
+  discordDestinations     DiscordChannelDestination[]
+  discordSettings         DiscordIntegrationSettings[]
+  discordSettingsScopes   DiscordSettingsScope[]
+  discordSettingsRoutes   DiscordSettingsDestination[]
   externalDataSources     ExternalDataSource[]
   externalIngestionRuns   ExternalIngestionRun[]
   externalProviderRecords ExternalProviderRecord[]
@@ -690,6 +726,7 @@ model TeamSeason {
   rosterEntries RosterEntry[]
   games         Game[]
   gameTeams     GameTeamSnapshot[]
+  discordSettingsScopes DiscordSettingsScope[]
 
   @@unique([accountId, teamId, seasonId])
   @@unique([accountId, id])
@@ -1482,4 +1519,113 @@ model NotificationDeliveryAttempt {
   @@unique([accountId, id])
   @@unique([deliveryId, attemptNumber])
   @@index([accountId, completedAt])
+}
+
+model DiscordInstallation {
+  id                  String                    @id @default(cuid())
+  externalId          String                    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId           String
+  guildId             String
+  guildDisplayName    String?
+  credentialReference String
+  status              DiscordInstallationStatus @default(PENDING)
+  installedAt         DateTime?
+  disconnectedAt      DateTime?
+  revokedAt           DateTime?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+
+  account      Account                     @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  destinations DiscordChannelDestination[]
+  settings     DiscordIntegrationSettings?
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@unique([guildId])
+  @@index([accountId, status])
+}
+
+model DiscordChannelDestination {
+  id             String   @id @default(cuid())
+  externalId     String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId      String
+  installationId String
+  channelId      String
+  channelReference String
+  displayName    String?
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  account      Account                      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  installation DiscordInstallation          @relation(fields: [accountId, installationId], references: [accountId, id], onDelete: Restrict)
+  settings     DiscordSettingsDestination[]
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@unique([installationId, channelId])
+  @@unique([installationId, channelReference])
+  @@index([accountId, installationId, enabled])
+}
+
+model DiscordIntegrationSettings {
+  id                String                 @id @default(cuid())
+  externalId        String                 @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId         String
+  installationId    String
+  schemaVersion     Int                    @default(1)
+  revision          Int                    @default(1)
+  enabled           Boolean                @default(false)
+  cadenceSeconds    Int                    @default(300)
+  triggers          DiscordUpdateTrigger[]  @default([GAME_COMPLETED, GAME_VERIFIED, GAME_CORRECTED])
+  messageFormat     DiscordMessageFormat   @default(STANDARD)
+  quietHoursEnabled Boolean                @default(false)
+  quietStartMinute  Int                    @default(1320)
+  quietEndMinute    Int                    @default(420)
+  quietTimeZone     String                 @default("UTC")
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  account      Account                       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  installation DiscordInstallation           @relation(fields: [accountId, installationId], references: [accountId, id], onDelete: Restrict)
+  trackedScopes DiscordSettingsScope[]
+  destinations DiscordSettingsDestination[]
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@unique([accountId, installationId])
+  @@index([accountId, enabled])
+}
+
+model DiscordSettingsScope {
+  id           String   @id @default(cuid())
+  accountId    String
+  settingsId   String
+  teamSeasonId String
+  createdAt    DateTime @default(now())
+
+  account    Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  settings   DiscordIntegrationSettings @relation(fields: [accountId, settingsId], references: [accountId, id], onDelete: Cascade)
+  teamSeason TeamSeason                 @relation(fields: [accountId, teamSeasonId], references: [accountId, id], onDelete: Restrict)
+
+  @@unique([accountId, id])
+  @@unique([settingsId, teamSeasonId])
+  @@index([accountId, teamSeasonId])
+}
+
+model DiscordSettingsDestination {
+  id            String                    @id @default(cuid())
+  accountId     String
+  settingsId    String
+  destinationId String
+  purpose       DiscordDestinationPurpose
+  createdAt     DateTime                  @default(now())
+
+  account     Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  settings    DiscordIntegrationSettings @relation(fields: [accountId, settingsId], references: [accountId, id], onDelete: Cascade)
+  destination DiscordChannelDestination  @relation(fields: [accountId, destinationId], references: [accountId, id], onDelete: Restrict)
+
+  @@unique([accountId, id])
+  @@unique([settingsId, destinationId, purpose])
+  @@index([accountId, destinationId])
 }
