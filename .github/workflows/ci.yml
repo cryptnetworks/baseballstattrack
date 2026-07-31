@@ -61,5 +61,8 @@ jobs:
       - name: Run canonical quality verification
         run: npm run verify
 
+      - name: Prove backup and restore
+        run: npm run db:restore:verify
+
       - name: Build and smoke-test containers
         run: npm run container:verify
