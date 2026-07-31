@@ -73,20 +73,30 @@ Primary epic: [#102](https://github.com/cryptnetworks/baseballstattrack/issues/1
 
 Primary issues: #33, #102–#104.
 
-## M7 — Offline and mobile
+## M7 — Progressive web application experience
 
-Make scorekeeping resilient to unreliable connectivity through conflict-safe sync, an installable PWA, and secure device recovery.
+Deliver an installable, mobile-first, online-only PWA shell with safe static
+asset caching, visible connectivity state, secure authentication behavior,
+and field-friendly navigation.
 
-The accepted bounded single-writer authority model, M2 reuse map, and M7
-go/no-go gates are in
-[Offline scoring and conflict-safe sync decision](OFFLINE_SCORING_AND_SYNC_DECISION.md).
+The implementation boundary is documented in
+[PWA application experience](PWA_APPLICATION_EXPERIENCE.md). Offline scoring,
+local event acceptance, background synchronization, conflict resolution,
+offline authentication, and replicated local databases remain explicitly
+deferred; the existing offline strategy is a future decision/design boundary.
 
-Exit criteria: an interrupted or offline game can be recovered without duplicate or lost events, and the mobile scoring workflow meets accessibility and performance targets.
+Exit criteria: the application is installable, the service-worker cache cannot
+serve private or scoring data, connection loss is explained without claiming
+offline support, and the mobile shell meets accessibility and performance
+targets.
 
 Owner: `@cryptnetworks` repository maintainers. Target date: 2027-07-23.
-Primary epic: [#100](https://github.com/cryptnetworks/baseballstattrack/issues/100).
+Primary issue: [#105](https://github.com/cryptnetworks/baseballstattrack/issues/105).
 
-Primary issues: #34, #100, #105.
+Offline strategy and conflict-safe synchronization remain deferred under
+[#100](https://github.com/cryptnetworks/baseballstattrack/issues/100) and
+[#34](https://github.com/cryptnetworks/baseballstattrack/issues/34); they are
+not part of this M7 implementation.
 
 ## M8 — League ecosystem
 

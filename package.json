@@ -42,8 +42,9 @@
     "api:contract:write": "node scripts/verify-statistics-api-contract.mjs --write",
     "experience:measure": "EXPERIENCE_MEASURE=1 vitest run tests/quality/experience-measurement.test.ts --reporter=verbose",
     "experience:verify": "node scripts/verify-experience-budgets.mjs",
+    "pwa:verify": "node scripts/verify-pwa.mjs",
     "performance:measure": "EXPERIENCE_MEASURE=1 PERFORMANCE_MEASURE=1 vitest run tests/quality/experience-measurement.test.ts tests/quality/production-workload-budgets.integration.test.ts --reporter=verbose",
-    "verify": "npm run format && npm run lint && npm run typecheck && npm run test && npm run policy:validate && npm run api:contract && npm run db:validate && npm run build && npm run experience:verify && npm run audit:prod"
+    "verify": "npm run format && npm run lint && npm run typecheck && npm run test && npm run policy:validate && npm run api:contract && npm run db:validate && npm run build && npm run experience:verify && npm run pwa:verify && npm run audit:prod"
   },
   "overrides": {
     "find-my-way": "9.7.0",
