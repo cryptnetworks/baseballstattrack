@@ -66,6 +66,10 @@ Primary issues: #33, #102–#104.
 
 Make scorekeeping resilient to unreliable connectivity through conflict-safe sync, an installable PWA, and secure device recovery.
 
+The accepted bounded single-writer authority model, M2 reuse map, and M7
+go/no-go gates are in
+[Offline scoring and conflict-safe sync decision](OFFLINE_SCORING_AND_SYNC_DECISION.md).
+
 Exit criteria: an interrupted or offline game can be recovered without duplicate or lost events, and the mobile scoring workflow meets accessibility and performance targets.
 
 Owner: `@cryptnetworks` repository maintainers. Target date: 2027-07-23.
