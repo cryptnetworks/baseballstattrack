@@ -34,6 +34,7 @@
     "container:build": "docker build --target runtime --tag baseballstattrack:local .",
     "container:verify": "bash scripts/container-smoke.sh",
     "release:rehearse": "bash scripts/release-rehearsal.sh",
+    "reliability:drill": "bash scripts/verify-reliability-drill.sh",
     "container:scan": "docker scout cves --exit-code --only-severity critical,high local://baseballstattrack:local",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "experience:measure": "EXPERIENCE_MEASURE=1 vitest run tests/quality/experience-measurement.test.ts --reporter=verbose",

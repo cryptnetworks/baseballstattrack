@@ -147,6 +147,8 @@ The authority is `docs/PERSISTENCE_AND_TENANCY.md`,
 
 Use `docs/RELEASE_AND_WORKFLOW_SECURITY.md` for the full secret, artifact,
 release, migration, and rollback contract.
+Use `docs/PRODUCTION_RELIABILITY.md` for SLO, budget, alert, incident, and
+reliability-drill decisions.
 
 ## Incident and emergency change
 
