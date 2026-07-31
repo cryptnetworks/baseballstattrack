@@ -24,12 +24,27 @@ function actor(
   });
 }
 
-function service(repository: Partial<PrismaStatisticsApiRepository>) {
+function service(
+  repository: Partial<PrismaStatisticsApiRepository>,
+  dashboards = {} as SeasonDashboardService,
+) {
   return new StatisticsApiService(
     repository as PrismaStatisticsApiRepository,
     {} as GameBoxScoreService,
-    {} as SeasonDashboardService,
+    dashboards,
   );
+}
+
+function reportActor() {
+  return trustedActorForTest({
+    accountId,
+    actorId: "viewer",
+    actorKind: "USER",
+    actorUserId: "viewer",
+    capability: "report.view",
+    scope: { kind: "TEAM", teamId: "team-internal" },
+    authorizedAt: "2026-07-31T18:00:00.000Z",
+  });
 }
 
 describe("statistics API service boundary", () => {
@@ -199,5 +214,92 @@ describe("statistics API service boundary", () => {
     ]);
     expect(JSON.stringify(result)).not.toContain("archivedAt");
     expect(JSON.stringify(result)).not.toContain("externalId");
+  });
+
+  it("returns bot-ready season data without internal player, game, or setup keys", async () => {
+    const playerExternal = "00000000-0000-4000-8000-000000000092";
+    const gameExternal = "00000000-0000-4000-8000-000000000093";
+    const dashboards = {
+      load: vi.fn().mockResolvedValue({
+        version: {
+          freshness: "CURRENT_SOURCE_DERIVED",
+          derivationVersion: 2,
+          statisticRulesVersion: 1,
+          privacyOverlayRevision: 0,
+        },
+        selection: {
+          seasonDisplayName: "2026",
+          teamDisplayName: "Stars",
+          dateFrom: null,
+          dateTo: null,
+        },
+        inclusionPolicy: { official: "VERIFIED_ONLY" },
+        record: { wins: 1, losses: 0, ties: 0 },
+        leaders: {
+          batting: [{ playerId: "player-internal", displayName: "Jordan" }],
+          pitching: [],
+          fielding: [],
+        },
+        recentGames: [
+          {
+            gameId: "game-internal",
+            setupSnapshotId: "setup-private",
+            status: "CORRECTED",
+          },
+        ],
+        players: [
+          {
+            playerId: "player-internal",
+            displayName: "Jordan",
+            batting: { playerId: "player-internal", counters: { hits: 1 } },
+            pitching: null,
+            fielding: null,
+            sourceGames: [
+              {
+                gameId: "game-internal",
+                setupSnapshotId: "setup-private",
+                verificationState: "VERIFIED",
+              },
+            ],
+          },
+        ],
+      }),
+    } as unknown as SeasonDashboardService;
+    const api = service(
+      {
+        resolveSeasonTeam: vi.fn().mockResolvedValue({
+          seasonId: "season-internal",
+          teamId: "team-internal",
+        }),
+        externalPlayerIds: vi
+          .fn()
+          .mockResolvedValue(new Map([["player-internal", playerExternal]])),
+        externalGameIds: vi
+          .fn()
+          .mockResolvedValue(new Map([["game-internal", gameExternal]])),
+      },
+      dashboards,
+    );
+    const result = await api.leaders(
+      accountId,
+      externalAccount,
+      externalAccount,
+      reportActor(),
+    );
+    expect(result.data).toMatchObject({
+      selection: { teamDisplayName: "Stars" },
+      recentGames: [{ gameId: gameExternal }],
+      players: [
+        {
+          playerId: playerExternal,
+          batting: { playerId: playerExternal },
+          sourceGames: [{ gameId: gameExternal }],
+        },
+      ],
+    });
+    const encoded = JSON.stringify(result);
+    expect(encoded).not.toContain("player-internal");
+    expect(encoded).not.toContain("game-internal");
+    expect(encoded).not.toContain("setup-private");
   });
 });

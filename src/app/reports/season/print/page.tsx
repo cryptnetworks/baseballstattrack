@@ -31,7 +31,7 @@ export default async function PrintableSeasonPage({
     const actor = await authorizeProtectedRequest(
       authenticatePageSession,
       getAuthorizationService(),
-      { kind: "SEASON", accountId, seasonId: query.seasonId },
+      { kind: "TEAM", accountId, teamId: query.teamId },
       "report.view",
     );
     dashboard = await getSeasonDashboardService().load(

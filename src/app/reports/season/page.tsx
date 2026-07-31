@@ -435,7 +435,7 @@ export default async function SeasonDashboardPage({ searchParams }: PageProps) {
     const actor = await authorizeProtectedRequest(
       authenticatePageSession,
       authorization,
-      { kind: "SEASON", accountId, seasonId: selected.seasonId },
+      { kind: "TEAM", accountId, teamId: selected.teamId },
       "report.view",
     );
     dashboard = await service.load(

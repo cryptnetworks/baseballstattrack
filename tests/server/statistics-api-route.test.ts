@@ -182,6 +182,16 @@ describe("statistics API v1 HTTP authorization boundary", () => {
       seasonExternal,
       teamExternal,
     );
+    expect(mocks.authorize).toHaveBeenLastCalledWith(
+      expect.any(Function),
+      expect.anything(),
+      {
+        kind: "TEAM",
+        accountId: "account-internal",
+        teamId: "team-internal",
+      },
+      "report.view",
+    );
     expect(mocks.leaders).toHaveBeenCalled();
   });
 

@@ -156,9 +156,9 @@ export async function GET(
       );
       if (!scope) throw new StatisticsApiError("RESOURCE_UNAVAILABLE");
       target = {
-        kind: "SEASON",
+        kind: "TEAM",
         accountId: account.id,
-        seasonId: scope.seasonId,
+        teamId: scope.teamId,
       };
       capability = "report.view";
       operation = {

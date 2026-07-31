@@ -67,8 +67,7 @@ export class SeasonDashboardService {
       "report.view",
     );
     if (
-      actor.target.kind !== "SEASON" ||
-      actor.target.seasonId !== query.seasonId ||
+      actor.target.kind !== "TEAM" ||
       !actor.target.teamIds.includes(query.teamId)
     ) {
       throw new Error("Exact team-season report authorization is required.");

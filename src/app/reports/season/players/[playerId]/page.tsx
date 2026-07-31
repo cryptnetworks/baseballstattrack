@@ -39,7 +39,7 @@ export default async function PlayerSeasonSummaryPage({
     actor = await authorizeProtectedRequest(
       authenticatePageSession,
       authorization,
-      { kind: "SEASON", accountId, seasonId: query.seasonId },
+      { kind: "TEAM", accountId, teamId: query.teamId },
       "report.view",
     );
   } catch (error) {

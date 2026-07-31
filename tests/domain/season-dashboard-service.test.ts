@@ -4,7 +4,7 @@ import { SeasonDashboardService } from "@/server/app/season-dashboard-service";
 import { createTrustedActorContext } from "@/server/auth/types";
 
 describe("season dashboard service boundary", () => {
-  it("denies cross-Account and wrong-season reads before persistence", async () => {
+  it("denies cross-Account and wrong-team reads before persistence", async () => {
     const listChoices = vi.fn();
     const loadGameSources = vi.fn();
     const loadAcceptedHistories = vi.fn();
@@ -22,10 +22,10 @@ describe("season dashboard service boundary", () => {
       capability: "report.view",
       authorityReferenceIds: ["role-a"],
       target: {
-        kind: "SEASON",
+        kind: "TEAM",
         accountId: "account-a",
         teamIds: ["team-a"],
-        seasonId: "season-other",
+        seasonId: null,
         gameId: null,
       },
       authorizedAt: "2026-07-30T22:30:00.000Z",
@@ -35,7 +35,7 @@ describe("season dashboard service boundary", () => {
       service.load(
         {
           accountId: "account-a",
-          teamId: "team-a",
+          teamId: "team-other",
           seasonId: "season-a",
         },
         actor,
