@@ -68,6 +68,7 @@ cross-Account search surface to ordinary Account members.
 | Unexpected scoring acceptance failures exceed 1% for 5 minutes     | Critical/page                                           | pause rollout; preserve correlation IDs; verify accepted history before retry                        | Scorekeeping/on-call |
 | Projection/report freshness exceeds 5 minutes                      | Warning/ticket                                          | inspect checkpoint, source/privacy revisions, and rebuild worker                                     | Reports              |
 | Background job exhausts retries                                    | Warning/ticket, critical if scoring recovery is blocked | inspect typed failure and checkpoint; do not skip failed work silently                               | Owning service       |
+| Webhook delivery enters the dead-letter queue                      | Warning/ticket                                          | inspect the retained attempt history, endpoint health, and replay eligibility                        | Integrations         |
 | Authorization rejection rate changes by 3× baseline for 10 minutes | Warning/security review                                 | distinguish expired membership and expected denial from attack or deploy regression                  | Security             |
 
 Expected domain rejections, validation errors, and idempotent retries do not page.

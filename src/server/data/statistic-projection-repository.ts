@@ -8,6 +8,7 @@ import {
 
 import { STATISTIC_DERIVATION_VERSION } from "@/domain/statistics";
 import { StatisticDerivationError } from "@/domain/statistics/statistic-values";
+import { enqueueWebhookEvent } from "@/server/data/webhook-repository";
 
 export type PublishGameProjectionCheckpointCommand = {
   accountId: string;
@@ -56,7 +57,7 @@ export class PrismaStatisticProjectionRepository {
                 id: command.gameId,
               },
             },
-            select: { revision: true },
+            select: { revision: true, externalId: true },
           });
           if (!game) {
             throw new StatisticDerivationError(
@@ -116,13 +117,28 @@ export class PrismaStatisticProjectionRepository {
                 "Stored projection checkpoint has an invalid game scope.",
               );
             }
-            return tx.projectionCheckpoint.update({
+            const checkpoint = await tx.projectionCheckpoint.update({
               where: { id: existing.id },
               data: {
                 status: ProjectionStatus.CURRENT,
                 failureCode: null,
               },
             });
+            await enqueueWebhookEvent(tx, {
+              accountId: command.accountId,
+              eventName: "REPORT_READY",
+              deduplicationKey: `report.ready:game:${command.gameId}:${command.sourceRevision}:${command.privacyOverlayRevision}:${command.derivationVersion}`,
+              payload: {
+                scope: "GAME",
+                targetId: game.externalId,
+                sourceRevision: command.sourceRevision,
+                derivationVersion: command.derivationVersion,
+                privacyOverlayRevision: command.privacyOverlayRevision,
+                freshness: "CURRENT",
+              },
+              occurredAt: checkpoint.updatedAt,
+            });
+            return checkpoint;
           }
 
           await tx.projectionCheckpoint.updateMany({
@@ -134,7 +150,7 @@ export class PrismaStatisticProjectionRepository {
             },
             data: { status: ProjectionStatus.STALE },
           });
-          return tx.projectionCheckpoint.create({
+          const checkpoint = await tx.projectionCheckpoint.create({
             data: {
               ...identity,
               scope: ProjectionScope.GAME,
@@ -142,6 +158,21 @@ export class PrismaStatisticProjectionRepository {
               status: ProjectionStatus.CURRENT,
             },
           });
+          await enqueueWebhookEvent(tx, {
+            accountId: command.accountId,
+            eventName: "REPORT_READY",
+            deduplicationKey: `report.ready:game:${command.gameId}:${command.sourceRevision}:${command.privacyOverlayRevision}:${command.derivationVersion}`,
+            payload: {
+              scope: "GAME",
+              targetId: game.externalId,
+              sourceRevision: command.sourceRevision,
+              derivationVersion: command.derivationVersion,
+              privacyOverlayRevision: command.privacyOverlayRevision,
+              freshness: "CURRENT",
+            },
+            occurredAt: checkpoint.updatedAt,
+          });
+          return checkpoint;
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );

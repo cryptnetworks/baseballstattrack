@@ -443,6 +443,37 @@ integration("privacy lifecycle persistence boundary", () => {
         expiresAt: new Date(current.getTime() + 60_000),
       },
     });
+    const webhookEndpoint = await prisma.webhookEndpoint.create({
+      data: {
+        id: `${prefix}-privacy-webhook-endpoint`,
+        accountId: ids.account,
+        url: "https://privacy.example.test/webhook",
+        status: "ACTIVE",
+        subscribedEvents: ["GAME_VERIFIED"],
+        verifiedAt: current,
+      },
+    });
+    const webhookEvent = await prisma.webhookEvent.create({
+      data: {
+        id: `${prefix}-privacy-webhook-event`,
+        accountId: ids.account,
+        eventName: "GAME_VERIFIED",
+        deduplicationKey: `${prefix}-privacy-webhook-event`,
+        payload: {},
+        occurredAt: current,
+        retentionUntil: new Date(current.getTime() + 90 * 86_400_000),
+      },
+    });
+    await prisma.webhookDelivery.create({
+      data: {
+        id: `${prefix}-privacy-webhook-delivery`,
+        accountId: ids.account,
+        endpointId: webhookEndpoint.id,
+        eventId: webhookEvent.id,
+        secretVersion: 1,
+        retentionUntil: new Date(current.getTime() + 30 * 86_400_000),
+      },
+    });
     const created = await service.createRequest(
       {
         accountId: ids.account,
@@ -556,6 +587,20 @@ integration("privacy lifecycle persistence boundary", () => {
     ).toMatchObject({
       status: "REVOKED",
       revokedAt: current,
+    });
+    expect(
+      await prisma.webhookEndpoint.findUniqueOrThrow({
+        where: { id: webhookEndpoint.id },
+      }),
+    ).toMatchObject({ status: "REVOKED", revokedAt: current });
+    expect(
+      await prisma.webhookDelivery.findUniqueOrThrow({
+        where: { id: `${prefix}-privacy-webhook-delivery` },
+      }),
+    ).toMatchObject({
+      status: "CANCELLED",
+      cancelledAt: current,
+      lastFailureCode: "ACCOUNT_ARCHIVED",
     });
     const completionAudit = await prisma.securityAuditRecord.findFirstOrThrow({
       where: {

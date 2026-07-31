@@ -4,7 +4,7 @@ import { getApplicationReadiness } from "@/server/app/readiness-service";
 
 const configuredEnvironment = {
   DATABASE_URL: "postgresql://synthetic:synthetic@db:5432/synthetic",
-  REQUIRED_DATABASE_MIGRATION: "20260731150000_public_api_external_ids",
+  REQUIRED_DATABASE_MIGRATION: "20260731163523_durable_webhooks",
 };
 
 describe("getApplicationReadiness", () => {

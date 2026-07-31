@@ -611,6 +611,26 @@ export class PrismaPrivacyLifecycleRepository {
               revokedAt: input.now,
             },
           });
+          await tx.webhookEndpoint.updateMany({
+            where: {
+              accountId: input.accountId,
+              status: { not: "REVOKED" },
+            },
+            data: { status: "REVOKED", revokedAt: input.now },
+          });
+          await tx.webhookDelivery.updateMany({
+            where: {
+              accountId: input.accountId,
+              status: { in: ["PENDING", "PROCESSING"] },
+            },
+            data: {
+              status: "CANCELLED",
+              cancelledAt: input.now,
+              leaseOwner: null,
+              leaseExpiresAt: null,
+              lastFailureCode: "ACCOUNT_ARCHIVED",
+            },
+          });
           await tx.rateLimitCharge.deleteMany({
             where: { accountId: input.accountId },
           });
