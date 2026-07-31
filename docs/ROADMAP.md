@@ -41,6 +41,9 @@ Turn the versioned statistics API, Discord bot, webhooks, calendar synchronizati
 
 Exit criteria: at least one external consumer uses a documented read contract; credentials, quotas, privacy, retries, deprecation, and support workflows are operational.
 
+Owner: `@cryptnetworks` repository maintainers. Target date: 2027-04-02.
+Primary epic: [#97](https://github.com/cryptnetworks/baseballstattrack/issues/97).
+
 Primary issues: #73, #91–#99, #108–#121.
 
 Discord control-plane delivery is tracked by [#108](https://github.com/cryptnetworks/baseballstattrack/issues/108) and its child issues covering settings, installation, web UI, routing, cadence, delivery, permissions, previews, health, testing, and deployment.
@@ -51,6 +54,9 @@ Add optional, explainable analytics such as batted-ball and pitch-location views
 
 Exit criteria: advanced insights are reproducible from versioned source data, disclose sample-size and ruleset assumptions, respect privacy, and never become required for core scoring.
 
+Owner: `@cryptnetworks` repository maintainers. Target date: 2027-05-28.
+Primary epic: [#102](https://github.com/cryptnetworks/baseballstattrack/issues/102).
+
 Primary issues: #33, #102–#104.
 
 ## M7 — Offline and mobile
@@ -59,6 +65,9 @@ Make scorekeeping resilient to unreliable connectivity through conflict-safe syn
 
 Exit criteria: an interrupted or offline game can be recovered without duplicate or lost events, and the mobile scoring workflow meets accessibility and performance targets.
 
+Owner: `@cryptnetworks` repository maintainers. Target date: 2027-07-23.
+Primary epic: [#100](https://github.com/cryptnetworks/baseballstattrack/issues/100).
+
 Primary issues: #34, #100, #105.
 
 ## M8 — League ecosystem
@@ -66,6 +75,9 @@ Primary issues: #34, #100, #105.
 Support configurable league rulesets, portable historical data, and carefully delegated organization or league administration.
 
 Exit criteria: multiple documented rulesets can coexist without reinterpreting historical games, imports remain auditable, and cross-team access is explicit and least-privilege.
+
+Owner: `@cryptnetworks` repository maintainers. Target date: 2027-09-17.
+Primary epic: [#106](https://github.com/cryptnetworks/baseballstattrack/issues/106).
 
 Primary issues: #4, #26, #101, #106–#107, #122–#127.
 

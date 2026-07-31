@@ -33,10 +33,10 @@ Reproduction outcomes such as duplicate, expected behavior, cannot reproduce, ve
 - M2 — Scorekeeping MVP — due 2026-11-06
 - M3 — Season experience — due 2026-12-18
 - M4 — Production readiness — due 2027-02-05
-- M5 — Integrations and ecosystem — native milestone 6
-- M6 — Advanced analytics — native milestone 7
-- M7 — Offline and mobile — native milestone 8
-- M8 — League ecosystem — native milestone 9
+- M5 — Integrations and ecosystem — due 2027-04-02 — native milestone 6
+- M6 — Advanced analytics — due 2027-05-28 — native milestone 7
+- M7 — Offline and mobile — due 2027-07-23 — native milestone 8
+- M8 — League ecosystem — due 2027-09-17 — native milestone 9
 
 ## Projects v2 delivery board
 
@@ -53,9 +53,9 @@ The issue, milestone, security, and project trackers are live. GitHub's built-in
 
 The next roadmap targets are defined here and in docs/ROADMAP.md. Native GitHub milestones M5–M8 are now available; issue #96 tracks final reconciliation.
 
-- M5 — Integrations and ecosystem: versioned API consumers, Discord, webhooks, calendar, and notifications.
-- M6 — Advanced analytics: explainable batted-ball, pitch, lineup, matchup, and trend analysis.
-- M7 — Offline and mobile: conflict-safe offline scoring, PWA delivery, and secure device recovery.
-- M8 — League ecosystem: configurable ruleset packs, portable data, and delegated organization administration.
+- M5 — Integrations and ecosystem: owned by `@cryptnetworks` repository maintainers; primary epic #97 and Discord control-plane epic #108.
+- M6 — Advanced analytics: owned by `@cryptnetworks` repository maintainers; primary epic #102.
+- M7 — Offline and mobile: owned by `@cryptnetworks` repository maintainers; primary epic #100.
+- M8 — League ecosystem: owned by `@cryptnetworks` repository maintainers; primary epic #106 and fantasy product epic #122.
 
 For future issues, use the exact target prefix, corresponding Target metadata, and the matching native GitHub milestone.
