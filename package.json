@@ -31,6 +31,8 @@
     "db:restore:verify": "bash scripts/verify-backup-restore.sh",
     "policy:validate": "node scripts/verify-defect-policy.mjs",
     "container:config": "docker compose config --quiet",
+    "container:production:config": "docker compose --env-file compose.production.env.example --file compose.production.yaml config --quiet",
+    "container:production:build": "bash scripts/build-production-images.sh",
     "container:build": "docker build --target runtime --tag baseballstattrack:local .",
     "container:verify": "bash scripts/container-smoke.sh",
     "release:rehearse": "bash scripts/release-rehearsal.sh",

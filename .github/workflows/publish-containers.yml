@@ -1,0 +1,109 @@
+name: Publish production containers
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Mutable or immutable image tag to publish
+        required: true
+        default: latest
+        type: string
+      make_public:
+        description: Make all three GHCR packages public after publication
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-production-containers
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+      IMAGE_TAG: ${{ inputs.tag }}
+      VCS_REF: ${{ github.sha }}
+    steps:
+      - name: Require main and validate tag
+        env:
+          SOURCE_REF: ${{ github.ref }}
+        run: |
+          set -Eeuo pipefail
+          [[ "${SOURCE_REF}" == "refs/heads/main" ]] || {
+            echo "production containers must be dispatched from main" >&2
+            exit 1
+          }
+          [[ "${IMAGE_TAG}" =~ ^[a-z0-9][a-z0-9._-]{0,127}$ ]] || {
+            echo "tag must be a valid lowercase container tag" >&2
+            exit 1
+          }
+
+      - name: Checkout exact source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Log in to GHCR
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: printf '%s' "${REGISTRY_TOKEN}" | docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+
+      - name: Build production images
+        run: ./scripts/build-production-images.sh
+
+      - name: Tag exact source revision
+        run: |
+          for image in \
+            "${IMAGE_PREFIX}" \
+            "${IMAGE_PREFIX}-migration" \
+            "${IMAGE_PREFIX}-discord-bot"; do
+            docker tag "${image}:${IMAGE_TAG}" "${image}:sha-${GITHUB_SHA}"
+          done
+
+      - name: Push production images
+        run: |
+          for image in \
+            "${IMAGE_PREFIX}" \
+            "${IMAGE_PREFIX}-migration" \
+            "${IMAGE_PREFIX}-discord-bot"; do
+            docker push "${image}:${IMAGE_TAG}"
+            docker push "${image}:sha-${GITHUB_SHA}"
+          done
+
+      - name: Make GHCR packages public
+        if: ${{ inputs.make_public }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for package in \
+            baseballstattrack \
+            baseballstattrack-migration \
+            baseballstattrack-discord-bot; do
+            gh api \
+              --method PATCH \
+              "/users/${GITHUB_REPOSITORY_OWNER}/packages/container/${package}" \
+              --field visibility=public
+          done
+
+      - name: Record image digests
+        run: |
+          {
+            echo "### Production container images"
+            for image in \
+              "${IMAGE_PREFIX}" \
+              "${IMAGE_PREFIX}-migration" \
+              "${IMAGE_PREFIX}-discord-bot"; do
+              digest="$(docker image inspect "${image}:${IMAGE_TAG}" --format '{{index .RepoDigests 0}}')"
+              echo "- \`${digest}\`"
+            done
+            echo "- Source: \`${GITHUB_SHA}\`"
+            echo "- Packages public: \`${{ inputs.make_public }}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
