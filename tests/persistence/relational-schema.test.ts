@@ -26,6 +26,7 @@ describe("relational domain schema", () => {
       "PlayTransaction",
       "SourceEvent",
       "EventCorrection",
+      "AnalyticsObservation",
       "ProjectionCheckpoint",
       "PrivacyOverlay",
       "DataExportArtifact",
@@ -111,6 +112,29 @@ describe("relational domain schema", () => {
         (field) => field.name === "replacementPayloadId",
       ),
     ).toBe(true);
+  });
+
+  it("keeps optional analytics observations separate from canonical events", () => {
+    const fields = new Set(
+      model("AnalyticsObservation").fields.map((field) => field.name),
+    );
+    for (const required of [
+      "accountId",
+      "gameId",
+      "setupSnapshotId",
+      "sourceEventId",
+      "type",
+      "version",
+      "ordinal",
+      "captureSource",
+      "confidence",
+      "payload",
+      "supersedesObservationId",
+    ]) {
+      expect(fields).toContain(required);
+    }
+    expect(fields).not.toContain("playerDisplayName");
+    expect(fields).not.toContain("video");
   });
 
   it("keeps setup and scoring revisions separate with an exact ready pointer", () => {

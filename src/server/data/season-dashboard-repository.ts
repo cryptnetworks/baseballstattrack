@@ -123,6 +123,7 @@ export class PrismaSeasonDashboardRepository {
                   playerId: true,
                   gameTeamSnapshotId: true,
                   displayName: true,
+                  battingOrder: true,
                 },
                 orderBy: [{ battingOrder: "asc" }, { id: "asc" }],
               },

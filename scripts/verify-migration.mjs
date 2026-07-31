@@ -54,6 +54,18 @@ const expectedConstraints = [
   "ExternalIngestionRun_lifecycle_check",
   "ExternalProviderRecord_values_check",
   "ExternalIngestionQuarantine_lifecycle_check",
+  "AnalyticsObservation_externalId_key",
+  "AnalyticsObservation_accountId_id_key",
+  "AnalyticsObservation_accountId_gameId_sourceEventId_type_ordina",
+  "AnalyticsObservation_accountId_gameId_recordedAt_idx",
+  "AnalyticsObservation_accountId_supersedesObservationId_idx",
+  "AnalyticsObservation_accountId_fkey",
+  "AnalyticsObservation_accountId_gameId_fkey",
+  "AnalyticsObservation_accountId_gameId_setupSnapshotId_fkey",
+  "AnalyticsObservation_accountId_gameId_sourceEventId_fkey",
+  "AnalyticsObservation_accountId_actorUserId_fkey",
+  "AnalyticsObservation_accountId_supersedesObservationId_fkey",
+  "AnalyticsObservation_values_check",
   "RosterEntry_active_player_key",
   "RosterEntry_no_overlapping_periods",
   "RosterEntry_period_revision_check",
@@ -98,6 +110,9 @@ const expectedTriggers = [
   "WebhookEndpoint_identity_immutable",
   "WebhookEvent_immutable",
   "ExternalProviderRecord_evidence_immutable",
+  "AnalyticsObservation_evidence_immutable",
+  "AnalyticsObservation_ordinal_guard",
+  "AnalyticsObservation_append_only",
 ];
 
 const client = new pg.Client({ connectionString: databaseUrl });

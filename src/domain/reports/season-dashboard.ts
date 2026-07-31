@@ -3,6 +3,15 @@ import {
   type GameStatisticsProjection,
   type SeasonStatisticsProjection,
 } from "@/domain/statistics";
+import {
+  buildAnalyticsInsights,
+  buildContactAnalytics,
+  type AnalyticsObservation,
+  type AnalyticsGame,
+  type AnalyticsInsight,
+  type ContactAnalytics,
+} from "@/domain/analytics";
+import type { AcceptedEvent, AcceptedSetup } from "@/domain/events/event-log";
 import type { ExactRate } from "@/domain/statistics/statistic-values";
 
 export const DEFAULT_LEADERBOARD_MINIMUMS = Object.freeze({
@@ -15,6 +24,8 @@ export type LeaderboardMinimums = typeof DEFAULT_LEADERBOARD_MINIMUMS;
 
 export type SeasonDashboardGame = {
   projection: GameStatisticsProjection;
+  setup?: AcceptedSetup;
+  events?: readonly AcceptedEvent[];
   side: "HOME" | "AWAY";
   seasonId: string;
   teamId: string;
@@ -34,6 +45,7 @@ export type SeasonDashboardInput = {
   minimums?: LeaderboardMinimums;
   dateFrom?: string | null;
   dateTo?: string | null;
+  observations?: readonly AnalyticsObservation[];
 };
 
 export type SeasonLeaderboardEntry = {
@@ -104,6 +116,10 @@ export type SeasonDashboard = {
     runsAllowed: number;
     result: "WIN" | "LOSS" | "TIE";
   }>;
+  analytics: {
+    insights: AnalyticsInsight[];
+    contact: ContactAnalytics;
+  };
   players: Array<{
     playerId: string;
     displayName: string;
@@ -395,6 +411,26 @@ export function buildSeasonDashboard(
         left.playerId.localeCompare(right.playerId),
     );
 
+  const analyticsGames: AnalyticsGame[] = games.flatMap((game) => {
+    if (!game.setup || !game.events) return [];
+    return [{ ...game, setup: game.setup, events: game.events }];
+  });
+  const analytics = {
+    insights: buildAnalyticsInsights({
+      accountId: input.accountId,
+      teamId: input.teamId,
+      seasonId: input.seasonId,
+      games: analyticsGames,
+    }),
+    contact: buildContactAnalytics(
+      analyticsGames.filter(
+        ({ projection }) =>
+          projection.metadata.verificationStatus === "VERIFIED",
+      ),
+      input.observations ?? [],
+    ),
+  };
+
   return {
     version: {
       accountId: input.accountId,
@@ -443,5 +479,6 @@ export function buildSeasonDashboard(
         };
       }),
     players,
+    analytics,
   };
 }

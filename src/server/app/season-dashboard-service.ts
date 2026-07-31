@@ -10,6 +10,7 @@ import {
 import type { TrustedActorContext } from "@/server/auth/types";
 import { requireTrustedActor } from "@/server/auth/types";
 import { PrismaGameEventRepository } from "@/server/data/game-event-repository";
+import { PrismaAnalyticsObservationRepository } from "@/server/data/analytics-observation-repository";
 import { getPrismaClient } from "@/server/data/prisma";
 import {
   PrismaSeasonDashboardRepository,
@@ -39,6 +40,10 @@ export class SeasonDashboardService {
       "loadAcceptedHistories"
     >,
     private readonly rateLimits: RateLimitEnforcer = noRateLimit,
+    private readonly observations: Pick<
+      PrismaAnalyticsObservationRepository,
+      "listCurrent"
+    > | null = null,
   ) {}
 
   async listChoices(
@@ -111,7 +116,7 @@ export class SeasonDashboardService {
           ...history,
           privacyOverlayRevision: source.privacyOverlayRevision,
         });
-        return { source, projection };
+        return { source, projection, history };
       });
       if (
         games.some(
@@ -121,6 +126,15 @@ export class SeasonDashboardService {
       ) {
         continue;
       }
+      const observations = this.observations
+        ? (
+            await Promise.all(
+              sources.map(({ gameId }) =>
+                this.observations!.listCurrent(query.accountId, gameId),
+              ),
+            )
+          ).flat()
+        : [];
       return buildSeasonDashboard({
         accountId: query.accountId,
         seasonId: query.seasonId,
@@ -129,8 +143,11 @@ export class SeasonDashboardService {
         teamDisplayName: choice.teamDisplayName,
         dateFrom: query.dateFrom ?? null,
         dateTo: query.dateTo ?? null,
-        games: games.map(({ source, projection }) => ({
+        observations,
+        games: games.map(({ source, projection, history }) => ({
           projection,
+          setup: history.setup,
+          events: history.events,
           side: source.side,
           seasonId: query.seasonId,
           teamId: query.teamId,
@@ -153,5 +170,6 @@ export function getSeasonDashboardService(): SeasonDashboardService {
     new PrismaSeasonDashboardRepository(prisma),
     new PrismaGameEventRepository(prisma),
     getRateLimitService(),
+    new PrismaAnalyticsObservationRepository(prisma),
   );
 }
