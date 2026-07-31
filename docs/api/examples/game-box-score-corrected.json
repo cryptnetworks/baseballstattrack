@@ -1,0 +1,66 @@
+{
+  "apiVersion": "v1",
+  "data": {
+    "id": "00000000-0000-4000-8000-000000000005",
+    "accountTeamId": "00000000-0000-4000-8000-000000000002",
+    "seasonId": "00000000-0000-4000-8000-000000000003",
+    "version": {
+      "sourceRevision": 12,
+      "correctionRevision": 12,
+      "correctionCount": 1,
+      "derivationVersion": 2,
+      "statisticRulesVersion": 1,
+      "rulesetVersion": "ruleset_2o8JrN5Lz0as7vXyQe4uW1pB",
+      "privacyOverlayRevision": 0,
+      "verificationState": "UNVERIFIED",
+      "freshness": "CURRENT_SOURCE_DERIVED",
+      "projectionFreshness": "CURRENT",
+      "generatedAt": "2026-07-31T19:05:00.000Z"
+    },
+    "reportState": "CORRECTED",
+    "scoreKind": "FINAL",
+    "correctionStatus": "CORRECTED_HISTORY",
+    "score": { "AWAY": 4, "HOME": 6 },
+    "teams": {
+      "AWAY": {
+        "id": "team_snapshot_xH3cM9fQ2sV7wN4kL8pD6aR1",
+        "displayName": "Comets",
+        "opponentDisplayName": "Stars",
+        "lineup": [],
+        "batting": [],
+        "pitching": [],
+        "fielding": [],
+        "totals": {
+          "side": "AWAY",
+          "batting": { "runs": 4, "hits": 7 },
+          "pitching": { "runsAllowed": 6, "outsRecorded": 18 },
+          "fielding": { "errors": 1 }
+        }
+      },
+      "HOME": {
+        "id": "team_snapshot_mK8rP1vC5nQ2xW7dF4sL9aT6",
+        "displayName": "Stars",
+        "opponentDisplayName": "Comets",
+        "lineup": [],
+        "batting": [],
+        "pitching": [],
+        "fielding": [],
+        "totals": {
+          "side": "HOME",
+          "batting": { "runs": 6, "hits": 9 },
+          "pitching": { "runsAllowed": 4, "outsRecorded": 21 },
+          "fielding": { "errors": 0 }
+        }
+      }
+    },
+    "innings": [
+      { "inning": 1, "side": "AWAY", "runs": 4 },
+      { "inning": 1, "side": "HOME", "runs": 6 }
+    ],
+    "reconciliation": {
+      "status": "PASSED",
+      "confidence": "CORRECTED",
+      "checks": ["team_runs_match_inning_lines"]
+    }
+  }
+}

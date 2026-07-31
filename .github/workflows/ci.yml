@@ -45,6 +45,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -71,6 +73,10 @@ jobs:
 
       - name: Validate migration chain
         run: npm run db:migrate:deploy && npm run db:migrate:status && npm run db:migrate:verify && npm run db:representability
+
+      - name: Reject breaking statistics API changes
+        if: github.event_name == 'pull_request'
+        run: npm run api:contract -- --baseline-ref "origin/${GITHUB_BASE_REF}"
 
       - name: Run canonical quality verification
         run: npm run verify

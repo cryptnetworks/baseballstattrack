@@ -68,5 +68,7 @@ the verified-only inclusion policy. Corrected or incomplete data is labeled; it
 is never silently promoted to verified data.
 
 The v1 contract is additive-only within its major version. Removing or changing
-field meaning requires a new API version. Issue #92 owns the machine-readable
-OpenAPI contract and broader compatibility harness.
+field meaning requires a new API version. The canonical
+[OpenAPI specification](api/statistics-v1.openapi.yaml), its executable
+examples, and the [versioning and compatibility policy](API_VERSIONING_AND_COMPATIBILITY.md)
+define the supported boundary and change process.
