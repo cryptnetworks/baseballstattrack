@@ -106,7 +106,7 @@ target_signature="$(
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "EventCorrection";')" == "1" ]]
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "SecurityAuditRecord";')" == "1" ]]
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "ProjectionCheckpoint" WHERE "status" = '\''CURRENT'\'';')" == "1" ]]
-[[ "$(database_query "${target_container}" 'SELECT count(*) FROM "_prisma_migrations" WHERE "finished_at" IS NOT NULL AND "rolled_back_at" IS NULL;')" == "5" ]]
+[[ "$(database_query "${target_container}" 'SELECT count(*) FROM "_prisma_migrations" WHERE "finished_at" IS NOT NULL AND "rolled_back_at" IS NULL;')" == "6" ]]
 [[ "$(database_query "${target_container}" 'SELECT count(*) FROM "Team" t JOIN "Account" a ON a."id" = t."accountId" WHERE t."accountId" <> a."id";')" == "0" ]]
 
 cp "${backup_archive}" "${backup_archive}.corrupt"
