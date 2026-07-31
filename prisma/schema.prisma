@@ -193,6 +193,16 @@ enum PrivacyHoldStatus {
   RELEASED
 }
 
+enum RateLimitScope {
+  ACCOUNT
+  ACTOR
+}
+
+enum RateLimitOverrideStatus {
+  ACTIVE
+  REVOKED
+}
+
 model Account {
   id          String        @id @default(cuid())
   slug        String        @unique
@@ -224,6 +234,9 @@ model Account {
   dataExportArtifacts   DataExportArtifact[]
   privacyRequests       PrivacyLifecycleRequest[]
   privacyHolds          PrivacyHold[]
+  rateLimitCounters     RateLimitCounter[]
+  rateLimitCharges      RateLimitCharge[]
+  rateLimitOverrides    RateLimitOverride[]
 }
 
 model AppUser {
@@ -844,4 +857,68 @@ model PrivacyHold {
   @@unique([accountId, id])
   @@index([accountId, status, expiresAt])
   @@index([accountId, lifecycleRequestId, status])
+}
+
+model RateLimitCounter {
+  id              String         @id @default(cuid())
+  accountId       String
+  scope           RateLimitScope
+  actorKind       ActorKind
+  subjectKey      String
+  endpointClass   String
+  policyVersion   String
+  windowStartedAt DateTime
+  windowSeconds   Int
+  limit           Int
+  used            Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, scope, actorKind, subjectKey, endpointClass, policyVersion, windowStartedAt])
+  @@index([accountId, endpointClass, windowStartedAt])
+  @@index([updatedAt])
+}
+
+model RateLimitCharge {
+  id            String    @id @default(cuid())
+  accountId     String
+  actorKind     ActorKind
+  actorId       String
+  endpointClass String
+  operationKey  String
+  fingerprint   String
+  cost          Int
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, actorKind, actorId, endpointClass, operationKey])
+  @@index([expiresAt])
+}
+
+model RateLimitOverride {
+  id               String                  @id @default(cuid())
+  accountId        String
+  endpointClass    String
+  actorKind        ActorKind?
+  actorId          String?
+  actorLimit       Int
+  accountLimit     Int
+  status           RateLimitOverrideStatus @default(ACTIVE)
+  reasonCode       String
+  grantedByActorId String
+  revokedByActorId String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, id])
+  @@index([accountId, endpointClass, status, expiresAt])
+  @@index([accountId, actorKind, actorId, endpointClass, status, expiresAt])
 }

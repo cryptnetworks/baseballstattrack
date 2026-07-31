@@ -403,6 +403,46 @@ integration("privacy lifecycle persistence boundary", () => {
         status: "CURRENT",
       },
     });
+    await prisma.rateLimitCounter.create({
+      data: {
+        id: `${prefix}-privacy-counter`,
+        accountId: ids.account,
+        scope: "ACTOR",
+        actorKind: "USER",
+        subjectKey: userId,
+        endpointClass: "EXPORT",
+        policyVersion: "privacy-test",
+        windowStartedAt: current,
+        windowSeconds: 60,
+        limit: 10,
+        used: 1,
+      },
+    });
+    await prisma.rateLimitCharge.create({
+      data: {
+        id: `${prefix}-privacy-charge`,
+        accountId: ids.account,
+        actorKind: "USER",
+        actorId: userId,
+        endpointClass: "EXPORT",
+        operationKey: `${prefix}-privacy-operation`,
+        fingerprint: "a".repeat(64),
+        cost: 1,
+        expiresAt: new Date(current.getTime() + 60_000),
+      },
+    });
+    const limiterOverride = await prisma.rateLimitOverride.create({
+      data: {
+        id: `${prefix}-privacy-override`,
+        accountId: ids.account,
+        endpointClass: "EXPORT",
+        actorLimit: 20,
+        accountLimit: 100,
+        reasonCode: "PRIVACY_TEST",
+        grantedByActorId: userId,
+        expiresAt: new Date(current.getTime() + 60_000),
+      },
+    });
     const created = await service.createRequest(
       {
         accountId: ids.account,
@@ -498,6 +538,24 @@ integration("privacy lifecycle persistence boundary", () => {
     ).toMatchObject({
       status: "REVOKED",
       tokenVerifier: null,
+    });
+    expect(
+      await prisma.rateLimitCounter.count({
+        where: { accountId: ids.account },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.rateLimitCharge.count({
+        where: { accountId: ids.account },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.rateLimitOverride.findUniqueOrThrow({
+        where: { id: limiterOverride.id },
+      }),
+    ).toMatchObject({
+      status: "REVOKED",
+      revokedAt: current,
     });
     const completionAudit = await prisma.securityAuditRecord.findFirstOrThrow({
       where: {

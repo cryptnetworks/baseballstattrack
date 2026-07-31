@@ -4,7 +4,15 @@ import {
   PrivacyLifecycleError,
   createPrivacyRequestSchema,
 } from "@/domain/privacy-lifecycle";
+import {
+  RateLimitError,
+  rateLimitFingerprint,
+  rateLimitHeaders,
+  rateLimitStatus,
+  safeRateLimitMessage,
+} from "@/domain/rate-limits";
 import { getPrivacyLifecycleService } from "@/server/app/privacy-lifecycle-service";
+import { getRateLimitService } from "@/server/app/rate-limit-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import {
   safeAuthorizationMessage,
@@ -59,6 +67,12 @@ function errorResponse(error: unknown) {
       { status: 409, headers: { "Cache-Control": "no-store" } },
     );
   }
+  if (error instanceof RateLimitError) {
+    return Response.json(
+      { error: safeRateLimitMessage(error) },
+      { status: rateLimitStatus(error), headers: rateLimitHeaders(error) },
+    );
+  }
   return Response.json(
     { error: safeAuthorizationMessage(error) },
     {
@@ -73,6 +87,20 @@ export async function POST(request: Request) {
     requireSameOrigin(request);
     const input = createPrivacyRequestSchema.parse(await request.json());
     const actor = await privacyActor(request, input.accountId, input.target);
+    await getRateLimitService().enforce(
+      {
+        accountId: input.accountId,
+        endpointClass: "ADMINISTRATION",
+        operationKey: input.clientRequestId,
+        fingerprint: rateLimitFingerprint(
+          input.target,
+          input.targetId,
+          input.reasonCode,
+          input.confirmation,
+        ),
+      },
+      actor,
+    );
     const result = await getPrivacyLifecycleService().createRequest(
       input,
       actor,
@@ -101,6 +129,10 @@ export async function DELETE(request: Request) {
       target: url.searchParams.get("target"),
     });
     const actor = await privacyActor(request, input.accountId, input.target);
+    await getRateLimitService().enforce(
+      { accountId: input.accountId, endpointClass: "ADMINISTRATION" },
+      actor,
+    );
     await getPrivacyLifecycleService().cancelRequest(input, actor);
     return new Response(null, {
       status: 204,

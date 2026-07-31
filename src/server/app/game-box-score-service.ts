@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 import { GameBoxScoreError, buildGameBoxScore } from "@/domain/reports";
+import {
+  getRateLimitService,
+  noRateLimit,
+  type RateLimitEnforcer,
+} from "@/server/app/rate-limit-service";
 import type { TrustedActorContext } from "@/server/auth/types";
 import { requireTrustedActor } from "@/server/auth/types";
 import { PrismaGameBoxScoreRepository } from "@/server/data/game-box-score-repository";
@@ -20,6 +25,7 @@ export class GameBoxScoreService {
   constructor(
     private readonly events: PrismaGameEventRepository,
     private readonly reports: PrismaGameBoxScoreRepository,
+    private readonly rateLimits: RateLimitEnforcer = noRateLimit,
   ) {}
 
   async load(input: unknown, actorInput: TrustedActorContext) {
@@ -35,6 +41,13 @@ export class GameBoxScoreService {
         "Exact game report authorization is required.",
       );
     }
+    await this.rateLimits.enforce(
+      {
+        accountId: query.accountId,
+        endpointClass: "REPORT_READ",
+      },
+      actor,
+    );
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const history = await this.events.loadAcceptedHistory(
@@ -70,5 +83,6 @@ export function getGameBoxScoreService() {
   return new GameBoxScoreService(
     new PrismaGameEventRepository(prisma),
     new PrismaGameBoxScoreRepository(prisma),
+    getRateLimitService(),
   );
 }

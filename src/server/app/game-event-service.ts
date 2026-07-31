@@ -1,6 +1,12 @@
 import { z } from "zod";
 
 import { parseEventBody } from "@/domain/events/event-log";
+import { rateLimitFingerprint } from "@/domain/rate-limits";
+import {
+  getRateLimitService,
+  noRateLimit,
+  type RateLimitEnforcer,
+} from "@/server/app/rate-limit-service";
 import {
   type AcceptEventCommand,
   PrismaGameEventRepository,
@@ -73,6 +79,7 @@ export class GameEventService {
   constructor(
     private readonly repository: PrismaGameEventRepository,
     private readonly operationalEvents: OperationalEventSink = getOperationalEventSink(),
+    private readonly rateLimits: RateLimitEnforcer = noRateLimit,
   ) {}
 
   async accept(input: EventAcceptanceInput, actor: TrustedActorContext) {
@@ -86,6 +93,25 @@ export class GameEventService {
         command.accountId,
         command.gameId,
         capability,
+      );
+      await this.rateLimits.enforce(
+        {
+          accountId: command.accountId,
+          endpointClass:
+            capability === "game.verify" || capability === "game.reverify"
+              ? "CORRECTION_VERIFICATION"
+              : "SCORING_MUTATION",
+          operationKey: command.clientSubmissionId,
+          fingerprint: rateLimitFingerprint(
+            command.gameId,
+            command.setupSnapshotId,
+            command.expectedRevision,
+            command.eventId,
+            command.playTransactionId,
+            command.body,
+          ),
+        },
+        trusted,
       );
       const result = await this.repository.accept({
         ...command,
@@ -156,5 +182,9 @@ export class GameEventService {
 }
 
 export function getGameEventService() {
-  return new GameEventService(new PrismaGameEventRepository(getPrismaClient()));
+  return new GameEventService(
+    new PrismaGameEventRepository(getPrismaClient()),
+    getOperationalEventSink(),
+    getRateLimitService(),
+  );
 }

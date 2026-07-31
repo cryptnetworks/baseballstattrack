@@ -4,6 +4,12 @@ import {
   parseCorrectionCommand,
 } from "@/domain/corrections";
 import { GameEventError } from "@/domain/events/event-log";
+import { rateLimitFingerprint } from "@/domain/rate-limits";
+import {
+  getRateLimitService,
+  noRateLimit,
+  type RateLimitEnforcer,
+} from "@/server/app/rate-limit-service";
 import { toCorrectionActor } from "@/server/auth/trusted-actor-adapters";
 import type { TrustedActorContext } from "@/server/auth/types";
 import { PrismaGameEventRepository } from "@/server/data/game-event-repository";
@@ -65,7 +71,10 @@ function translateCorrectionError(error: unknown): never {
 }
 
 export class CorrectionAuditReplayService {
-  constructor(private readonly repository: PrismaGameEventRepository) {}
+  constructor(
+    private readonly repository: PrismaGameEventRepository,
+    private readonly rateLimits: RateLimitEnforcer = noRateLimit,
+  ) {}
 
   async loadCorrectionContext(
     accountId: string,
@@ -89,6 +98,15 @@ export class CorrectionAuditReplayService {
       command.gameId,
     );
     try {
+      await this.rateLimits.enforce(
+        {
+          accountId: command.accountId,
+          endpointClass: "CORRECTION_VERIFICATION",
+          operationKey: command.idempotencyKey,
+          fingerprint: rateLimitFingerprint(command),
+        },
+        actorInput,
+      );
       return await this.repository.acceptCorrection(
         {
           accountId: command.accountId,
@@ -125,5 +143,6 @@ export class CorrectionAuditReplayService {
 export function getCorrectionAuditReplayService() {
   return new CorrectionAuditReplayService(
     new PrismaGameEventRepository(getPrismaClient()),
+    getRateLimitService(),
   );
 }

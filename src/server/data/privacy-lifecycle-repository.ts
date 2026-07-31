@@ -611,6 +611,20 @@ export class PrismaPrivacyLifecycleRepository {
               revokedAt: input.now,
             },
           });
+          await tx.rateLimitCharge.deleteMany({
+            where: { accountId: input.accountId },
+          });
+          await tx.rateLimitCounter.deleteMany({
+            where: { accountId: input.accountId },
+          });
+          await tx.rateLimitOverride.updateMany({
+            where: { accountId: input.accountId, status: "ACTIVE" },
+            data: {
+              status: "REVOKED",
+              revokedAt: input.now,
+              revokedByActorId: input.actor.actorId,
+            },
+          });
           await tx.account.update({
             where: { id: input.accountId },
             data: {
@@ -620,6 +634,28 @@ export class PrismaPrivacyLifecycleRepository {
             },
           });
         } else if (request.target === "USER") {
+          await tx.rateLimitCharge.deleteMany({
+            where: { actorKind: "USER", actorId: request.targetId },
+          });
+          await tx.rateLimitCounter.deleteMany({
+            where: {
+              scope: "ACTOR",
+              actorKind: "USER",
+              subjectKey: { startsWith: `${request.targetId}:` },
+            },
+          });
+          await tx.rateLimitOverride.updateMany({
+            where: {
+              actorKind: "USER",
+              actorId: request.targetId,
+              status: "ACTIVE",
+            },
+            data: {
+              status: "REVOKED",
+              revokedAt: input.now,
+              revokedByActorId: input.actor.actorId,
+            },
+          });
           await tx.accountMembership.updateMany({
             where: {
               userId: request.targetId,

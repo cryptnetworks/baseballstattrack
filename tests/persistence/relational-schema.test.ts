@@ -31,6 +31,9 @@ describe("relational domain schema", () => {
       "DataExportArtifact",
       "PrivacyLifecycleRequest",
       "PrivacyHold",
+      "RateLimitCounter",
+      "RateLimitCharge",
+      "RateLimitOverride",
     ]) {
       expect(model(name).name).toBe(name);
     }
