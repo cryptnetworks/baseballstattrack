@@ -111,6 +111,37 @@ describe("operational event contract", () => {
         outcome: "rejected",
       }),
     ).toBeNull();
+    expect(
+      classifyOperationalAlert({
+        category: "scoring",
+        name: "event_acceptance",
+        outcome: "rejected",
+        code: "REVISION_CONFLICT",
+      }),
+    ).toBeNull();
+    expect(
+      classifyOperationalAlert({
+        category: "scoring",
+        name: "event_acceptance",
+        outcome: "failed",
+        code: "INTERNAL_ERROR",
+      }),
+    ).toEqual({
+      key: "scoring-acceptance-failure",
+      severity: "critical",
+      page: true,
+    });
+    expect(
+      classifyOperationalAlert({
+        category: "projection",
+        name: "freshness",
+        outcome: "degraded",
+      }),
+    ).toEqual({
+      key: "derived-data-stale",
+      severity: "warning",
+      page: false,
+    });
   });
 
   it("keeps Account-scoped events distinguishable without private payloads", () => {

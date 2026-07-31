@@ -38,6 +38,11 @@ The workflow runs for pull requests targeting `main` and pushes to `main`. It us
 
 The job uses a GitHub-hosted Ubuntu runner, Node 24, npm's dependency cache keyed from the lockfile, `npm ci`, a disposable PostgreSQL 17 service, the complete migration chain, and `npm run verify`. The cache only accelerates download; `npm ci` remains authoritative and fails on a package-lock mismatch. The migration step runs deploy, status, catalog verification, and the transaction-scoped relational representability proof against the empty CI database, so invalid SQL, unapplied migrations, missing database-only constraints, and lossy representative mappings fail before application verification. The job has a 30-minute timeout and named checkout, setup, install, migration, and verification steps so failures are visible in GitHub Actions logs. No required step uses `continue-on-error`, `|| true`, or a failure-masking pipe.
 
+After canonical verification, CI independently proves backup/restore, the
+representative stale-projection detection/recovery drill, and the production
+container contract. These operational checks use only disposable synthetic
+PostgreSQL and Docker state.
+
 Authentication and Account-isolation tests run in this same job. Because the
 migration chain is applied first, current membership, scoped role and grant,
 revocation, and cross-Account database tests run against disposable PostgreSQL

@@ -5,6 +5,10 @@ application signals from the transactional security and baseball histories that
 already exist. A log line is never authorization evidence and never replaces a
 required `SecurityAuditRecord` or immutable scoring event.
 
+Numeric service objectives, error-budget decisions, incident severity and
+roles, and the representative stale-projection drill are defined in
+[`PRODUCTION_RELIABILITY.md`](PRODUCTION_RELIABILITY.md).
+
 ## Signal classes
 
 | Class            | Purpose                                  | Authority and examples                                                                                   |

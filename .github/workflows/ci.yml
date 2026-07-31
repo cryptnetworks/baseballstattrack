@@ -64,5 +64,8 @@ jobs:
       - name: Prove backup and restore
         run: npm run db:restore:verify
 
+      - name: Run stale-projection reliability drill
+        run: npm run reliability:drill
+
       - name: Build and smoke-test containers
         run: npm run container:verify
