@@ -11,6 +11,9 @@ later issues.
 
 The authorized web shell and its navigation/state contract are defined in
 [`DISCORD_SETTINGS_WEB_UI.md`](DISCORD_SETTINGS_WEB_UI.md).
+Channel discovery, permission evidence, route categories, administrative
+disablement, and test-delivery behavior are defined in
+[`DISCORD_CHANNEL_ROUTING.md`](DISCORD_CHANNEL_ROUTING.md).
 
 ## Ownership boundaries
 
@@ -88,8 +91,8 @@ Account archival disables settings and disconnects active installations before
 the Account becomes unavailable. A disconnected or revoked installation may be
 inspected or reset but cannot be enabled. Database constraints preserve
 lifecycle and immutable identity; application rollback is roll-forward and
-does not reverse migration `20260731230000_discord_settings_contract` after
-configuration exists.
+does not reverse migrations `20260731230000_discord_settings_contract` or
+`20260801040000_discord_channel_routing` after configuration exists.
 
 The Python bot continues to use deployment configuration until #119 introduces
 an authenticated, version-aware configuration consumer. No process should read

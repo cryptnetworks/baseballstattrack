@@ -22,8 +22,11 @@ export const discordUpdateTriggers = [
 ] as const;
 export const discordDestinationPurposes = [
   "LIVE_UPDATES",
-  "REPORTS",
-  "OPERATIONS",
+  "FINAL_SCORES",
+  "CORRECTIONS",
+  "SUMMARIES",
+  "ERRORS",
+  "DIGESTS",
 ] as const;
 
 export type DiscordMessageFormat = (typeof discordMessageFormats)[number];

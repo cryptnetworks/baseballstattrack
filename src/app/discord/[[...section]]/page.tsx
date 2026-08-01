@@ -3,10 +3,12 @@ import { notFound, redirect } from "next/navigation";
 
 import { selectDiscordAccount } from "@/app/discord/actions";
 import { ApplicationShell } from "@/components/app/application-shell";
+import { DiscordChannelRoutingPanel } from "@/components/discord/discord-channel-routing-panel";
 import { DiscordSettingsFeedback } from "@/components/discord/discord-settings-feedback";
 import { DiscordSettingsShell } from "@/components/discord/discord-settings-shell";
 import { discordSettingsSectionSchema } from "@/domain/discord-settings-navigation";
 import { getDiscordInstallationService } from "@/server/app/discord-installation-service";
+import { getDiscordChannelRoutingService } from "@/server/app/discord-channel-routing-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import { AuthorizationError } from "@/server/auth/errors";
 import { authenticatePageSession } from "@/server/auth/next-session";
@@ -56,6 +58,7 @@ async function loadDiscordWorkspace(requestedServer: string | undefined) {
       installations: [],
       selectedInstallationId: null,
       invalidServerSelection: false,
+      actor: null,
     };
   }
   const selectedCookie = (await cookies()).get(
@@ -80,6 +83,7 @@ async function loadDiscordWorkspace(requestedServer: string | undefined) {
     installations,
     selectedInstallationId: (requested ?? fallback)?.id ?? null,
     invalidServerSelection: Boolean(requestedServer && !requested),
+    actor: selected.actor,
   };
 }
 
@@ -88,15 +92,27 @@ export default async function DiscordSettingsPage({
   searchParams,
 }: {
   params: Promise<{ section?: string[] }>;
-  searchParams: Promise<{ server?: string }>;
+  searchParams: Promise<{ server?: string; notice?: string; error?: string }>;
 }) {
   const path = (await params).section ?? [];
   const parsedSection = discordSettingsSectionSchema.safeParse(
     path[0] ?? "overview",
   );
   if (!parsedSection.success || path.length > 1) notFound();
-  const requestedServer = (await searchParams).server;
+  const search = await searchParams;
+  const requestedServer = search.server;
   const workspace = await loadDiscordWorkspace(requestedServer);
+  const channelWorkspace =
+    parsedSection.data === "channels" &&
+    workspace.selectedAccountId &&
+    workspace.selectedInstallationId &&
+    workspace.actor
+      ? await getDiscordChannelRoutingService().get(
+          workspace.selectedAccountId,
+          workspace.selectedInstallationId,
+          workspace.actor,
+        )
+      : null;
 
   return (
     <ApplicationShell>
@@ -108,18 +124,43 @@ export default async function DiscordSettingsPage({
         selectedAccountId={workspace.selectedAccountId}
         selectedInstallationId={workspace.selectedInstallationId}
       >
-        {workspace.invalidServerSelection ? (
-          <div className="mt-6">
-            <DiscordSettingsFeedback
-              errors={[
-                {
-                  fieldId: "discord-server",
-                  message:
-                    "That Discord server is unavailable for this Account. A safe available server is selected instead.",
-                },
-              ]}
-              state="validation-error"
-            />
+        {workspace.invalidServerSelection || channelWorkspace ? (
+          <div>
+            {workspace.invalidServerSelection ? (
+              <div className="mt-6">
+                <DiscordSettingsFeedback
+                  errors={[
+                    {
+                      fieldId: "discord-server",
+                      message:
+                        "That Discord server is unavailable for this Account. A safe available server is selected instead.",
+                    },
+                  ]}
+                  state="validation-error"
+                />
+              </div>
+            ) : null}
+            {channelWorkspace ? (
+              <DiscordChannelRoutingPanel
+                accountId={workspace.selectedAccountId!}
+                channels={channelWorkspace.channels}
+                destinations={
+                  channelWorkspace.configuration.settings.destinations
+                }
+                {...(search.error ? { error: search.error } : {})}
+                installationId={workspace.selectedInstallationId!}
+                lastVerifiedAt={channelWorkspace.lastVerifiedAt}
+                messageFormat={
+                  channelWorkspace.configuration.settings.messageFormat
+                }
+                missingPermissions={channelWorkspace.missingPermissions}
+                {...(search.notice ? { notice: search.notice } : {})}
+                permissionEvidenceStale={
+                  channelWorkspace.permissionEvidenceStale
+                }
+                revision={channelWorkspace.configuration.settings.revision}
+              />
+            ) : null}
           </div>
         ) : undefined}
       </DiscordSettingsShell>

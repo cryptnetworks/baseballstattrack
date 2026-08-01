@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { DiscordDestinationPurpose, Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
 const model = (name: string) => {
@@ -88,6 +88,9 @@ describe("relational domain schema", () => {
     const settingsFields = new Set(
       model("DiscordIntegrationSettings").fields.map((field) => field.name),
     );
+    const destinationFields = new Set(
+      model("DiscordChannelDestination").fields.map((field) => field.name),
+    );
     for (const required of ["guildId", "credentialReference", "status"]) {
       expect(installationFields).toContain(required);
     }
@@ -104,6 +107,25 @@ describe("relational domain schema", () => {
     }
     expect(settingsFields).not.toContain("guildId");
     expect(settingsFields).not.toContain("credentialReference");
+    for (const required of [
+      "enabled",
+      "canView",
+      "canSend",
+      "lastVerifiedAt",
+    ]) {
+      expect(destinationFields).toContain(required);
+    }
+  });
+
+  it("defines each independently routable Discord delivery category", () => {
+    expect(Object.values(DiscordDestinationPurpose)).toEqual([
+      "LIVE_UPDATES",
+      "FINAL_SCORES",
+      "CORRECTIONS",
+      "SUMMARIES",
+      "ERRORS",
+      "DIGESTS",
+    ]);
   });
 
   it("keeps prohibited MVP player fields out of persistence", () => {

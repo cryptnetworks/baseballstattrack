@@ -42,6 +42,8 @@ const installationInclude = {
               channelReference: true,
               displayName: true,
               enabled: true,
+              canView: true,
+              canSend: true,
             },
           },
         },
@@ -80,7 +82,10 @@ function settingsView(installation: InstallationWithSettings) {
         destinationId: key,
         channelReference: route.destination.channelReference,
         displayName: route.destination.displayName,
-        available: route.destination.enabled,
+        available:
+          route.destination.enabled &&
+          route.destination.canView &&
+          route.destination.canSend,
         purposes: [route.purpose],
       });
     }
@@ -230,6 +235,8 @@ export class PrismaDiscordSettingsRepository {
                 installationId: installation.id,
                 externalId: { in: destinationIds },
                 enabled: true,
+                canView: true,
+                canSend: true,
               },
               select: { id: true, externalId: true },
             })
