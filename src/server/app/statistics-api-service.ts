@@ -303,6 +303,7 @@ export class StatisticsApiService {
         generatedAt: report.version.generatedAt,
       },
       reportState: report.reportState,
+      gameState: report.gameState,
       scoreKind: report.scoreKind,
       correctionStatus: report.correctionStatus,
       seasonId: game.season.externalId,

@@ -1,6 +1,6 @@
 {
   "openapi": "3.1.0",
-  "sha256": "38c365f7e4150dd3718b9959efd7f3a58d7fa2508c2043c465597610d0c23c4a",
+  "sha256": "3320625b04ad768e6f41102c986c532ba6dc7b92cd58442dfc66a71a7e12391a",
   "specification": "docs/api/statistics-v1.openapi.yaml",
   "version": "1.0.0"
 }

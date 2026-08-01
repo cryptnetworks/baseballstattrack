@@ -151,6 +151,7 @@ describe("versioned game box score", () => {
     live.start();
     expect(report(live)).toMatchObject({
       reportState: "IN_PROGRESS",
+      gameState: { inning: 1, half: "TOP" },
       scoreKind: "CURRENT",
     });
   });

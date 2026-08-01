@@ -326,6 +326,27 @@ enum DiscordRoleGrantStatus {
   REVOKED
 }
 
+enum DiscordUpdateWorkStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  DEAD_LETTER
+  CANCELLED
+}
+
+enum DiscordUpdateOperation {
+  CREATE
+  EDIT
+  APPEND
+}
+
+enum DiscordUpdateAttemptOutcome {
+  SUCCEEDED
+  RETRYABLE_FAILURE
+  TERMINAL_FAILURE
+  CANCELLED
+}
+
 enum ProductAnalyticsConsentStatus {
   OPTED_IN
   OPTED_OUT
@@ -404,52 +425,55 @@ model Account {
   updatedAt   DateTime      @updatedAt
   archivedAt  DateTime?
 
-  memberships             AccountMembership[]
-  invitations             MembershipInvitation[]
-  teams                   Team[]
-  seasons                 Season[]
-  teamSeasons             TeamSeason[]
-  players                 Player[]
-  rosterEntries           RosterEntry[]
-  rulesetVersions         RulesetVersion[]
-  games                   Game[]
-  gameTeams               GameTeamSnapshot[]
-  setupSnapshots          GameSetupSnapshot[]
-  lineupSlots             LineupSlotSnapshot[]
-  playTransactions        PlayTransaction[]
-  sourceEvents            SourceEvent[]
-  eventCorrections        EventCorrection[]
-  projectionCheckpoints   ProjectionCheckpoint[]
-  securityAuditRecords    SecurityAuditRecord[]
-  privacyOverlays         PrivacyOverlay[]
-  privacyOverlayFields    PrivacyOverlayField[]
-  dataExportArtifacts     DataExportArtifact[]
-  privacyRequests         PrivacyLifecycleRequest[]
-  privacyHolds            PrivacyHold[]
-  rateLimitCounters       RateLimitCounter[]
-  rateLimitCharges        RateLimitCharge[]
-  rateLimitOverrides      RateLimitOverride[]
-  webhookEndpoints        WebhookEndpoint[]
-  webhookEvents           WebhookEvent[]
-  webhookDeliveries       WebhookDelivery[]
-  webhookAttempts         WebhookDeliveryAttempt[]
-  notificationPreferences NotificationPreference[]
-  notificationDeliveries  NotificationDelivery[]
-  notificationAttempts    NotificationDeliveryAttempt[]
-  discordInstallations    DiscordInstallation[]
-  discordDestinations     DiscordChannelDestination[]
-  discordSettings         DiscordIntegrationSettings[]
-  discordSettingsScopes   DiscordSettingsScope[]
-  discordSettingsRoutes   DiscordSettingsDestination[]
-  discordGuildRoles       DiscordGuildRole[]
-  discordRoleGrants       DiscordRoleGrant[]
-  externalDataSources     ExternalDataSource[]
-  externalIngestionRuns   ExternalIngestionRun[]
-  externalProviderRecords ExternalProviderRecord[]
-  externalQuarantines     ExternalIngestionQuarantine[]
-  analyticsObservations   AnalyticsObservation[]
-  calendarConnections     CalendarConnection[]
-  calendarEventLinks      CalendarEventLink[]
+  memberships              AccountMembership[]
+  invitations              MembershipInvitation[]
+  teams                    Team[]
+  seasons                  Season[]
+  teamSeasons              TeamSeason[]
+  players                  Player[]
+  rosterEntries            RosterEntry[]
+  rulesetVersions          RulesetVersion[]
+  games                    Game[]
+  gameTeams                GameTeamSnapshot[]
+  setupSnapshots           GameSetupSnapshot[]
+  lineupSlots              LineupSlotSnapshot[]
+  playTransactions         PlayTransaction[]
+  sourceEvents             SourceEvent[]
+  eventCorrections         EventCorrection[]
+  projectionCheckpoints    ProjectionCheckpoint[]
+  securityAuditRecords     SecurityAuditRecord[]
+  privacyOverlays          PrivacyOverlay[]
+  privacyOverlayFields     PrivacyOverlayField[]
+  dataExportArtifacts      DataExportArtifact[]
+  privacyRequests          PrivacyLifecycleRequest[]
+  privacyHolds             PrivacyHold[]
+  rateLimitCounters        RateLimitCounter[]
+  rateLimitCharges         RateLimitCharge[]
+  rateLimitOverrides       RateLimitOverride[]
+  webhookEndpoints         WebhookEndpoint[]
+  webhookEvents            WebhookEvent[]
+  webhookDeliveries        WebhookDelivery[]
+  webhookAttempts          WebhookDeliveryAttempt[]
+  notificationPreferences  NotificationPreference[]
+  notificationDeliveries   NotificationDelivery[]
+  notificationAttempts     NotificationDeliveryAttempt[]
+  discordInstallations     DiscordInstallation[]
+  discordDestinations      DiscordChannelDestination[]
+  discordSettings          DiscordIntegrationSettings[]
+  discordSettingsScopes    DiscordSettingsScope[]
+  discordSettingsRoutes    DiscordSettingsDestination[]
+  discordGuildRoles        DiscordGuildRole[]
+  discordRoleGrants        DiscordRoleGrant[]
+  discordUpdateEvaluations DiscordUpdateEvaluation[]
+  discordUpdateDeliveries  DiscordUpdateDelivery[]
+  discordUpdateAttempts    DiscordUpdateDeliveryAttempt[]
+  externalDataSources      ExternalDataSource[]
+  externalIngestionRuns    ExternalIngestionRun[]
+  externalProviderRecords  ExternalProviderRecord[]
+  externalQuarantines      ExternalIngestionQuarantine[]
+  analyticsObservations    AnalyticsObservation[]
+  calendarConnections      CalendarConnection[]
+  calendarEventLinks       CalendarEventLink[]
 }
 
 model AppUser {
@@ -616,12 +640,12 @@ model AccountMembership {
   disabledAt  DateTime?
   removedAt   DateTime?
 
-  account            Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  user               AppUser                    @relation(fields: [userId], references: [id], onDelete: Restrict)
-  roleAssignments    MembershipRoleAssignment[]
-  capabilityGrants   CapabilityGrant[]
+  account                 Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  user                    AppUser                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  roleAssignments         MembershipRoleAssignment[]
+  capabilityGrants        CapabilityGrant[]
   notificationPreferences NotificationPreference[]
-  acceptedInvitation MembershipInvitation?
+  acceptedInvitation      MembershipInvitation?
 
   @@unique([accountId, id])
   @@index([userId, status])
@@ -710,10 +734,10 @@ model Team {
   updatedAt   DateTime   @updatedAt
   archivedAt  DateTime?
 
-  account          Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  teamSeasons      TeamSeason[]
-  roleAssignments  MembershipRoleAssignment[] @relation("RoleAssignmentTeam")
-  capabilityGrants CapabilityGrant[]          @relation("CapabilityGrantTeam")
+  account                 Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  teamSeasons             TeamSeason[]
+  roleAssignments         MembershipRoleAssignment[] @relation("RoleAssignmentTeam")
+  capabilityGrants        CapabilityGrant[]          @relation("CapabilityGrantTeam")
   notificationPreferences NotificationPreference[]
 
   @@unique([accountId, id])
@@ -758,12 +782,12 @@ model TeamSeason {
   archivedAt DateTime?
   revision   Int       @default(0)
 
-  account       Account            @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  team          Team               @relation(fields: [accountId, teamId], references: [accountId, id], onDelete: Restrict)
-  season        Season             @relation(fields: [accountId, seasonId], references: [accountId, id], onDelete: Restrict)
-  rosterEntries RosterEntry[]
-  games         Game[]
-  gameTeams     GameTeamSnapshot[]
+  account               Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  team                  Team                   @relation(fields: [accountId, teamId], references: [accountId, id], onDelete: Restrict)
+  season                Season                 @relation(fields: [accountId, seasonId], references: [accountId, id], onDelete: Restrict)
+  rosterEntries         RosterEntry[]
+  games                 Game[]
+  gameTeams             GameTeamSnapshot[]
   discordSettingsScopes DiscordSettingsScope[]
 
   @@unique([accountId, teamId, seasonId])
@@ -860,19 +884,21 @@ model Game {
   updatedAt            DateTime          @updatedAt
   archivedAt           DateTime?
 
-  account               Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  season                Season                     @relation(fields: [accountId, seasonId], references: [accountId, id], onDelete: Restrict)
-  teamSeason            TeamSeason                 @relation(fields: [accountId, seasonId, teamSeasonId], references: [accountId, seasonId, id], onDelete: Restrict)
-  readySetupSnapshot    GameSetupSnapshot?         @relation("ReadyGameSetup", fields: [accountId, id, readySetupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
-  teamSnapshots         GameTeamSnapshot[]
-  setupSnapshots        GameSetupSnapshot[]
-  playTransactions      PlayTransaction[]
-  sourceEvents          SourceEvent[]
-  analyticsObservations AnalyticsObservation[]
-  projectionCheckpoints ProjectionCheckpoint[]
-  roleAssignments       MembershipRoleAssignment[] @relation("RoleAssignmentGame")
-  capabilityGrants      CapabilityGrant[]          @relation("CapabilityGrantGame")
-  calendarEventLinks    CalendarEventLink[]
+  account                  Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  season                   Season                     @relation(fields: [accountId, seasonId], references: [accountId, id], onDelete: Restrict)
+  teamSeason               TeamSeason                 @relation(fields: [accountId, seasonId, teamSeasonId], references: [accountId, seasonId, id], onDelete: Restrict)
+  readySetupSnapshot       GameSetupSnapshot?         @relation("ReadyGameSetup", fields: [accountId, id, readySetupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
+  teamSnapshots            GameTeamSnapshot[]
+  setupSnapshots           GameSetupSnapshot[]
+  playTransactions         PlayTransaction[]
+  sourceEvents             SourceEvent[]
+  analyticsObservations    AnalyticsObservation[]
+  projectionCheckpoints    ProjectionCheckpoint[]
+  roleAssignments          MembershipRoleAssignment[] @relation("RoleAssignmentGame")
+  capabilityGrants         CapabilityGrant[]          @relation("CapabilityGrantGame")
+  calendarEventLinks       CalendarEventLink[]
+  discordUpdateEvaluations DiscordUpdateEvaluation[]
+  discordUpdateDeliveries  DiscordUpdateDelivery[]
 
   @@unique([accountId, id])
   @@unique([accountId, externalId])
@@ -978,14 +1004,14 @@ model GameSetupSnapshot {
   payloadHash        String?
   acceptedAt         DateTime          @default(now())
 
-  account          Account              @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  game             Game                 @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
-  readyForGame     Game?                @relation("ReadyGameSetup")
-  rulesetVersion   RulesetVersion       @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
-  lineupSlots      LineupSlotSnapshot[]
-  teamSnapshots    GameTeamSnapshot[]
-  playTransactions PlayTransaction[]
-  sourceEvents     SourceEvent[]
+  account               Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  game                  Game                   @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  readyForGame          Game?                  @relation("ReadyGameSetup")
+  rulesetVersion        RulesetVersion         @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
+  lineupSlots           LineupSlotSnapshot[]
+  teamSnapshots         GameTeamSnapshot[]
+  playTransactions      PlayTransaction[]
+  sourceEvents          SourceEvent[]
   analyticsObservations AnalyticsObservation[]
 
   @@unique([accountId, id])
@@ -1077,18 +1103,18 @@ model SourceEvent {
   actorUserId        String?
   recordedAt         DateTime  @default(now())
 
-  account                Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  game                   Game              @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
-  setupSnapshot          GameSetupSnapshot @relation(fields: [accountId, gameId, setupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
-  playTransaction        PlayTransaction?  @relation(fields: [accountId, gameId, setupSnapshotId, playTransactionId], references: [accountId, gameId, setupSnapshotId, id], onDelete: Restrict, map: "SourceEvent_setup_playTransaction_fkey")
-  rulesetVersion         RulesetVersion    @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
-  actorUser              AppUser?          @relation("SourceEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
-  parentEvent            SourceEvent?      @relation("EventParent", fields: [accountId, gameId, parentEventId], references: [accountId, gameId, id], onDelete: Restrict)
-  childEvents            SourceEvent[]     @relation("EventParent")
-  correctionsAuthored    EventCorrection[] @relation("CorrectionEvent")
-  correctionTargets      EventCorrection[] @relation("CorrectionTarget")
-  correctionReplacements EventCorrection[] @relation("CorrectionReplacement")
-  analyticsObservations   AnalyticsObservation[]
+  account                Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  game                   Game                   @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  setupSnapshot          GameSetupSnapshot      @relation(fields: [accountId, gameId, setupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
+  playTransaction        PlayTransaction?       @relation(fields: [accountId, gameId, setupSnapshotId, playTransactionId], references: [accountId, gameId, setupSnapshotId, id], onDelete: Restrict, map: "SourceEvent_setup_playTransaction_fkey")
+  rulesetVersion         RulesetVersion         @relation(fields: [accountId, rulesetVersionId], references: [accountId, id], onDelete: Restrict)
+  actorUser              AppUser?               @relation("SourceEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  parentEvent            SourceEvent?           @relation("EventParent", fields: [accountId, gameId, parentEventId], references: [accountId, gameId, id], onDelete: Restrict)
+  childEvents            SourceEvent[]          @relation("EventParent")
+  correctionsAuthored    EventCorrection[]      @relation("CorrectionEvent")
+  correctionTargets      EventCorrection[]      @relation("CorrectionTarget")
+  correctionReplacements EventCorrection[]      @relation("CorrectionReplacement")
+  analyticsObservations  AnalyticsObservation[]
 
   @@unique([accountId, id])
   @@unique([accountId, gameId, id])
@@ -1101,29 +1127,29 @@ model SourceEvent {
 }
 
 model AnalyticsObservation {
-  id                    String                         @id @default(cuid())
-  externalId            String                         @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  accountId             String
-  gameId                String
-  setupSnapshotId       String
-  sourceEventId         String
-  type                  AnalyticsObservationType
-  version               Int                            @default(1)
-  ordinal               Int
-  captureSource         AnalyticsCaptureSource
-  confidence            AnalyticsObservationConfidence
-  payload               Json
-  actorId               String
-  actorUserId           String?
+  id                      String                         @id @default(cuid())
+  externalId              String                         @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId               String
+  gameId                  String
+  setupSnapshotId         String
+  sourceEventId           String
+  type                    AnalyticsObservationType
+  version                 Int                            @default(1)
+  ordinal                 Int
+  captureSource           AnalyticsCaptureSource
+  confidence              AnalyticsObservationConfidence
+  payload                 Json
+  actorId                 String
+  actorUserId             String?
   supersedesObservationId String?
-  recordedAt            DateTime                       @default(now())
+  recordedAt              DateTime                       @default(now())
 
-  account       Account          @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  game          Game             @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
-  setupSnapshot GameSetupSnapshot @relation(fields: [accountId, gameId, setupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
-  sourceEvent   SourceEvent      @relation(fields: [accountId, gameId, sourceEventId], references: [accountId, gameId, id], onDelete: Restrict)
-  actorUser     AppUser?         @relation("AnalyticsObservationActor", fields: [actorUserId], references: [id], onDelete: Restrict)
-  supersedes    AnalyticsObservation? @relation("AnalyticsObservationSupersession", fields: [accountId, supersedesObservationId], references: [accountId, id], onDelete: Restrict)
+  account       Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  game          Game                   @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  setupSnapshot GameSetupSnapshot      @relation(fields: [accountId, gameId, setupSnapshotId], references: [accountId, gameId, id], onDelete: Restrict)
+  sourceEvent   SourceEvent            @relation(fields: [accountId, gameId, sourceEventId], references: [accountId, gameId, id], onDelete: Restrict)
+  actorUser     AppUser?               @relation("AnalyticsObservationActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  supersedes    AnalyticsObservation?  @relation("AnalyticsObservationSupersession", fields: [accountId, supersedesObservationId], references: [accountId, id], onDelete: Restrict)
   supersededBy  AnalyticsObservation[] @relation("AnalyticsObservationSupersession")
 
   @@unique([accountId, id])
@@ -1407,8 +1433,8 @@ model WebhookEvent {
   retentionUntil   DateTime
   createdAt        DateTime         @default(now())
 
-  account    Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  deliveries WebhookDelivery[]
+  account                Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  deliveries             WebhookDelivery[]
   notificationDeliveries NotificationDelivery[]
 
   @@unique([accountId, id])
@@ -1586,23 +1612,24 @@ model DiscordInstallation {
 }
 
 model DiscordChannelDestination {
-  id             String   @id @default(cuid())
-  externalId     String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  accountId      String
-  installationId String
-  channelId      String
+  id               String    @id @default(cuid())
+  externalId       String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId        String
+  installationId   String
+  channelId        String
   channelReference String
-  displayName    String?
-  enabled        Boolean  @default(true)
-  canView        Boolean  @default(true)
-  canSend        Boolean  @default(true)
-  lastVerifiedAt DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  displayName      String?
+  enabled          Boolean   @default(true)
+  canView          Boolean   @default(true)
+  canSend          Boolean   @default(true)
+  lastVerifiedAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  account      Account                      @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  installation DiscordInstallation          @relation(fields: [accountId, installationId], references: [accountId, id], onDelete: Restrict)
-  settings     DiscordSettingsDestination[]
+  account          Account                      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  installation     DiscordInstallation          @relation(fields: [accountId, installationId], references: [accountId, id], onDelete: Restrict)
+  settings         DiscordSettingsDestination[]
+  updateDeliveries DiscordUpdateDelivery[]
 
   @@unique([accountId, id])
   @@unique([accountId, externalId])
@@ -1612,39 +1639,41 @@ model DiscordChannelDestination {
 }
 
 model DiscordIntegrationSettings {
-  id                String                 @id @default(cuid())
-  externalId        String                 @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  accountId         String
-  installationId    String
-  schemaVersion     Int                    @default(1)
-  revision          Int                    @default(1)
-  enabled           Boolean                @default(false)
-  cadenceMode       DiscordCadenceMode     @default(FIXED_INTERVAL)
-  cadenceSeconds    Int                    @default(300)
-  gameDayWindowEnabled Boolean             @default(false)
-  gameDayStartMinute Int                   @default(480)
-  gameDayEndMinute   Int                   @default(1380)
-  digestEnabled      Boolean               @default(false)
-  digestMinute       Int                   @default(540)
-  catchUpPolicy      DiscordCatchUpPolicy  @default(LATEST_ONLY)
-  triggers          DiscordUpdateTrigger[]  @default([GAME_COMPLETED, GAME_VERIFIED, GAME_CORRECTED])
-  messageStrategy   DiscordMessageStrategy @default(FINAL_ONLY)
-  messageFormat     DiscordMessageFormat   @default(STANDARD)
-  quietHoursEnabled Boolean                @default(false)
-  quietStartMinute  Int                    @default(1320)
-  quietEndMinute    Int                    @default(420)
-  quietTimeZone     String                 @default("UTC")
-  pausedAt           DateTime?
-  manualRefreshRequestedAt DateTime?
+  id                        String                 @id @default(cuid())
+  externalId                String                 @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId                 String
+  installationId            String
+  schemaVersion             Int                    @default(1)
+  revision                  Int                    @default(1)
+  enabled                   Boolean                @default(false)
+  cadenceMode               DiscordCadenceMode     @default(FIXED_INTERVAL)
+  cadenceSeconds            Int                    @default(300)
+  gameDayWindowEnabled      Boolean                @default(false)
+  gameDayStartMinute        Int                    @default(480)
+  gameDayEndMinute          Int                    @default(1380)
+  digestEnabled             Boolean                @default(false)
+  digestMinute              Int                    @default(540)
+  catchUpPolicy             DiscordCatchUpPolicy   @default(LATEST_ONLY)
+  triggers                  DiscordUpdateTrigger[] @default([GAME_COMPLETED, GAME_VERIFIED, GAME_CORRECTED])
+  messageStrategy           DiscordMessageStrategy @default(FINAL_ONLY)
+  messageFormat             DiscordMessageFormat   @default(STANDARD)
+  quietHoursEnabled         Boolean                @default(false)
+  quietStartMinute          Int                    @default(1320)
+  quietEndMinute            Int                    @default(420)
+  quietTimeZone             String                 @default("UTC")
+  pausedAt                  DateTime?
+  manualRefreshRequestedAt  DateTime?
   nextScheduledEvaluationAt DateTime?
-  lastSuccessfulUpdateAt DateTime?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  lastSuccessfulUpdateAt    DateTime?
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
 
-  account      Account                       @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  installation DiscordInstallation           @relation(fields: [accountId, installationId], references: [accountId, id], onDelete: Restrict)
-  trackedScopes DiscordSettingsScope[]
-  destinations DiscordSettingsDestination[]
+  account           Account                      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  installation      DiscordInstallation          @relation(fields: [accountId, installationId], references: [accountId, id], onDelete: Restrict)
+  trackedScopes     DiscordSettingsScope[]
+  destinations      DiscordSettingsDestination[]
+  updateEvaluations DiscordUpdateEvaluation[]
+  updateDeliveries  DiscordUpdateDelivery[]
 
   @@unique([accountId, id])
   @@unique([accountId, externalId])
@@ -1684,6 +1713,110 @@ model DiscordSettingsDestination {
   @@unique([accountId, id])
   @@unique([settingsId, destinationId, purpose])
   @@index([accountId, destinationId])
+}
+
+model DiscordUpdateEvaluation {
+  id               String                  @id @default(cuid())
+  externalId       String                  @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId        String
+  settingsId       String
+  gameId           String
+  settingsRevision Int
+  sourceRevision   Int
+  trigger          DiscordUpdateTrigger
+  status           DiscordUpdateWorkStatus @default(PENDING)
+  attemptCount     Int                     @default(0)
+  nextAttemptAt    DateTime                @default(now())
+  leaseOwner       String?
+  leaseExpiresAt   DateTime?
+  lastFailureCode  String?
+  evaluatedAt      DateTime?
+  deadLetteredAt   DateTime?
+  cancelledAt      DateTime?
+  retentionUntil   DateTime
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  account    Account                    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  settings   DiscordIntegrationSettings @relation(fields: [accountId, settingsId], references: [accountId, id], onDelete: Restrict)
+  game       Game                       @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  deliveries DiscordUpdateDelivery[]
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@unique([settingsId, gameId, settingsRevision, sourceRevision, trigger])
+  @@index([status, nextAttemptAt, leaseExpiresAt])
+  @@index([accountId, settingsId, gameId, sourceRevision])
+  @@index([accountId, gameId])
+  @@index([retentionUntil])
+}
+
+model DiscordUpdateDelivery {
+  id                      String                  @id @default(cuid())
+  externalId              String                  @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId               String
+  settingsId              String
+  evaluationId            String
+  gameId                  String
+  destinationId           String
+  settingsRevision        Int
+  sourceRevision          Int
+  operation               DiscordUpdateOperation
+  messageFormat           DiscordMessageFormat
+  content                 String
+  targetProviderMessageId String?
+  providerMessageId       String?
+  status                  DiscordUpdateWorkStatus @default(PENDING)
+  attemptCount            Int                     @default(0)
+  nextAttemptAt           DateTime                @default(now())
+  leaseOwner              String?
+  leaseExpiresAt          DateTime?
+  lastFailureCode         String?
+  deliveredAt             DateTime?
+  deadLetteredAt          DateTime?
+  cancelledAt             DateTime?
+  retentionUntil          DateTime
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+
+  account     Account                        @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  settings    DiscordIntegrationSettings     @relation(fields: [accountId, settingsId], references: [accountId, id], onDelete: Restrict)
+  evaluation  DiscordUpdateEvaluation        @relation(fields: [accountId, evaluationId], references: [accountId, id], onDelete: Restrict)
+  game        Game                           @relation(fields: [accountId, gameId], references: [accountId, id], onDelete: Restrict)
+  destination DiscordChannelDestination      @relation(fields: [accountId, destinationId], references: [accountId, id], onDelete: Restrict)
+  attempts    DiscordUpdateDeliveryAttempt[]
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@unique([evaluationId, destinationId])
+  @@index([status, nextAttemptAt, leaseExpiresAt])
+  @@index([accountId, settingsId, gameId, destinationId, sourceRevision])
+  @@index([accountId, destinationId])
+  @@index([accountId, evaluationId])
+  @@index([accountId, gameId])
+  @@index([retentionUntil])
+}
+
+model DiscordUpdateDeliveryAttempt {
+  id             String                      @id @default(cuid())
+  accountId      String
+  deliveryId     String
+  workerId       String
+  attemptNumber  Int
+  outcome        DiscordUpdateAttemptOutcome
+  responseStatus Int?
+  failureCode    String?
+  durationMs     Int
+  startedAt      DateTime
+  completedAt    DateTime
+
+  account  Account               @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  delivery DiscordUpdateDelivery @relation(fields: [accountId, deliveryId], references: [accountId, id], onDelete: Restrict)
+
+  @@unique([accountId, id])
+  @@unique([deliveryId, attemptNumber])
+  @@index([accountId, completedAt])
+  @@index([accountId, deliveryId])
 }
 
 model DiscordGuildRole {

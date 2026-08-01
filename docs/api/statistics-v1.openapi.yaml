@@ -871,6 +871,7 @@ components:
           accountTeamId,
           version,
           reportState,
+          gameState,
           scoreKind,
           correctionStatus,
           seasonId,
@@ -884,6 +885,13 @@ components:
         accountTeamId: { $ref: "#/components/schemas/ExternalId" }
         version: { $ref: "#/components/schemas/BoxScoreVersion" }
         reportState: { $ref: "#/components/schemas/BoxScoreReportState" }
+        gameState:
+          type: object
+          additionalProperties: false
+          required: [inning, half]
+          properties:
+            inning: { type: [integer, "null"], minimum: 1 }
+            half: { type: [string, "null"], enum: [TOP, BOTTOM, null] }
         scoreKind: { type: string, enum: [CURRENT, FINAL, TERMINATED] }
         correctionStatus: { type: string, enum: [NONE, CORRECTED_HISTORY] }
         seasonId: { $ref: "#/components/schemas/ExternalId" }

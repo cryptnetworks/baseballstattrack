@@ -43,6 +43,9 @@ describe("relational domain schema", () => {
       "DiscordIntegrationSettings",
       "DiscordSettingsScope",
       "DiscordSettingsDestination",
+      "DiscordUpdateEvaluation",
+      "DiscordUpdateDelivery",
+      "DiscordUpdateDeliveryAttempt",
     ]) {
       expect(model(name).name).toBe(name);
     }

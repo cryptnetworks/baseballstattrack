@@ -103,8 +103,12 @@ lifecycle and immutable identity; application rollback is roll-forward and
 does not reverse migrations `20260731230000_discord_settings_contract`,
 `20260801040000_discord_channel_routing`,
 `20260801050000_discord_update_cadence`, or
-`20260801060000_discord_update_content` after configuration exists.
+`20260801060000_discord_update_content`, or
+`20260801070000_discord_update_delivery` and its
+`20260801071000_discord_update_delivery_indexes` follow-up after configuration
+or delivery evidence exists.
 
-The Python bot continues to use deployment configuration until #119 introduces
-an authenticated, version-aware configuration consumer. No process should read
-these PostgreSQL tables directly except the application data-access boundary.
+The update worker consumes authenticated versioned statistics and routes
+Discord traffic through the application-owned durable ledger. The Python bot
+must not poll these PostgreSQL tables directly. No process reads them except
+the application data-access boundary.
