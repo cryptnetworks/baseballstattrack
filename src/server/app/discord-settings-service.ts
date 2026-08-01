@@ -39,8 +39,9 @@ export class DiscordSettingsError extends Error {
 function administrator(
   actorInput: TrustedActorContext,
   accountId: string,
+  capability: "discord.settings.view" | "discord.settings.configure",
 ): TrustedActorContext {
-  const actor = requireTrustedActor(actorInput, accountId, "account.manage");
+  const actor = requireTrustedActor(actorInput, accountId, capability);
   if (actor.target.kind !== "ACCOUNT") {
     throw new AuthorizationError("AUTHORIZATION_REQUIRED");
   }
@@ -58,7 +59,7 @@ export class DiscordSettingsService {
     installationId: string,
     actorInput: TrustedActorContext,
   ) {
-    administrator(actorInput, accountId);
+    administrator(actorInput, accountId, "discord.settings.view");
     const configuration = await this.repository.getConfiguration(
       accountId,
       installationId,
@@ -75,7 +76,11 @@ export class DiscordSettingsService {
 
   async update(input: unknown, actorInput: TrustedActorContext) {
     const parsed = discordSettingsUpdateSchema.parse(input);
-    const actor = administrator(actorInput, parsed.accountId);
+    const actor = administrator(
+      actorInput,
+      parsed.accountId,
+      "discord.settings.configure",
+    );
     await this.rateLimits.enforce(
       { accountId: parsed.accountId, endpointClass: "ADMINISTRATION" },
       actor,
@@ -91,7 +96,11 @@ export class DiscordSettingsService {
 
   async reset(input: unknown, actorInput: TrustedActorContext) {
     const parsed = discordSettingsResetSchema.parse(input);
-    const actor = administrator(actorInput, parsed.accountId);
+    const actor = administrator(
+      actorInput,
+      parsed.accountId,
+      "discord.settings.configure",
+    );
     await this.rateLimits.enforce(
       { accountId: parsed.accountId, endpointClass: "ADMINISTRATION" },
       actor,

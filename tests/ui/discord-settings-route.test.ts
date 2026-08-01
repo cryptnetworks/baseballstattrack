@@ -13,10 +13,14 @@ const repository = readFileSync(
 
 describe("Discord settings HTTP boundary", () => {
   it("requires exact Account administration and same-origin writes", () => {
-    expect(route).toContain('"account.manage"');
+    expect(route).toContain('"discord.settings.view"');
+    expect(route).toContain('"discord.settings.configure"');
     expect(route).toContain("authorizeProtectedRequest");
     expect(route).toContain("requireSameOrigin(request)");
     expect(route).toContain('"Cache-Control": "no-store"');
+    expect(route).toContain('"SIGN_IN_REQUIRED"');
+    expect(route).toContain('"DISCORD_PERMISSION_REQUIRED"');
+    expect(route).toContain('"DISCORD_RESOURCE_UNAVAILABLE"');
   });
 
   it("exposes revision ETags and non-enumerating resource errors", () => {

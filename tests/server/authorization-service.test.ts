@@ -251,6 +251,63 @@ describe("production authorization boundary", () => {
     expect(permitted("VIEWER", "game.view")).toBe(true);
   });
 
+  it("separates Discord read, configure, preview, and operational authority", () => {
+    const accountTarget: ResolvedTarget = {
+      kind: "ACCOUNT",
+      accountId: "account-a",
+      teamIds: [],
+      seasonId: null,
+      gameId: null,
+    };
+    const teamTarget: ResolvedTarget = {
+      kind: "TEAM",
+      accountId: "account-a",
+      teamIds: ["team-a"],
+      seasonId: null,
+      gameId: null,
+    };
+    const authority = (assignment: AuthorityAssignment): ActiveAuthority => ({
+      appUserId: "user-a",
+      membershipId: "membership-a",
+      accountId: "account-a",
+      assignments: [assignment],
+    });
+
+    const coach = authority(
+      role("COACH_MANAGER", "TEAM", { teamId: "team-a" }),
+    );
+    expect(authorityPermits(coach, "discord.settings.view", teamTarget)).toBe(
+      true,
+    );
+    expect(
+      authorityPermits(coach, "discord.settings.preview", teamTarget),
+    ).toBe(true);
+    expect(
+      authorityPermits(coach, "discord.settings.configure", teamTarget),
+    ).toBe(false);
+
+    const administrator = authority(role("ADMINISTRATOR", "ACCOUNT"));
+    expect(
+      authorityPermits(administrator, "discord.settings.configure", teamTarget),
+    ).toBe(true);
+    expect(
+      authorityPermits(
+        administrator,
+        "discord.settings.operate",
+        accountTarget,
+      ),
+    ).toBe(true);
+    expect(
+      authorityPermits(
+        authority(
+          grant("discord.settings.operate", "TEAM", { teamId: "team-a" }),
+        ),
+        "discord.settings.operate",
+        teamTarget,
+      ),
+    ).toBe(false);
+  });
+
   it("observes revocation and regrant on each authorization attempt", async () => {
     const store = new MutableStore();
     const service = new AuthorizationService(store);

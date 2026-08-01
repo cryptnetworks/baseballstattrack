@@ -290,6 +290,18 @@ enum DiscordDestinationPurpose {
   OPERATIONS
 }
 
+enum DiscordControlAction {
+  READ_ONLY
+  CONFIGURE
+  PREVIEW
+  OPERATE
+}
+
+enum DiscordRoleGrantStatus {
+  ACTIVE
+  REVOKED
+}
+
 enum ProductAnalyticsConsentStatus {
   OPTED_IN
   OPTED_OUT
@@ -405,6 +417,8 @@ model Account {
   discordSettings         DiscordIntegrationSettings[]
   discordSettingsScopes   DiscordSettingsScope[]
   discordSettingsRoutes   DiscordSettingsDestination[]
+  discordGuildRoles       DiscordGuildRole[]
+  discordRoleGrants       DiscordRoleGrant[]
   externalDataSources     ExternalDataSource[]
   externalIngestionRuns   ExternalIngestionRun[]
   externalProviderRecords ExternalProviderRecord[]
@@ -1538,6 +1552,8 @@ model DiscordInstallation {
   account      Account                     @relation(fields: [accountId], references: [id], onDelete: Restrict)
   destinations DiscordChannelDestination[]
   settings     DiscordIntegrationSettings?
+  guildRoles   DiscordGuildRole[]
+  roleGrants   DiscordRoleGrant[]
 
   @@unique([accountId, id])
   @@unique([accountId, externalId])
@@ -1628,4 +1644,52 @@ model DiscordSettingsDestination {
   @@unique([accountId, id])
   @@unique([settingsId, destinationId, purpose])
   @@index([accountId, destinationId])
+}
+
+model DiscordGuildRole {
+  id             String   @id @default(cuid())
+  externalId     String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId      String
+  installationId String
+  roleId         String
+  roleReference  String
+  displayName    String?
+  enabled        Boolean  @default(true)
+  lastVerifiedAt DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  account      Account             @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  installation DiscordInstallation @relation(fields: [accountId, installationId], references: [accountId, id], onDelete: Restrict)
+  grant        DiscordRoleGrant?
+
+  @@unique([accountId, id])
+  @@unique([accountId, installationId, id])
+  @@unique([accountId, externalId])
+  @@unique([installationId, roleId])
+  @@unique([installationId, roleReference])
+  @@index([accountId, installationId, enabled])
+}
+
+model DiscordRoleGrant {
+  id             String                 @id @default(cuid())
+  externalId     String                 @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId      String
+  installationId String
+  guildRoleId    String
+  actions        DiscordControlAction[]
+  status         DiscordRoleGrantStatus @default(ACTIVE)
+  revision       Int                    @default(1)
+  revokedAt      DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  account      Account             @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  installation DiscordInstallation @relation(fields: [accountId, installationId], references: [accountId, id], onDelete: Restrict)
+  guildRole    DiscordGuildRole    @relation(fields: [accountId, installationId, guildRoleId], references: [accountId, installationId, id], onDelete: Restrict)
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@unique([accountId, installationId, guildRoleId])
+  @@index([accountId, installationId, status])
 }

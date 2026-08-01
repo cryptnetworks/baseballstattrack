@@ -36,6 +36,8 @@ const coachManager = [
   "season.manage",
   "roster.manage",
   "report.export",
+  "discord.settings.view",
+  "discord.settings.preview",
 ] satisfies Capability[];
 
 const administrator = [
@@ -56,6 +58,8 @@ const administrator = [
   "game.verify",
   "game.reverify",
   "audit.view",
+  "discord.settings.configure",
+  "discord.settings.operate",
   "privacy.request",
   "ruleset.view",
   "ruleset.manage",
@@ -121,6 +125,10 @@ const exactGrantScopes: Readonly<
   "report.export": ["ACCOUNT", "TEAM", "SEASON", "GAME"],
   "report.publish": [],
   "audit.view": ["ACCOUNT"],
+  "discord.settings.view": ["ACCOUNT", "TEAM"],
+  "discord.settings.configure": ["ACCOUNT", "TEAM"],
+  "discord.settings.preview": ["ACCOUNT", "TEAM"],
+  "discord.settings.operate": ["ACCOUNT"],
   "privacy.request": ["ACCOUNT"],
   "privacy.manage": ["ACCOUNT"],
   "ruleset.view": ["ACCOUNT"],
