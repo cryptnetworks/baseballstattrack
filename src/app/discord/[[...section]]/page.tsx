@@ -1,0 +1,128 @@
+import { cookies } from "next/headers";
+import { notFound, redirect } from "next/navigation";
+
+import { selectDiscordAccount } from "@/app/discord/actions";
+import { ApplicationShell } from "@/components/app/application-shell";
+import { DiscordSettingsFeedback } from "@/components/discord/discord-settings-feedback";
+import { DiscordSettingsShell } from "@/components/discord/discord-settings-shell";
+import { discordSettingsSectionSchema } from "@/domain/discord-settings-navigation";
+import { getDiscordInstallationService } from "@/server/app/discord-installation-service";
+import { getAuthorizationService } from "@/server/auth/application";
+import { AuthorizationError } from "@/server/auth/errors";
+import { authenticatePageSession } from "@/server/auth/next-session";
+import { selectedAccountCookie } from "@/server/auth/request-security";
+
+export const dynamic = "force-dynamic";
+
+async function loadDiscordWorkspace(requestedServer: string | undefined) {
+  let identity;
+  try {
+    identity = await authenticatePageSession();
+  } catch (error) {
+    if (error instanceof AuthorizationError) redirect("/login");
+    throw error;
+  }
+  const authorization = getAuthorizationService();
+  const candidates = await authorization.listAvailableAccounts(identity);
+  const authorizedAccounts = (
+    await Promise.all(
+      candidates.map(async (account) => {
+        try {
+          const actor = await authorization.authorize(
+            identity,
+            { kind: "ACCOUNT", accountId: account.id },
+            "discord.settings.view",
+          );
+          return { account, actor };
+        } catch (error) {
+          if (
+            error instanceof AuthorizationError &&
+            (error.code === "NO_ACTIVE_MEMBERSHIP" ||
+              error.code === "INSUFFICIENT_CAPABILITY" ||
+              error.code === "ACCOUNT_UNAVAILABLE")
+          ) {
+            return null;
+          }
+          throw error;
+        }
+      }),
+    )
+  ).filter((candidate) => candidate !== null);
+  const accounts = authorizedAccounts.map(({ account }) => account);
+  if (accounts.length === 0) {
+    return {
+      accounts,
+      selectedAccountId: null,
+      installations: [],
+      selectedInstallationId: null,
+      invalidServerSelection: false,
+    };
+  }
+  const selectedCookie = (await cookies()).get(
+    selectedAccountCookie.name,
+  )?.value;
+  const selected =
+    authorizedAccounts.find(({ account }) => account.id === selectedCookie) ??
+    authorizedAccounts[0]!;
+  const selectedAccount = selected.account;
+  const installations = await getDiscordInstallationService().list(
+    selectedAccount.id,
+    selected.actor,
+  );
+  const requested = requestedServer
+    ? installations.find(({ id }) => id === requestedServer)
+    : undefined;
+  const fallback =
+    installations.find(({ status }) => status === "ACTIVE") ?? installations[0];
+  return {
+    accounts,
+    selectedAccountId: selectedAccount.id,
+    installations,
+    selectedInstallationId: (requested ?? fallback)?.id ?? null,
+    invalidServerSelection: Boolean(requestedServer && !requested),
+  };
+}
+
+export default async function DiscordSettingsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ section?: string[] }>;
+  searchParams: Promise<{ server?: string }>;
+}) {
+  const path = (await params).section ?? [];
+  const parsedSection = discordSettingsSectionSchema.safeParse(
+    path[0] ?? "overview",
+  );
+  if (!parsedSection.success || path.length > 1) notFound();
+  const requestedServer = (await searchParams).server;
+  const workspace = await loadDiscordWorkspace(requestedServer);
+
+  return (
+    <ApplicationShell>
+      <DiscordSettingsShell
+        accounts={workspace.accounts}
+        installations={workspace.installations}
+        section={parsedSection.data}
+        selectAccountAction={selectDiscordAccount}
+        selectedAccountId={workspace.selectedAccountId}
+        selectedInstallationId={workspace.selectedInstallationId}
+      >
+        {workspace.invalidServerSelection ? (
+          <div className="mt-6">
+            <DiscordSettingsFeedback
+              errors={[
+                {
+                  fieldId: "discord-server",
+                  message:
+                    "That Discord server is unavailable for this Account. A safe available server is selected instead.",
+                },
+              ]}
+              state="validation-error"
+            />
+          </div>
+        ) : undefined}
+      </DiscordSettingsShell>
+    </ApplicationShell>
+  );
+}

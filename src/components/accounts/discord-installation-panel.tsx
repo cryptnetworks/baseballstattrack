@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 
 type Installation = Readonly<{
   id: string;
@@ -166,14 +167,22 @@ export function DiscordInstallationPanel({
               {installation.status.toLowerCase()}
             </span>
             {installation.status === "ACTIVE" ? (
-              <button
-                className="min-h-11 rounded border border-slate-400 px-4 text-sm font-medium"
-                disabled={busy}
-                onClick={() => void disconnect(installation.id)}
-                type="button"
-              >
-                Disconnect
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  className="inline-flex min-h-11 items-center rounded border border-slate-400 px-4 text-sm font-medium"
+                  href={`/discord/overview?server=${encodeURIComponent(installation.id)}`}
+                >
+                  Manage settings
+                </Link>
+                <button
+                  className="min-h-11 rounded border border-slate-400 px-4 text-sm font-medium"
+                  disabled={busy}
+                  onClick={() => void disconnect(installation.id)}
+                  type="button"
+                >
+                  Disconnect
+                </button>
+              </div>
             ) : null}
           </li>
         ))}

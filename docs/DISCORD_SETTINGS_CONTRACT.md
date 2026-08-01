@@ -9,6 +9,9 @@ Permissions (#117), routing UI (#112), tracked-scope UI (#120), schedules
 (#118), message strategy (#115), and workers (#119) consume this contract in
 later issues.
 
+The authorized web shell and its navigation/state contract are defined in
+[`DISCORD_SETTINGS_WEB_UI.md`](DISCORD_SETTINGS_WEB_UI.md).
+
 ## Ownership boundaries
 
 `DiscordInstallation` owns the Account binding, Discord guild ID, lifecycle,
