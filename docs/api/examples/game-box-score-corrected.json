@@ -18,6 +18,7 @@
       "generatedAt": "2026-07-31T19:05:00.000Z"
     },
     "reportState": "CORRECTED",
+    "gameState": { "inning": 7, "half": "BOTTOM" },
     "scoreKind": "FINAL",
     "correctionStatus": "CORRECTED_HISTORY",
     "score": { "AWAY": 4, "HOME": 6 },

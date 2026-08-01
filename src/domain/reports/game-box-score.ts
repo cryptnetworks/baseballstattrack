@@ -65,6 +65,10 @@ export type GameBoxScore = {
     | "VERIFIED"
     | "ABANDONED"
     | "CANCELLED";
+  gameState: {
+    inning: number | null;
+    half: "TOP" | "BOTTOM" | null;
+  };
   scoreKind: "CURRENT" | "FINAL" | "TERMINATED";
   correctionStatus: "NONE" | "CORRECTED_HISTORY";
   season: { id: string; displayName: string };
@@ -420,6 +424,7 @@ export function buildGameBoxScore(input: {
       generatedAt: input.generatedAt,
     },
     reportState: state,
+    gameState: { inning: replay.state.inning, half: replay.state.half },
     scoreKind: scoreKind(state),
     correctionStatus: correctionEvents.length ? "CORRECTED_HISTORY" : "NONE",
     season: { ...input.presentation.season },

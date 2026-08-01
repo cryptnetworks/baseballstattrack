@@ -2,6 +2,7 @@ export const featureFlagNames = [
   "FEATURE_ICS_CALENDAR_ENABLED",
   "FEATURE_EMAIL_NOTIFICATIONS_ENABLED",
   "FEATURE_DISCORD_NOTIFICATIONS_ENABLED",
+  "FEATURE_DISCORD_UPDATES_ENABLED",
 ] as const;
 
 export type FeatureFlagName = (typeof featureFlagNames)[number];

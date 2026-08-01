@@ -55,6 +55,8 @@ Primary issues: #73, #91–#99, #108–#121.
 Discord control-plane delivery is tracked by [#108](https://github.com/cryptnetworks/baseballstattrack/issues/108) and its child issues covering settings, installation, web UI, routing, cadence, delivery, permissions, previews, health, testing, and deployment.
 The implemented trigger, message-strategy, correction-presentation, and payload
 budget contract is in [Discord update content](DISCORD_UPDATE_CONTENT.md).
+The durable, version-aware execution boundary is in
+[Discord update worker](DISCORD_UPDATE_WORKER.md).
 
 ## M6 — Advanced analytics
 
