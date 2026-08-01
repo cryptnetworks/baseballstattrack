@@ -64,7 +64,7 @@ ARG VCS_REF=unknown
 ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=3000 \
-    REQUIRED_DATABASE_MIGRATION=20260731233000_discord_permissions
+    REQUIRED_DATABASE_MIGRATION=20260801034000_supabase_security_hardening
 
 LABEL org.opencontainers.image.title="Baseball Stat Track" \
       org.opencontainers.image.description="Production-compatible Baseball Stat Track application image" \

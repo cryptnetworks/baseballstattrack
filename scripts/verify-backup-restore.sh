@@ -88,7 +88,7 @@ docker run --rm --network "${restore_network}" \
   --env NODE_ENV=production \
   --env NEXT_PUBLIC_APP_ENV=local \
   --env "DATABASE_URL=postgresql://${restore_user}:${restore_password}@${source_container}:5432/${restore_database}?schema=public" \
-  --env REQUIRED_DATABASE_MIGRATION=20260731233000_discord_permissions \
+  --env REQUIRED_DATABASE_MIGRATION=20260801034000_supabase_security_hardening \
   "${migration_image}" npm run db:migrate:deploy >/dev/null
 
 docker exec --interactive "${source_container}" psql \
