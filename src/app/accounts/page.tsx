@@ -7,6 +7,7 @@ import {
   updateProductAnalyticsPreference,
 } from "@/app/accounts/actions";
 import { signOut } from "@/app/login/actions";
+import { DiscordInstallationPanel } from "@/components/accounts/discord-installation-panel";
 import { getProductAnalyticsService } from "@/server/app/product-analytics-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import { AuthorizationError } from "@/server/auth/errors";
@@ -15,7 +16,11 @@ import { selectedAccountCookie } from "@/server/auth/request-security";
 
 export const dynamic = "force-dynamic";
 
-export default async function AccountsPage() {
+export default async function AccountsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ discord?: string }>;
+}) {
   let identity;
   try {
     identity = await authenticatePageSession();
@@ -27,6 +32,7 @@ export default async function AccountsPage() {
     await getAuthorizationService().listAvailableAccounts(identity);
   const selected = (await cookies()).get(selectedAccountCookie.name)?.value;
   const selectedAccount = accounts.find(({ id }) => id === selected);
+  const discordResult = (await searchParams).discord;
   const analyticsPreference = selectedAccount
     ? await getProductAnalyticsService().preference(
         selectedAccount.id,
@@ -139,6 +145,12 @@ export default async function AccountsPage() {
             </form>
           </div>
         </section>
+      ) : null}
+      {selectedAccount ? (
+        <DiscordInstallationPanel
+          accountId={selectedAccount.id}
+          result={discordResult}
+        />
       ) : null}
     </main>
   );
