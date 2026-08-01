@@ -293,6 +293,17 @@ enum DiscordDestinationPurpose {
   DIGESTS
 }
 
+enum DiscordCadenceMode {
+  EVENT_DRIVEN
+  FIXED_INTERVAL
+  MANUAL_ONLY
+}
+
+enum DiscordCatchUpPolicy {
+  SKIP
+  LATEST_ONLY
+}
+
 enum DiscordControlAction {
   READ_ONLY
   CONFIGURE
@@ -1598,13 +1609,24 @@ model DiscordIntegrationSettings {
   schemaVersion     Int                    @default(1)
   revision          Int                    @default(1)
   enabled           Boolean                @default(false)
+  cadenceMode       DiscordCadenceMode     @default(FIXED_INTERVAL)
   cadenceSeconds    Int                    @default(300)
+  gameDayWindowEnabled Boolean             @default(false)
+  gameDayStartMinute Int                   @default(480)
+  gameDayEndMinute   Int                   @default(1380)
+  digestEnabled      Boolean               @default(false)
+  digestMinute       Int                   @default(540)
+  catchUpPolicy      DiscordCatchUpPolicy  @default(LATEST_ONLY)
   triggers          DiscordUpdateTrigger[]  @default([GAME_COMPLETED, GAME_VERIFIED, GAME_CORRECTED])
   messageFormat     DiscordMessageFormat   @default(STANDARD)
   quietHoursEnabled Boolean                @default(false)
   quietStartMinute  Int                    @default(1320)
   quietEndMinute    Int                    @default(420)
   quietTimeZone     String                 @default("UTC")
+  pausedAt           DateTime?
+  manualRefreshRequestedAt DateTime?
+  nextScheduledEvaluationAt DateTime?
+  lastSuccessfulUpdateAt DateTime?
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
 
@@ -1617,6 +1639,7 @@ model DiscordIntegrationSettings {
   @@unique([accountId, externalId])
   @@unique([accountId, installationId])
   @@index([accountId, enabled])
+  @@index([nextScheduledEvaluationAt, id])
 }
 
 model DiscordSettingsScope {

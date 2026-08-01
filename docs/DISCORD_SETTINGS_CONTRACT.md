@@ -5,9 +5,9 @@ future web control plane. It stores no delivery work and does not change the
 bot's current read-only command behavior. Installation and onboarding are
 defined in
 [`DISCORD_INSTALLATION_AND_ONBOARDING.md`](DISCORD_INSTALLATION_AND_ONBOARDING.md).
-Permissions (#117), routing UI (#112), tracked-scope UI (#120), schedules
-(#118), message strategy (#115), and workers (#119) consume this contract in
-later issues.
+Permissions (#117), routing UI (#112), tracked-scope UI (#120), and schedules
+(#118) extend this contract. Message strategy (#115) and workers (#119) consume
+it in later issues.
 
 The authorized web shell and its navigation/state contract are defined in
 [`DISCORD_SETTINGS_WEB_UI.md`](DISCORD_SETTINGS_WEB_UI.md).
@@ -17,6 +17,9 @@ disablement, and test-delivery behavior are defined in
 Tracked team-season selection, pause semantics, and game-lifecycle display
 behavior are defined in
 [`DISCORD_TRACKED_SCOPES.md`](DISCORD_TRACKED_SCOPES.md).
+Update cadence, schedule windows, pause/resume, and manual evaluation behavior
+are defined in
+[`DISCORD_UPDATE_CADENCE.md`](DISCORD_UPDATE_CADENCE.md).
 
 ## Ownership boundaries
 
@@ -94,8 +97,9 @@ Account archival disables settings and disconnects active installations before
 the Account becomes unavailable. A disconnected or revoked installation may be
 inspected or reset but cannot be enabled. Database constraints preserve
 lifecycle and immutable identity; application rollback is roll-forward and
-does not reverse migrations `20260731230000_discord_settings_contract` or
-`20260801040000_discord_channel_routing` after configuration exists.
+does not reverse migrations `20260731230000_discord_settings_contract`,
+`20260801040000_discord_channel_routing`, or
+`20260801050000_discord_update_cadence` after configuration exists.
 
 The Python bot continues to use deployment configuration until #119 introduces
 an authenticated, version-aware configuration consumer. No process should read

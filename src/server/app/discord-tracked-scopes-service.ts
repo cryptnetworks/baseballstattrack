@@ -144,7 +144,11 @@ export class DiscordTrackedScopesService {
         destinations: current.settings.destinations.map(
           ({ destinationId, purposes }) => ({ destinationId, purposes }),
         ),
+        cadenceMode: current.settings.cadenceMode,
         cadenceSeconds: current.settings.cadenceSeconds,
+        gameDayWindow: current.settings.gameDayWindow,
+        digest: current.settings.digest,
+        catchUpPolicy: current.settings.catchUpPolicy,
         triggers: current.settings.triggers,
         messageFormat: current.settings.messageFormat,
         quietHours: current.settings.quietHours,
