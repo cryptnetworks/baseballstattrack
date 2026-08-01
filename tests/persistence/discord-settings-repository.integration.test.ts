@@ -11,6 +11,11 @@ import { trustedActorForTest } from "../fixtures/trusted-actor";
 const databaseUrl = process.env.DATABASE_URL;
 const integration = databaseUrl ? describe : describe.skip;
 const prefix = `issue109-${process.pid}-${Date.now()}`;
+const identitySuffix = String(Date.now()).padStart(13, "0").slice(-13);
+const guildA = `11${identitySuffix}01`;
+const guildB = `11${identitySuffix}02`;
+const channelA = `22${identitySuffix}01`;
+const channelB = `22${identitySuffix}02`;
 
 integration("Discord settings persistence", () => {
   const prisma = new PrismaClient({
@@ -43,6 +48,16 @@ integration("Discord settings persistence", () => {
     capability: "discord.settings.configure",
     scope: { kind: "ACCOUNT" },
     authorizedAt: "2026-07-31T23:00:00.000Z",
+  });
+  const operator = trustedActorForTest({
+    accountId: accountA,
+    actorId: `${prefix}-operator`,
+    actorKind: "SERVICE",
+    actorUserId: null,
+    membershipId: null,
+    capability: "discord.settings.operate",
+    scope: { kind: "ACCOUNT" },
+    authorizedAt: "2026-08-01T05:00:00.000Z",
   });
 
   beforeAll(async () => {
@@ -99,7 +114,7 @@ integration("Discord settings persistence", () => {
       prisma.discordInstallation.create({
         data: {
           accountId: accountA,
-          guildId: "123456789012345601",
+          guildId: guildA,
           guildDisplayName: "Guild A",
           credentialReference: "discord/installations/a",
           status: "ACTIVE",
@@ -109,7 +124,7 @@ integration("Discord settings persistence", () => {
       prisma.discordInstallation.create({
         data: {
           accountId: accountB,
-          guildId: "123456789012345602",
+          guildId: guildB,
           guildDisplayName: "Guild B",
           credentialReference: "discord/installations/b",
           status: "ACTIVE",
@@ -124,7 +139,7 @@ integration("Discord settings persistence", () => {
         data: {
           accountId: accountA,
           installationId: createdInstallationA.id,
-          channelId: "223456789012345601",
+          channelId: channelA,
           channelReference: "discord/channels/a-live",
           displayName: "Live scores",
         },
@@ -133,7 +148,7 @@ integration("Discord settings persistence", () => {
         data: {
           accountId: accountB,
           installationId: createdInstallationB.id,
-          channelId: "223456789012345602",
+          channelId: channelB,
           channelReference: "discord/channels/b-live",
           displayName: "Other live scores",
         },
@@ -159,7 +174,15 @@ integration("Discord settings persistence", () => {
         purposes: ["LIVE_UPDATES" as const, "SUMMARIES" as const],
       },
     ],
+    cadenceMode: "FIXED_INTERVAL" as const,
     cadenceSeconds: 60,
+    gameDayWindow: {
+      enabled: true,
+      startMinute: 480,
+      endMinute: 1_380,
+    },
+    digest: { enabled: true, minute: 540 },
+    catchUpPolicy: "LATEST_ONLY" as const,
     triggers: ["SCORE_CHANGED" as const, "GAME_COMPLETED" as const],
     messageFormat: "COMPACT" as const,
     quietHours: {
@@ -177,14 +200,13 @@ integration("Discord settings persistence", () => {
     expect(defaults).toMatchObject({
       installation: {
         id: installationA,
-        guildId: "123456789012345601",
+        guildId: guildA,
         status: "ACTIVE",
       },
       settings: { revision: 0, enabled: false, trackedScopes: [] },
     });
-    expect(JSON.stringify(defaults)).not.toMatch(
-      /credentialReference|223456789012345601/iu,
-    );
+    expect(JSON.stringify(defaults)).not.toContain(channelA);
+    expect(JSON.stringify(defaults)).not.toMatch(/credentialReference/iu);
 
     const result = await repository.writeConfiguration(input());
     expect(result).toMatchObject({
@@ -201,14 +223,21 @@ integration("Discord settings persistence", () => {
               purposes: ["LIVE_UPDATES", "SUMMARIES"],
             },
           ],
+          cadenceMode: "FIXED_INTERVAL",
+          gameDayWindow: { enabled: true },
+          digest: { enabled: true, minute: 540 },
+          catchUpPolicy: "LATEST_ONLY",
+          nextScheduledEvaluationAt: expect.any(Date),
         },
       },
     });
     const audit = await prisma.securityAuditRecord.findFirstOrThrow({
       where: { accountId: accountA, action: "discord.settings.update" },
     });
+    expect(JSON.stringify(audit.metadata)).not.toContain(guildA);
+    expect(JSON.stringify(audit.metadata)).not.toContain(channelA);
     expect(JSON.stringify(audit.metadata)).not.toMatch(
-      /123456789012345601|223456789012345601|discord\/installations|discord\/channels|credential/iu,
+      /discord\/installations|discord\/channels|credential/iu,
     );
     const stored = await prisma.discordIntegrationSettings.findUniqueOrThrow({
       where: {
@@ -234,6 +263,18 @@ integration("Discord settings persistence", () => {
       }),
     ).rejects.toBeTruthy();
     await expect(
+      prisma.discordIntegrationSettings.update({
+        where: { id: stored.id },
+        data: { cadenceSeconds: 59 },
+      }),
+    ).rejects.toBeTruthy();
+    await expect(
+      prisma.discordIntegrationSettings.update({
+        where: { id: stored.id },
+        data: { pausedAt: new Date() },
+      }),
+    ).rejects.toBeTruthy();
+    await expect(
       prisma.discordChannelDestination.update({
         where: {
           accountId_externalId: {
@@ -244,6 +285,43 @@ integration("Discord settings persistence", () => {
         data: { enabled: false },
       }),
     ).rejects.toBeTruthy();
+  });
+
+  it("coalesces manual evaluations and records secret-free operational audits", async () => {
+    const current = await repository.getConfiguration(accountA, installationA);
+    const now = new Date("2026-08-01T12:00:00.000Z");
+    const request = {
+      accountId: accountA,
+      installationId: installationA,
+      expectedRevision: current!.settings.revision,
+      actor: operator,
+      now,
+    };
+    const first = await repository.requestManualRefresh(request);
+    const retry = await repository.requestManualRefresh({
+      ...request,
+      now: new Date("2026-08-01T12:00:01.000Z"),
+    });
+    expect(first).toMatchObject({ outcome: "requested", coalesced: false });
+    expect(retry).toMatchObject({ outcome: "requested", coalesced: true });
+    expect(
+      retry.outcome === "requested"
+        ? retry.configuration.settings.manualRefreshRequestedAt
+        : null,
+    ).toEqual(now);
+    const audits = await prisma.securityAuditRecord.findMany({
+      where: {
+        accountId: accountA,
+        action: "discord.settings.manual_refresh",
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    expect(audits.map(({ metadata }) => metadata)).toEqual([
+      { revision: current!.settings.revision, coalesced: false },
+      { revision: current!.settings.revision, coalesced: true },
+    ]);
+    expect(JSON.stringify(audits)).not.toContain(guildA);
+    expect(JSON.stringify(audits)).not.toMatch(/guild|channel|credential/iu);
   });
 
   it("rejects stale revisions and cross-Account scopes or destinations", async () => {
@@ -319,6 +397,9 @@ integration("Discord settings persistence", () => {
           trackedScopes: [],
           destinations: [],
           cadenceSeconds: 300,
+          pausedAt: null,
+          manualRefreshRequestedAt: null,
+          nextScheduledEvaluationAt: null,
         },
       },
     });

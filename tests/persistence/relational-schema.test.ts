@@ -98,10 +98,18 @@ describe("relational domain schema", () => {
       "schemaVersion",
       "revision",
       "enabled",
+      "cadenceMode",
       "cadenceSeconds",
+      "gameDayWindowEnabled",
+      "digestEnabled",
+      "catchUpPolicy",
       "triggers",
       "messageFormat",
       "quietHoursEnabled",
+      "pausedAt",
+      "manualRefreshRequestedAt",
+      "nextScheduledEvaluationAt",
+      "lastSuccessfulUpdateAt",
     ]) {
       expect(settingsFields).toContain(required);
     }

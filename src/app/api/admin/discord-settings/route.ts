@@ -97,6 +97,13 @@ function configurationResponse(
     installation: configuration.installation,
     settings: {
       ...configuration.settings,
+      pausedAt: configuration.settings.pausedAt?.toISOString() ?? null,
+      manualRefreshRequestedAt:
+        configuration.settings.manualRefreshRequestedAt?.toISOString() ?? null,
+      nextScheduledEvaluationAt:
+        configuration.settings.nextScheduledEvaluationAt?.toISOString() ?? null,
+      lastSuccessfulUpdateAt:
+        configuration.settings.lastSuccessfulUpdateAt?.toISOString() ?? null,
       createdAt: configuration.settings.createdAt?.toISOString() ?? null,
       updatedAt: configuration.settings.updatedAt?.toISOString() ?? null,
     },

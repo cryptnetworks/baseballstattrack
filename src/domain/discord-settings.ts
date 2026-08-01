@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { discordSchedulePolicySchema } from "@/domain/discord-update-schedule";
+
 export const DISCORD_SETTINGS_SCHEMA_VERSION = 1;
 export const DISCORD_SETTINGS_MAX_SCOPES = 50;
 export const DISCORD_SETTINGS_MAX_DESTINATIONS = 20;
@@ -90,7 +92,21 @@ export const discordSettingsUpdateSchema = z
     destinations: z
       .array(discordDestinationSelectionSchema)
       .max(DISCORD_SETTINGS_MAX_DESTINATIONS),
-    cadenceSeconds: z.number().int().min(15).max(86_400),
+    cadenceMode:
+      discordSchedulePolicySchema.shape.cadenceMode.default("FIXED_INTERVAL"),
+    cadenceSeconds:
+      discordSchedulePolicySchema.shape.cadenceSeconds.default(300),
+    gameDayWindow: discordSchedulePolicySchema.shape.gameDayWindow.default({
+      enabled: false,
+      startMinute: 480,
+      endMinute: 1_380,
+    }),
+    digest: discordSchedulePolicySchema.shape.digest.default({
+      enabled: false,
+      minute: 540,
+    }),
+    catchUpPolicy:
+      discordSchedulePolicySchema.shape.catchUpPolicy.default("LATEST_ONLY"),
     triggers: z
       .array(z.enum(discordUpdateTriggers))
       .min(1)
@@ -141,6 +157,13 @@ export const discordSettingsUpdateSchema = z
         message: "Discord quiet hours must have different start and end times.",
       });
     }
+    if (value.gameDayWindow.startMinute === value.gameDayWindow.endMinute) {
+      context.addIssue({
+        code: "custom",
+        path: ["gameDayWindow"],
+        message: "Game-day window start and end must be different.",
+      });
+    }
     if (
       value.enabled &&
       (!value.trackedScopes.length || !value.destinations.length)
@@ -179,7 +202,15 @@ export const discordSettingsDefaults = Object.freeze({
   enabled: false,
   trackedScopes: [] as const,
   destinations: [] as const,
+  cadenceMode: "FIXED_INTERVAL" as const,
   cadenceSeconds: 300,
+  gameDayWindow: Object.freeze({
+    enabled: false,
+    startMinute: 480,
+    endMinute: 1_380,
+  }),
+  digest: Object.freeze({ enabled: false, minute: 540 }),
+  catchUpPolicy: "LATEST_ONLY" as const,
   triggers: [
     "GAME_COMPLETED",
     "GAME_VERIFIED",
@@ -192,4 +223,8 @@ export const discordSettingsDefaults = Object.freeze({
     endMinute: 420,
     timeZone: "UTC",
   }),
+  pausedAt: null,
+  manualRefreshRequestedAt: null,
+  nextScheduledEvaluationAt: null,
+  lastSuccessfulUpdateAt: null,
 });

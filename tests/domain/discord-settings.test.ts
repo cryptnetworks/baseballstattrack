@@ -21,7 +21,11 @@ function update() {
     destinations: [
       { destinationId: DESTINATION, purposes: ["LIVE_UPDATES" as const] },
     ],
+    cadenceMode: "FIXED_INTERVAL" as const,
     cadenceSeconds: 60,
+    gameDayWindow: { enabled: true, startMinute: 480, endMinute: 1_380 },
+    digest: { enabled: true, minute: 540 },
+    catchUpPolicy: "LATEST_ONLY" as const,
     triggers: ["SCORE_CHANGED" as const, "GAME_COMPLETED" as const],
     messageFormat: "COMPACT" as const,
     quietHours: {
@@ -41,7 +45,11 @@ describe("Discord settings contract", () => {
       enabled: false,
       trackedScopes: [],
       destinations: [],
+      cadenceMode: "FIXED_INTERVAL",
       cadenceSeconds: 300,
+      gameDayWindow: { enabled: false },
+      digest: { enabled: false },
+      catchUpPolicy: "LATEST_ONLY",
       messageFormat: "STANDARD",
       quietHours: { enabled: false, timeZone: "UTC" },
     });
@@ -49,6 +57,21 @@ describe("Discord settings contract", () => {
 
   it("accepts a bounded complete replacement document", () => {
     expect(discordSettingsUpdateSchema.parse(update())).toEqual(update());
+  });
+
+  it("preserves the version-1 API contract with safe schedule defaults", () => {
+    const legacy = update();
+    delete (legacy as Partial<typeof legacy>).cadenceMode;
+    delete (legacy as Partial<typeof legacy>).gameDayWindow;
+    delete (legacy as Partial<typeof legacy>).digest;
+    delete (legacy as Partial<typeof legacy>).catchUpPolicy;
+    expect(discordSettingsUpdateSchema.parse(legacy)).toMatchObject({
+      cadenceMode: "FIXED_INTERVAL",
+      cadenceSeconds: 60,
+      gameDayWindow: { enabled: false, startMinute: 480, endMinute: 1_380 },
+      digest: { enabled: false, minute: 540 },
+      catchUpPolicy: "LATEST_ONLY",
+    });
   });
 
   it("rejects enablement without scope or destination", () => {
