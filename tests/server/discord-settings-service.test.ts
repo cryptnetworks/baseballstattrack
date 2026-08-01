@@ -18,7 +18,7 @@ function actor(accountId = ACCOUNT) {
     actorKind: "USER",
     actorId: "user-a",
     actorUserId: "user-a",
-    capability: "account.manage",
+    capability: "discord.settings.configure",
     authorityReferenceIds: ["role-a"],
     target: {
       kind: "ACCOUNT",

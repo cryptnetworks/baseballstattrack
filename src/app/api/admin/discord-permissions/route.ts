@@ -7,9 +7,9 @@ import {
   safeRateLimitMessage,
 } from "@/domain/rate-limits";
 import {
-  DiscordSettingsError,
-  getDiscordSettingsService,
-} from "@/server/app/discord-settings-service";
+  DiscordPermissionsError,
+  getDiscordPermissionsService,
+} from "@/server/app/discord-permissions-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import {
   safeAuthorizationMessage,
@@ -18,15 +18,16 @@ import {
 import { authenticateRouteRequest } from "@/server/auth/next-session";
 import { authorizeProtectedRequest } from "@/server/auth/protected-boundary";
 import { requireSameOrigin } from "@/server/auth/request-security";
+import type { Capability } from "@/server/auth/types";
 
 export const dynamic = "force-dynamic";
 
 const id = z.string().trim().min(1).max(128);
 
-async function authorize(
+function authorize(
   request: Request,
   accountId: string,
-  capability: "discord.settings.view" | "discord.settings.configure",
+  capability: Capability,
 ) {
   return authorizeProtectedRequest(
     () => authenticateRouteRequest(request),
@@ -40,8 +41,8 @@ function errorResponse(error: unknown) {
   if (error instanceof z.ZodError) {
     return Response.json(
       {
-        code: "DISCORD_SETTINGS_REQUEST_INVALID",
-        error: "The Discord settings request is invalid.",
+        code: "DISCORD_PERMISSION_REQUEST_INVALID",
+        error: "The Discord permission request is invalid.",
       },
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
@@ -49,27 +50,21 @@ function errorResponse(error: unknown) {
   if (error instanceof RateLimitError) {
     return Response.json(
       {
-        code: "DISCORD_SETTINGS_RATE_LIMITED",
+        code: "DISCORD_PERMISSION_RATE_LIMITED",
         error: safeRateLimitMessage(error),
       },
       { status: rateLimitStatus(error), headers: rateLimitHeaders(error) },
     );
   }
-  if (error instanceof DiscordSettingsError) {
+  if (error instanceof DiscordPermissionsError) {
     const code =
       error.code === "REVISION_CONFLICT"
-        ? "DISCORD_SETTINGS_CONFLICT"
-        : error.code === "INSTALLATION_INACTIVE"
-          ? "DISCORD_INSTALLATION_INACTIVE"
+        ? "DISCORD_PERMISSION_CONFLICT"
+        : error.code === "MEMBERSHIP_STALE"
+          ? "DISCORD_MEMBERSHIP_STALE"
           : "DISCORD_RESOURCE_UNAVAILABLE";
     return Response.json(
-      {
-        code,
-        error:
-          error.code === "REVISION_CONFLICT"
-            ? "The Discord settings changed. Reload before saving again."
-            : "The Discord settings resource is unavailable.",
-      },
+      { code, error: error.message },
       { status: error.status, headers: { "Cache-Control": "no-store" } },
     );
   }
@@ -81,26 +76,11 @@ function errorResponse(error: unknown) {
           ? "SIGN_IN_REQUIRED"
           : status === 403
             ? "DISCORD_PERMISSION_REQUIRED"
-            : "DISCORD_SETTINGS_TEMPORARILY_UNAVAILABLE",
+            : "DISCORD_PERMISSION_TEMPORARILY_UNAVAILABLE",
       error: safeAuthorizationMessage(error),
     },
     { status, headers: { "Cache-Control": "no-store" } },
   );
-}
-
-function configurationResponse(
-  configuration: Awaited<
-    ReturnType<ReturnType<typeof getDiscordSettingsService>["get"]>
-  >,
-) {
-  return {
-    installation: configuration.installation,
-    settings: {
-      ...configuration.settings,
-      createdAt: configuration.settings.createdAt?.toISOString() ?? null,
-      updatedAt: configuration.settings.updatedAt?.toISOString() ?? null,
-    },
-  };
 }
 
 export async function GET(request: Request) {
@@ -108,17 +88,22 @@ export async function GET(request: Request) {
     const search = new URL(request.url).searchParams;
     const accountId = id.parse(search.get("accountId"));
     const installationId = z.uuid().parse(search.get("installationId"));
-    const actor = await authorize(request, accountId, "discord.settings.view");
-    const configuration = await getDiscordSettingsService().get(
+    const view = z
+      .enum(["grants", "audit"])
+      .default("grants")
+      .parse(search.get("view") ?? undefined);
+    const actor = await authorize(
+      request,
       accountId,
-      installationId,
-      actor,
+      view === "audit" ? "discord.settings.operate" : "discord.settings.view",
     );
-    return Response.json(configurationResponse(configuration), {
-      headers: {
-        "Cache-Control": "no-store",
-        ETag: `"discord-settings-${configuration.settings.revision}"`,
-      },
+    const service = getDiscordPermissionsService();
+    const result =
+      view === "audit"
+        ? await service.history(accountId, installationId, actor)
+        : await service.list(accountId, installationId, actor);
+    return Response.json(result, {
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
     return errorResponse(error);
@@ -130,7 +115,7 @@ export async function POST(request: Request) {
     requireSameOrigin(request);
     const input = z
       .object({
-        action: z.enum(["update", "reset"]),
+        action: z.enum(["update", "revoke"]),
         accountId: id,
       })
       .loose()
@@ -142,16 +127,13 @@ export async function POST(request: Request) {
     );
     const command: Record<string, unknown> = { ...input };
     delete command.action;
-    const service = getDiscordSettingsService();
-    const configuration =
+    const service = getDiscordPermissionsService();
+    const grant =
       input.action === "update"
         ? await service.update(command, actor)
-        : await service.reset(command, actor);
-    return Response.json(configurationResponse(configuration), {
-      headers: {
-        "Cache-Control": "no-store",
-        ETag: `"discord-settings-${configuration.settings.revision}"`,
-      },
+        : await service.revoke(command, actor);
+    return Response.json(grant, {
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
     return errorResponse(error);

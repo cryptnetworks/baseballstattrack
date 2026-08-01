@@ -659,6 +659,18 @@ export class PrismaPrivacyLifecycleRepository {
             where: { accountId: input.accountId, enabled: true },
             data: { enabled: false, revision: { increment: 1 } },
           });
+          await tx.discordRoleGrant.updateMany({
+            where: { accountId: input.accountId, status: "ACTIVE" },
+            data: {
+              status: "REVOKED",
+              revokedAt: input.now,
+              revision: { increment: 1 },
+            },
+          });
+          await tx.discordGuildRole.updateMany({
+            where: { accountId: input.accountId, enabled: true },
+            data: { enabled: false },
+          });
           await tx.discordInstallation.updateMany({
             where: { accountId: input.accountId, status: "ACTIVE" },
             data: { status: "DISCONNECTED", disconnectedAt: input.now },

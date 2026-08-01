@@ -532,6 +532,25 @@ integration("privacy lifecycle persistence boundary", () => {
           purpose: "LIVE_UPDATES",
         },
       });
+      const discordRole = await tx.discordGuildRole.create({
+        data: {
+          id: `${prefix}-privacy-discord-role`,
+          accountId: ids.account,
+          installationId: discordInstallation.id,
+          roleId: "523456789012345678",
+          roleReference: "discord/roles/privacy",
+          lastVerifiedAt: current,
+        },
+      });
+      await tx.discordRoleGrant.create({
+        data: {
+          id: `${prefix}-privacy-discord-grant`,
+          accountId: ids.account,
+          installationId: discordInstallation.id,
+          guildRoleId: discordRole.id,
+          actions: ["READ_ONLY", "CONFIGURE"],
+        },
+      });
     });
     const created = await service.createRequest(
       {
@@ -671,6 +690,16 @@ integration("privacy lifecycle persistence boundary", () => {
         where: { id: `${prefix}-privacy-discord-settings` },
       }),
     ).toMatchObject({ enabled: false, revision: 2 });
+    expect(
+      await prisma.discordGuildRole.findUniqueOrThrow({
+        where: { id: `${prefix}-privacy-discord-role` },
+      }),
+    ).toMatchObject({ enabled: false });
+    expect(
+      await prisma.discordRoleGrant.findUniqueOrThrow({
+        where: { id: `${prefix}-privacy-discord-grant` },
+      }),
+    ).toMatchObject({ status: "REVOKED", revokedAt: current, revision: 2 });
     const completionAudit = await prisma.securityAuditRecord.findFirstOrThrow({
       where: {
         accountId: ids.account,

@@ -40,7 +40,7 @@ integration("Discord settings persistence", () => {
     actorKind: "SERVICE",
     actorUserId: null,
     membershipId: null,
-    capability: "account.manage",
+    capability: "discord.settings.configure",
     scope: { kind: "ACCOUNT" },
     authorizedAt: "2026-07-31T23:00:00.000Z",
   });
