@@ -6,9 +6,11 @@ import { ApplicationShell } from "@/components/app/application-shell";
 import { DiscordChannelRoutingPanel } from "@/components/discord/discord-channel-routing-panel";
 import { DiscordSettingsFeedback } from "@/components/discord/discord-settings-feedback";
 import { DiscordSettingsShell } from "@/components/discord/discord-settings-shell";
+import { DiscordTrackedScopesPanel } from "@/components/discord/discord-tracked-scopes-panel";
 import { discordSettingsSectionSchema } from "@/domain/discord-settings-navigation";
 import { getDiscordInstallationService } from "@/server/app/discord-installation-service";
 import { getDiscordChannelRoutingService } from "@/server/app/discord-channel-routing-service";
+import { getDiscordTrackedScopesService } from "@/server/app/discord-tracked-scopes-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import { AuthorizationError } from "@/server/auth/errors";
 import { authenticatePageSession } from "@/server/auth/next-session";
@@ -113,6 +115,17 @@ export default async function DiscordSettingsPage({
           workspace.actor,
         )
       : null;
+  const trackedScopesWorkspace =
+    parsedSection.data === "teams" &&
+    workspace.selectedAccountId &&
+    workspace.selectedInstallationId &&
+    workspace.actor
+      ? await getDiscordTrackedScopesService().get(
+          workspace.selectedAccountId,
+          workspace.selectedInstallationId,
+          workspace.actor,
+        )
+      : null;
 
   return (
     <ApplicationShell>
@@ -124,7 +137,9 @@ export default async function DiscordSettingsPage({
         selectedAccountId={workspace.selectedAccountId}
         selectedInstallationId={workspace.selectedInstallationId}
       >
-        {workspace.invalidServerSelection || channelWorkspace ? (
+        {workspace.invalidServerSelection ||
+        channelWorkspace ||
+        trackedScopesWorkspace ? (
           <div>
             {workspace.invalidServerSelection ? (
               <div className="mt-6">
@@ -159,6 +174,20 @@ export default async function DiscordSettingsPage({
                   channelWorkspace.permissionEvidenceStale
                 }
                 revision={channelWorkspace.configuration.settings.revision}
+              />
+            ) : null}
+            {trackedScopesWorkspace ? (
+              <DiscordTrackedScopesPanel
+                accountId={workspace.selectedAccountId!}
+                {...(search.error ? { error: search.error } : {})}
+                installationId={workspace.selectedInstallationId!}
+                {...(search.notice ? { notice: search.notice } : {})}
+                revision={
+                  trackedScopesWorkspace.configuration.settings.revision
+                }
+                scopes={trackedScopesWorkspace.scopes}
+                selectedCount={trackedScopesWorkspace.selectedCount}
+                staleSelectedCount={trackedScopesWorkspace.staleSelectedCount}
               />
             ) : null}
           </div>

@@ -14,6 +14,9 @@ The authorized web shell and its navigation/state contract are defined in
 Channel discovery, permission evidence, route categories, administrative
 disablement, and test-delivery behavior are defined in
 [`DISCORD_CHANNEL_ROUTING.md`](DISCORD_CHANNEL_ROUTING.md).
+Tracked team-season selection, pause semantics, and game-lifecycle display
+behavior are defined in
+[`DISCORD_TRACKED_SCOPES.md`](DISCORD_TRACKED_SCOPES.md).
 
 ## Ownership boundaries
 
