@@ -49,8 +49,9 @@ Disabled memberships and disabled rules are ineligible for worker claims.
 `POST /api/internal/notifications/deliver` requires a dedicated bearer token
 and a stable `x-notification-worker-id`. Workers lease at most 25 due rows per
 call, preserve per-recipient event order, and re-claim expired leases safely.
-Email and Discord requests carry the delivery UUID as an idempotency key;
-Discord also uses an enforced nonce.
+Email uses a stable Message-ID and delivery header; Discord uses an enforced
+nonce. SMTP servers do not provide universal idempotency, so a connection loss
+after acceptance can result in a duplicate email.
 
 Retry delays are 30 seconds, 2 minutes, 10 minutes, 1 hour, 6 hours, and then
 daily, with at most eight attempts. Authentication and invalid-destination
@@ -66,13 +67,16 @@ boundary is not an arbitrary messaging API.
 
 ## Configuration and operations
 
-Required application configuration:
+Enable each channel independently with
+`FEATURE_EMAIL_NOTIFICATIONS_ENABLED` and
+`FEATURE_DISCORD_NOTIFICATIONS_ENABLED`. Disabled channels reject new
+destinations and do not require their credentials. Shared worker configuration:
 
 - `NOTIFICATION_WORKER_TOKEN` and the separate `NOTIFICATION_EVENT_TOKEN`;
 - `NOTIFICATION_DESTINATIONS_JSON` mapping opaque references to channel and
   destination;
-- `NOTIFICATION_EMAIL_PROVIDER_URL` and
-  `NOTIFICATION_EMAIL_PROVIDER_TOKEN`;
+- standard SMTP credentials: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`,
+  `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`;
 - `NOTIFICATION_DISCORD_BOT_TOKEN` and optional
   `NOTIFICATION_DISCORD_API_BASE_URL`.
 

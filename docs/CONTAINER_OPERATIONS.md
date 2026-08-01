@@ -38,12 +38,15 @@ IMAGE_TAG=local VCS_REF="$(git rev-parse HEAD)" npm run container:production:bui
 
 ## Configure and start
 
-Copy the environment example to a protected location and replace every
+Copy both scoped environment examples to a protected location and replace every
 placeholder:
 
 ```sh
 install -m 600 compose.production.env.example /etc/baseballstattrack/production.env
+install -m 600 app.production.env.example /etc/baseballstattrack/app.env
 ```
+
+Set `APP_ENV_FILE=/etc/baseballstattrack/app.env` in `production.env`.
 
 Use the same immutable source tag for all three application images. The moving
 `latest` tag is appropriate only for initial evaluation. `POSTGRES_PASSWORD`
@@ -63,7 +66,8 @@ Startup is fail-closed and dependency ordered:
 1. PostgreSQL must become healthy.
 2. The migration image runs `prisma migrate deploy` once and must exit zero.
 3. The application starts and `/api/ready` must succeed.
-4. The Discord bot starts and must connect to the Discord gateway.
+4. Enabled profile services start; the Discord bot must connect to the Discord
+   gateway and Cloudflare Tunnel must connect to the configured tunnel.
 
 A migration failure prevents both the app and bot from starting. Application
 startup never applies migrations.

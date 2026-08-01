@@ -1,44 +1,5 @@
 name: baseballstattrack
 
-x-database-url-environment: &database-url-environment
-  DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
-  DIRECT_URL: ${DIRECT_URL:-${DATABASE_URL}}
-
-x-application-environment: &application-environment
-  NODE_ENV: production
-  NEXT_PUBLIC_APP_ENV: production
-  NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?set NEXT_PUBLIC_SITE_URL}
-  NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set NEXT_PUBLIC_SUPABASE_URL}
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set NEXT_PUBLIC_SUPABASE_ANON_KEY}
-  SUPABASE_OAUTH_PROVIDER: ${SUPABASE_OAUTH_PROVIDER:-google}
-  <<: *database-url-environment
-  WEBHOOK_SIGNING_MASTER_KEY: ${WEBHOOK_SIGNING_MASTER_KEY:?set WEBHOOK_SIGNING_MASTER_KEY}
-  WEBHOOK_WORKER_TOKEN: ${WEBHOOK_WORKER_TOKEN:?set WEBHOOK_WORKER_TOKEN}
-  EXTERNAL_INGESTION_WORKER_TOKEN: ${EXTERNAL_INGESTION_WORKER_TOKEN:?set EXTERNAL_INGESTION_WORKER_TOKEN}
-  EXTERNAL_DATA_PROVIDER_BASE_URL: ${EXTERNAL_DATA_PROVIDER_BASE_URL:?set EXTERNAL_DATA_PROVIDER_BASE_URL}
-  EXTERNAL_DATA_PROVIDER_API_KEY: ${EXTERNAL_DATA_PROVIDER_API_KEY:?set EXTERNAL_DATA_PROVIDER_API_KEY}
-  CALENDAR_SYNC_WORKER_TOKEN: ${CALENDAR_SYNC_WORKER_TOKEN:?set CALENDAR_SYNC_WORKER_TOKEN}
-  CALENDAR_PROVIDER_TOKENS_JSON: ${CALENDAR_PROVIDER_TOKENS_JSON:?set CALENDAR_PROVIDER_TOKENS_JSON}
-  NOTIFICATION_WORKER_TOKEN: ${NOTIFICATION_WORKER_TOKEN:?set NOTIFICATION_WORKER_TOKEN}
-  NOTIFICATION_EVENT_TOKEN: ${NOTIFICATION_EVENT_TOKEN:?set NOTIFICATION_EVENT_TOKEN}
-  NOTIFICATION_DESTINATIONS_JSON: ${NOTIFICATION_DESTINATIONS_JSON:?set NOTIFICATION_DESTINATIONS_JSON}
-  NOTIFICATION_EMAIL_PROVIDER_URL: ${NOTIFICATION_EMAIL_PROVIDER_URL:?set NOTIFICATION_EMAIL_PROVIDER_URL}
-  NOTIFICATION_EMAIL_PROVIDER_TOKEN: ${NOTIFICATION_EMAIL_PROVIDER_TOKEN:?set NOTIFICATION_EMAIL_PROVIDER_TOKEN}
-  NOTIFICATION_DISCORD_API_BASE_URL: ${NOTIFICATION_DISCORD_API_BASE_URL:-https://discord.com/api/v10/}
-  NOTIFICATION_DISCORD_BOT_TOKEN: ${NOTIFICATION_DISCORD_BOT_TOKEN:?set NOTIFICATION_DISCORD_BOT_TOKEN}
-
-x-service-defaults: &service-defaults
-  init: true
-  cap_drop:
-    - ALL
-  security_opt:
-    - no-new-privileges:true
-  logging:
-    driver: json-file
-    options:
-      max-file: "5"
-      max-size: 10m
-
 services:
   db:
     image: postgres:17-bookworm@sha256:4f736ae292687621d4dbe0d499ffd024a36bd2ee7d8ca6f2ccd4c800f047b394
@@ -66,11 +27,11 @@ services:
     stop_grace_period: 60s
 
   migrate:
-    <<: *service-defaults
     image: ${MIGRATION_IMAGE:-ghcr.io/cryptnetworks/baseballstattrack-migration:latest}
     pull_policy: ${IMAGE_PULL_POLICY:-always}
     environment:
-      <<: *database-url-environment
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL:-${DATABASE_URL}}
       NODE_ENV: production
     depends_on:
       db:
@@ -78,16 +39,26 @@ services:
     networks:
       - database
     read_only: true
+    init: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-file: "5", max-size: 10m }
     tmpfs:
       - /tmp:size=64m,mode=1777
     restart: "no"
 
   app:
-    <<: *service-defaults
     image: ${APP_IMAGE:-ghcr.io/cryptnetworks/baseballstattrack:latest}
     pull_policy: ${IMAGE_PULL_POLICY:-always}
+    env_file:
+      - path: ${APP_ENV_FILE:-./app.production.env}
+        required: true
     environment:
-      <<: *application-environment
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL:-${DATABASE_URL}}
+      NODE_ENV: production
       PORT: 3000
     depends_on:
       db:
@@ -100,21 +71,27 @@ services:
       - database
       - outbound
     read_only: true
+    init: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-file: "5", max-size: 10m }
     tmpfs:
       - /tmp:size=64m,mode=1777
     restart: unless-stopped
     stop_grace_period: 30s
 
   discord-bot:
-    <<: *service-defaults
+    profiles: ["discord-bot"]
     image: ${DISCORD_BOT_IMAGE:-ghcr.io/cryptnetworks/baseballstattrack-discord-bot:latest}
     pull_policy: ${IMAGE_PULL_POLICY:-always}
     environment:
-      DISCORD_TOKEN: ${DISCORD_TOKEN:?set DISCORD_TOKEN}
-      BST_API_TOKEN: ${BST_API_TOKEN:?set BST_API_TOKEN}
-      BST_API_BASE_URL: ${BST_API_BASE_URL:?set BST_API_BASE_URL}
-      BST_WEB_BASE_URL: ${BST_WEB_BASE_URL:?set BST_WEB_BASE_URL}
-      DISCORD_TEAM_BINDINGS: ${DISCORD_TEAM_BINDINGS:?set DISCORD_TEAM_BINDINGS}
+      DISCORD_TOKEN: ${DISCORD_TOKEN:-}
+      BST_API_TOKEN: ${BST_API_TOKEN:-}
+      BST_API_BASE_URL: ${BST_API_BASE_URL:-http://app:3000}
+      BST_WEB_BASE_URL: ${BST_WEB_BASE_URL:-${NEXT_PUBLIC_SITE_URL}}
+      DISCORD_TEAM_BINDINGS: ${DISCORD_TEAM_BINDINGS:-[]}
       BST_API_TIMEOUT_SECONDS: ${BST_API_TIMEOUT_SECONDS:-8}
       HEALTH_HOST: 0.0.0.0
       HEALTH_PORT: 8080
@@ -124,8 +101,35 @@ services:
     networks:
       - outbound
     read_only: true
+    init: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-file: "5", max-size: 10m }
     tmpfs:
       - /tmp:size=32m,mode=1777
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+  cloudflare-tunnel:
+    profiles: ["cloudflare-tunnel"]
+    image: cloudflare/cloudflared:latest@sha256:e39ee8da81ad5e05d77f38d2f51c60ca51bf2a8450ac3abab50c17fdb91d91bf
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - outbound
+    read_only: true
+    init: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-file: "5", max-size: 10m }
     restart: unless-stopped
     stop_grace_period: 30s
 

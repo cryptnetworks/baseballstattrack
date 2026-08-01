@@ -21,6 +21,7 @@ scripts
 .env
 .env.*
 *.env
+*.production.env
 *.pem
 *.key
 *.crt

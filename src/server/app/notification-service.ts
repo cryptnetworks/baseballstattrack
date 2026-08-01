@@ -24,6 +24,7 @@ import {
   type ClaimedNotificationDelivery,
 } from "@/server/data/notification-repository";
 import { getPrismaClient } from "@/server/data/prisma";
+import { featureEnabled } from "@/server/config/feature-flags";
 import {
   emitOperationalEvent,
   getOperationalEventSink,
@@ -31,7 +32,8 @@ import {
 } from "@/server/observability/operational-events";
 import {
   ConfiguredNotificationDestinationResolver,
-  HttpNotificationTransport,
+  ConfiguredNotificationTransport,
+  type SmtpConfiguration,
 } from "@/server/providers/outbound-notifications";
 
 const id = z.string().trim().min(1).max(128);
@@ -384,29 +386,59 @@ export class NotificationEventPublicationService {
 }
 
 function configuredProviders() {
-  const destinations = process.env.NOTIFICATION_DESTINATIONS_JSON;
-  const emailUrl = process.env.NOTIFICATION_EMAIL_PROVIDER_URL;
-  const emailToken = process.env.NOTIFICATION_EMAIL_PROVIDER_TOKEN;
-  const discordToken = process.env.NOTIFICATION_DISCORD_BOT_TOKEN;
-  const discordApi =
-    process.env.NOTIFICATION_DISCORD_API_BASE_URL ??
-    "https://discord.com/api/v10/";
-  if (!destinations || !emailUrl || !emailToken || !discordToken) {
-    throw new NotificationError(
-      "CONFIGURATION_ERROR",
-      500,
-      "Notification delivery is unavailable.",
-    );
-  }
   try {
+    const emailEnabled = featureEnabled("FEATURE_EMAIL_NOTIFICATIONS_ENABLED");
+    const discordEnabled = featureEnabled(
+      "FEATURE_DISCORD_NOTIFICATIONS_ENABLED",
+    );
+    const enabledChannels = [
+      ...(emailEnabled ? (["EMAIL"] as const) : []),
+      ...(discordEnabled ? (["DISCORD"] as const) : []),
+    ];
+    const destinations = process.env.NOTIFICATION_DESTINATIONS_JSON ?? "{}";
+    let smtp: SmtpConfiguration | null = null;
+    if (emailEnabled) {
+      smtp = z
+        .object({
+          host: z.string().trim().min(1),
+          port: z.coerce.number().int().min(1).max(65_535),
+          secure: z
+            .string()
+            .trim()
+            .toLowerCase()
+            .transform((value) => value === "true"),
+          username: z.string().min(1),
+          password: z.string().min(1),
+          from: z.email(),
+        })
+        .parse({
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT ?? "587",
+          secure: process.env.SMTP_SECURE ?? "false",
+          username: process.env.SMTP_USERNAME,
+          password: process.env.SMTP_PASSWORD,
+          from: process.env.SMTP_FROM,
+        });
+    }
+    const discordToken = process.env.NOTIFICATION_DISCORD_BOT_TOKEN;
+    if (discordEnabled && !discordToken)
+      throw new Error("Discord is unconfigured.");
     return {
-      destinations: new ConfiguredNotificationDestinationResolver(destinations),
-      transport: new HttpNotificationTransport(
-        emailUrl,
-        emailToken,
-        discordApi,
-        discordToken,
+      destinations: new ConfiguredNotificationDestinationResolver(
+        destinations,
+        enabledChannels,
       ),
+      transport: new ConfiguredNotificationTransport({
+        smtp,
+        discord: discordEnabled
+          ? {
+              apiBase:
+                process.env.NOTIFICATION_DISCORD_API_BASE_URL ??
+                "https://discord.com/api/v10/",
+              token: discordToken!,
+            }
+          : null,
+      }),
     };
   } catch {
     throw new NotificationError(

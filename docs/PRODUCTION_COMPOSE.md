@@ -1,8 +1,9 @@
 # Production Docker Compose deployment
 
-`docker-compose.yml` is the repository's only Compose manifest. It runs the production application, its one-shot
-migration runner, PostgreSQL 17, and the read-only Discord bot. It pulls three
-matching images from public GHCR packages:
+`docker-compose.yml` is the repository's only Compose manifest. It runs the
+production application, its one-shot migration runner, PostgreSQL 17, and
+optional Discord bot and Cloudflare Tunnel services. It pulls three matching
+application images from public GHCR packages:
 
 - `ghcr.io/cryptnetworks/baseballstattrack`
 - `ghcr.io/cryptnetworks/baseballstattrack-migration`
@@ -16,24 +17,31 @@ requested tag and `sha-<full source SHA>`.
 ## Host prerequisites
 
 - A current Docker Engine and Docker Compose v2
-- A DNS name and TLS-terminating reverse proxy for the application
+- A DNS name with either a Cloudflare Tunnel or another TLS-terminating reverse
+  proxy for the application
 - A production Supabase project and OAuth configuration
 - A dedicated Discord application and least-privilege API identity
 - A protected host directory for the deployment environment file
 - A tested PostgreSQL backup and restore destination
 
-The Compose file does not install a reverse proxy or create credentials. The
-application binds to `127.0.0.1:3000` by default so an existing host proxy can
-forward HTTPS traffic without exposing Next.js or PostgreSQL directly.
+The application binds to `127.0.0.1:3000` by default so an existing host proxy
+can forward HTTPS traffic without exposing Next.js or PostgreSQL directly. The
+optional tunnel reaches the app over the Compose network and does not require a
+host port.
 
 ## Configure
 
-Copy the example outside the repository, restrict its permissions, and replace
-every placeholder:
+Copy the Compose and application examples outside the repository, restrict
+their permissions, and replace every placeholder:
 
 ```sh
 install -m 600 compose.production.env.example /etc/baseballstattrack/production.env
+install -m 600 app.production.env.example /etc/baseballstattrack/app.env
 ```
+
+Set `APP_ENV_FILE=/etc/baseballstattrack/app.env` in `production.env`. Compose
+injects that file only into the application container; the bot and tunnel do
+not receive SMTP, Supabase, webhook, or application worker credentials.
 
 `POSTGRES_PASSWORD` contains the raw database password. If it contains URL
 reserved characters, percent-encode them in `DATABASE_URL` and `DIRECT_URL`.
@@ -44,11 +52,24 @@ dedicated identity with only the exact-team `report.view` grant. The bot's API
 and web URLs must be the public HTTPS application origin; the bot never joins
 the database network or reads database credentials.
 
-`CALENDAR_SYNC_WORKER_TOKEN` authenticates the private calendar worker route.
-`CALENDAR_PROVIDER_TOKENS_JSON` is a managed-secret JSON object keyed by the
-non-secret credential references stored on calendar connections. Restrict both
-values to the application and scheduler; never put provider tokens in a
-connection row, request body, log, or support artifact.
+`FEATURE_ICS_CALENDAR_ENABLED` enables the pull-only calendar feed.
+`ICS_FEED_SIGNING_KEY` signs its subscription URLs and must be at least 32
+random characters. `ICS_FEED_DETAIL_LEVEL` is `private`, `opponent`, or `full`.
+
+Email and Discord notifications are independently controlled by
+`FEATURE_EMAIL_NOTIFICATIONS_ENABLED` and
+`FEATURE_DISCORD_NOTIFICATIONS_ENABLED`. Email uses only `SMTP_HOST`,
+`SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`.
+Disabled channels do not require their provider credentials.
+
+Optional containers use Compose profiles. Set `COMPOSE_PROFILES=discord-bot`
+for only the bot, `COMPOSE_PROFILES=cloudflare-tunnel` for only the tunnel, or a
+comma-separated list for both. With no profiles, only PostgreSQL, migration,
+and the application run.
+
+For the tunnel, create a remotely managed tunnel in Cloudflare, configure its
+public hostname service as `http://app:3000`, and copy its token to
+`CLOUDFLARE_TUNNEL_TOKEN`. No Cloudflare credentials are placed in the app.
 
 For reproducible deployments, set `APP_IMAGE`, `MIGRATION_IMAGE`, and
 `DISCORD_BOT_IMAGE` to the same `sha-<full source SHA>` tag after initial
@@ -72,8 +93,9 @@ docker compose \
 
 Compose waits for PostgreSQL, runs `prisma migrate deploy` once, waits for that
 container to exit successfully, starts the app, waits for `/api/ready`, and
-then starts the Discord bot. A migration failure prevents the application and
-bot from starting. Application startup never applies migrations itself.
+then starts whichever optional profiles are enabled. A migration failure
+prevents the application and dependent services from starting. Application
+startup never applies migrations itself.
 
 Confirm the deployed services and safe health endpoints:
 
