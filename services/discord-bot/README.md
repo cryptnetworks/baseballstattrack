@@ -61,6 +61,11 @@ unsafe configuration.
    UUIDs to `DISCORD_TEAM_BINDINGS`.
 5. Start the bot. Commands are synchronized only into configured guilds.
 
+The web onboarding flow uses the same Discord application and keeps its bot
+token in application deployment secrets. See
+[`docs/DISCORD_INSTALLATION_AND_ONBOARDING.md`](../../docs/DISCORD_INSTALLATION_AND_ONBOARDING.md).
+It never exposes that token to the browser or stores it in PostgreSQL.
+
 ## Local development
 
 Install [uv](https://docs.astral.sh/uv/), then run:

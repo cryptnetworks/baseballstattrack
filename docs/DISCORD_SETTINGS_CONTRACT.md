@@ -2,9 +2,12 @@
 
 Issue #109 defines the tenant-scoped contract shared by the Discord bot and the
 future web control plane. It stores no delivery work and does not change the
-bot's current read-only command behavior. Installation (#110), permissions
-(#117), routing UI (#112), tracked-scope UI (#120), schedules (#118), message
-strategy (#115), and workers (#119) consume this contract in later issues.
+bot's current read-only command behavior. Installation and onboarding are
+defined in
+[`DISCORD_INSTALLATION_AND_ONBOARDING.md`](DISCORD_INSTALLATION_AND_ONBOARDING.md).
+Permissions (#117), routing UI (#112), tracked-scope UI (#120), schedules
+(#118), message strategy (#115), and workers (#119) consume this contract in
+later issues.
 
 ## Ownership boundaries
 
@@ -54,7 +57,7 @@ version-1 row in place.
 ## Administration API
 
 `GET /api/admin/discord-settings?accountId=...&installationId=...` requires
-exact Account `account.manage` authority. It returns installation identity and
+exact Account `discord.settings.view` authority. It returns installation identity and
 settings with `Cache-Control: no-store` and an ETag containing the revision.
 
 `POST /api/admin/discord-settings` is same-origin protected and accepts either:
