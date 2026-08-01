@@ -220,6 +220,7 @@ export class DiscordCadenceService {
           ({ destinationId, purposes }) => ({ destinationId, purposes }),
         ),
         triggers: current.settings.triggers,
+        messageStrategy: current.settings.messageStrategy,
         messageFormat: current.settings.messageFormat,
       },
       actor,

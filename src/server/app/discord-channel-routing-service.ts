@@ -158,6 +158,7 @@ export class DiscordChannelRoutingService {
         digest: current.settings.digest,
         catchUpPolicy: current.settings.catchUpPolicy,
         triggers: current.settings.triggers,
+        messageStrategy: current.settings.messageStrategy,
         messageFormat: current.settings.messageFormat,
         quietHours: current.settings.quietHours,
         reasonCode: "CHANNEL_ROUTING_UPDATED",

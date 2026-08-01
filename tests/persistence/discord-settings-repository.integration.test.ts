@@ -183,7 +183,12 @@ integration("Discord settings persistence", () => {
     },
     digest: { enabled: true, minute: 540 },
     catchUpPolicy: "LATEST_ONLY" as const,
-    triggers: ["SCORE_CHANGED" as const, "GAME_COMPLETED" as const],
+    triggers: [
+      "SCORE_CHANGED" as const,
+      "GAME_COMPLETED" as const,
+      "GAME_CORRECTED" as const,
+    ],
+    messageStrategy: "EDIT_LIVE_MESSAGE" as const,
     messageFormat: "COMPACT" as const,
     quietHours: {
       enabled: true,
@@ -227,6 +232,7 @@ integration("Discord settings persistence", () => {
           gameDayWindow: { enabled: true },
           digest: { enabled: true, minute: 540 },
           catchUpPolicy: "LATEST_ONLY",
+          messageStrategy: "EDIT_LIVE_MESSAGE",
           nextScheduledEvaluationAt: expect.any(Date),
         },
       },
@@ -235,6 +241,13 @@ integration("Discord settings persistence", () => {
       where: { accountId: accountA, action: "discord.settings.update" },
     });
     expect(JSON.stringify(audit.metadata)).not.toContain(guildA);
+    expect(audit.metadata).toMatchObject({
+      after: {
+        triggerCount: 3,
+        messageStrategy: "EDIT_LIVE_MESSAGE",
+        messageFormat: "COMPACT",
+      },
+    });
     expect(JSON.stringify(audit.metadata)).not.toContain(channelA);
     expect(JSON.stringify(audit.metadata)).not.toMatch(
       /discord\/installations|discord\/channels|credential/iu,
@@ -378,6 +391,7 @@ integration("Discord settings persistence", () => {
       destinations: [],
       cadenceSeconds: 300,
       triggers: ["GAME_COMPLETED", "GAME_VERIFIED", "GAME_CORRECTED"],
+      messageStrategy: "FINAL_ONLY",
       messageFormat: "STANDARD",
       quietHours: {
         enabled: false,
@@ -397,6 +411,7 @@ integration("Discord settings persistence", () => {
           trackedScopes: [],
           destinations: [],
           cadenceSeconds: 300,
+          messageStrategy: "FINAL_ONLY",
           pausedAt: null,
           manualRefreshRequestedAt: null,
           nextScheduledEvaluationAt: null,

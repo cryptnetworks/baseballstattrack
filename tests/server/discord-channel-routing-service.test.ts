@@ -56,7 +56,8 @@ const configuration = {
     gameDayWindow: { enabled: false, startMinute: 480, endMinute: 1_380 },
     digest: { enabled: false, minute: 540 },
     catchUpPolicy: "LATEST_ONLY" as const,
-    triggers: ["SCORE_CHANGED"],
+    triggers: ["SCORE_CHANGED", "GAME_CORRECTED"],
+    messageStrategy: "EDIT_LIVE_MESSAGE",
     messageFormat: "STANDARD",
     quietHours: {
       enabled: false,

@@ -104,6 +104,7 @@ describe("relational domain schema", () => {
       "digestEnabled",
       "catchUpPolicy",
       "triggers",
+      "messageStrategy",
       "messageFormat",
       "quietHoursEnabled",
       "pausedAt",

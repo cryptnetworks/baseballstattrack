@@ -11,11 +11,20 @@ export const discordMessageFormats = [
   "STANDARD",
   "DETAILED",
 ] as const;
+export const discordMessageStrategies = [
+  "EDIT_LIVE_MESSAGE",
+  "APPEND_EVENTS",
+  "PERIODIC_SUMMARY",
+  "FINAL_ONLY",
+] as const;
 export const discordUpdateTriggers = [
   "GAME_SCHEDULED",
   "GAME_STARTED",
   "SCORE_CHANGED",
+  "LEAD_CHANGED",
+  "SCORING_PLAY",
   "INNING_ENDED",
+  "PITCHING_CHANGED",
   "GAME_COMPLETED",
   "GAME_VERIFIED",
   "GAME_CORRECTED",
@@ -32,6 +41,7 @@ export const discordDestinationPurposes = [
 ] as const;
 
 export type DiscordMessageFormat = (typeof discordMessageFormats)[number];
+export type DiscordMessageStrategy = (typeof discordMessageStrategies)[number];
 export type DiscordUpdateTrigger = (typeof discordUpdateTriggers)[number];
 export type DiscordDestinationPurpose =
   (typeof discordDestinationPurposes)[number];
@@ -111,6 +121,7 @@ export const discordSettingsUpdateSchema = z
       .array(z.enum(discordUpdateTriggers))
       .min(1)
       .max(discordUpdateTriggers.length),
+    messageStrategy: z.enum(discordMessageStrategies).default("FINAL_ONLY"),
     messageFormat: z.enum(discordMessageFormats),
     quietHours: z
       .object({
@@ -148,6 +159,13 @@ export const discordSettingsUpdateSchema = z
         code: "custom",
         path: ["triggers"],
         message: "Discord update triggers must be unique.",
+      });
+    }
+    for (const issue of discordContentPolicyErrors(value)) {
+      context.addIssue({
+        code: "custom",
+        path: issue.path,
+        message: issue.message,
       });
     }
     if (value.quietHours.startMinute === value.quietHours.endMinute) {
@@ -216,6 +234,7 @@ export const discordSettingsDefaults = Object.freeze({
     "GAME_VERIFIED",
     "GAME_CORRECTED",
   ] as const satisfies readonly DiscordUpdateTrigger[],
+  messageStrategy: "FINAL_ONLY" as const,
   messageFormat: "STANDARD" as const,
   quietHours: Object.freeze({
     enabled: false,
@@ -228,3 +247,30 @@ export const discordSettingsDefaults = Object.freeze({
   nextScheduledEvaluationAt: null,
   lastSuccessfulUpdateAt: null,
 });
+
+export function discordContentPolicyErrors(input: {
+  messageStrategy: DiscordMessageStrategy;
+  triggers: readonly DiscordUpdateTrigger[];
+}) {
+  const errors: { path: ["triggers"]; message: string }[] = [];
+  if (!input.triggers.includes("GAME_CORRECTED")) {
+    errors.push({
+      path: ["triggers"],
+      message:
+        "Discord correction updates are required so published game state cannot remain misleading.",
+    });
+  }
+  if (
+    input.messageStrategy === "FINAL_ONLY" &&
+    !input.triggers.some((trigger) =>
+      ["GAME_COMPLETED", "GAME_VERIFIED", "REPORT_READY"].includes(trigger),
+    )
+  ) {
+    errors.push({
+      path: ["triggers"],
+      message:
+        "Final-only delivery requires a completed, verified, or report-ready trigger.",
+    });
+  }
+  return errors;
+}

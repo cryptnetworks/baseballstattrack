@@ -118,6 +118,7 @@ export class DiscordSettingsService {
       digest: { ...discordSettingsDefaults.digest },
       catchUpPolicy: discordSettingsDefaults.catchUpPolicy,
       triggers: [...discordSettingsDefaults.triggers],
+      messageStrategy: discordSettingsDefaults.messageStrategy,
       messageFormat: discordSettingsDefaults.messageFormat,
       quietHours: { ...discordSettingsDefaults.quietHours },
       actor,

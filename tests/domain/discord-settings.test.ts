@@ -26,7 +26,12 @@ function update() {
     gameDayWindow: { enabled: true, startMinute: 480, endMinute: 1_380 },
     digest: { enabled: true, minute: 540 },
     catchUpPolicy: "LATEST_ONLY" as const,
-    triggers: ["SCORE_CHANGED" as const, "GAME_COMPLETED" as const],
+    triggers: [
+      "SCORE_CHANGED" as const,
+      "GAME_COMPLETED" as const,
+      "GAME_CORRECTED" as const,
+    ],
+    messageStrategy: "EDIT_LIVE_MESSAGE" as const,
     messageFormat: "COMPACT" as const,
     quietHours: {
       enabled: true,
@@ -50,6 +55,7 @@ describe("Discord settings contract", () => {
       gameDayWindow: { enabled: false },
       digest: { enabled: false },
       catchUpPolicy: "LATEST_ONLY",
+      messageStrategy: "FINAL_ONLY",
       messageFormat: "STANDARD",
       quietHours: { enabled: false, timeZone: "UTC" },
     });
@@ -65,13 +71,31 @@ describe("Discord settings contract", () => {
     delete (legacy as Partial<typeof legacy>).gameDayWindow;
     delete (legacy as Partial<typeof legacy>).digest;
     delete (legacy as Partial<typeof legacy>).catchUpPolicy;
+    delete (legacy as Partial<typeof legacy>).messageStrategy;
     expect(discordSettingsUpdateSchema.parse(legacy)).toMatchObject({
       cadenceMode: "FIXED_INTERVAL",
       cadenceSeconds: 60,
       gameDayWindow: { enabled: false, startMinute: 480, endMinute: 1_380 },
       digest: { enabled: false, minute: 540 },
       catchUpPolicy: "LATEST_ONLY",
+      messageStrategy: "FINAL_ONLY",
     });
+  });
+
+  it("requires correction-safe content and a terminal final-only trigger", () => {
+    expect(() =>
+      discordSettingsUpdateSchema.parse({
+        ...update(),
+        triggers: ["SCORE_CHANGED", "GAME_COMPLETED"],
+      }),
+    ).toThrow("correction updates are required");
+    expect(() =>
+      discordSettingsUpdateSchema.parse({
+        ...update(),
+        messageStrategy: "FINAL_ONLY",
+        triggers: ["SCORE_CHANGED", "GAME_CORRECTED"],
+      }),
+    ).toThrow("Final-only delivery requires");
   });
 
   it("rejects enablement without scope or destination", () => {

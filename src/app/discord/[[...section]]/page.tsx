@@ -8,6 +8,7 @@ import { DiscordCadencePanel } from "@/components/discord/discord-cadence-panel"
 import { DiscordSettingsFeedback } from "@/components/discord/discord-settings-feedback";
 import { DiscordSettingsShell } from "@/components/discord/discord-settings-shell";
 import { DiscordTrackedScopesPanel } from "@/components/discord/discord-tracked-scopes-panel";
+import { DiscordUpdateContentPanel } from "@/components/discord/discord-update-content-panel";
 import { discordSettingsSectionSchema } from "@/domain/discord-settings-navigation";
 import { getDiscordInstallationService } from "@/server/app/discord-installation-service";
 import { getDiscordChannelRoutingService } from "@/server/app/discord-channel-routing-service";
@@ -205,13 +206,34 @@ export default async function DiscordSettingsPage({
               />
             ) : null}
             {cadenceWorkspace ? (
-              <DiscordCadencePanel
-                accountId={workspace.selectedAccountId!}
-                {...(search.error ? { error: search.error } : {})}
-                installationId={workspace.selectedInstallationId!}
-                {...(search.notice ? { notice: search.notice } : {})}
-                settings={cadenceWorkspace.settings}
-              />
+              <>
+                <DiscordCadencePanel
+                  accountId={workspace.selectedAccountId!}
+                  {...(search.error?.startsWith("content-")
+                    ? {}
+                    : search.error
+                      ? { error: search.error }
+                      : {})}
+                  installationId={workspace.selectedInstallationId!}
+                  {...(search.notice?.startsWith("content-")
+                    ? {}
+                    : search.notice
+                      ? { notice: search.notice }
+                      : {})}
+                  settings={cadenceWorkspace.settings}
+                />
+                <DiscordUpdateContentPanel
+                  accountId={workspace.selectedAccountId!}
+                  {...(search.error?.startsWith("content-")
+                    ? { error: search.error }
+                    : {})}
+                  installationId={workspace.selectedInstallationId!}
+                  {...(search.notice?.startsWith("content-")
+                    ? { notice: search.notice }
+                    : {})}
+                  settings={cadenceWorkspace.settings}
+                />
+              </>
             ) : null}
           </div>
         ) : undefined}

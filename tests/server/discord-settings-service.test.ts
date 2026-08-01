@@ -46,7 +46,8 @@ function update() {
     gameDayWindow: { enabled: false, startMinute: 480, endMinute: 1_380 },
     digest: { enabled: false, minute: 540 },
     catchUpPolicy: "LATEST_ONLY" as const,
-    triggers: ["SCORE_CHANGED" as const],
+    triggers: ["SCORE_CHANGED" as const, "GAME_CORRECTED" as const],
+    messageStrategy: "EDIT_LIVE_MESSAGE" as const,
     messageFormat: "STANDARD" as const,
     quietHours: {
       enabled: false,
@@ -76,7 +77,8 @@ const configuration = {
     gameDayWindow: { enabled: false, startMinute: 480, endMinute: 1_380 },
     digest: { enabled: false, minute: 540 },
     catchUpPolicy: "LATEST_ONLY" as const,
-    triggers: ["SCORE_CHANGED"],
+    triggers: ["SCORE_CHANGED", "GAME_CORRECTED"],
+    messageStrategy: "EDIT_LIVE_MESSAGE",
     messageFormat: "STANDARD",
     quietHours: {
       enabled: false,
@@ -161,6 +163,7 @@ describe("Discord settings administration", () => {
         trackedScopes: [],
         destinations: [],
         cadenceSeconds: 300,
+        messageStrategy: "FINAL_ONLY",
         messageFormat: "STANDARD",
         auditAction: "reset",
         reasonCode: "OPERATOR_RESET",
