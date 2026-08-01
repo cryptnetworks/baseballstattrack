@@ -156,7 +156,7 @@ integration("Discord settings persistence", () => {
     destinations: [
       {
         destinationId: destinationA,
-        purposes: ["LIVE_UPDATES" as const, "REPORTS" as const],
+        purposes: ["LIVE_UPDATES" as const, "SUMMARIES" as const],
       },
     ],
     cadenceSeconds: 60,
@@ -198,7 +198,7 @@ integration("Discord settings persistence", () => {
             {
               destinationId: destinationA,
               channelReference: "discord/channels/a-live",
-              purposes: ["LIVE_UPDATES", "REPORTS"],
+              purposes: ["LIVE_UPDATES", "SUMMARIES"],
             },
           ],
         },

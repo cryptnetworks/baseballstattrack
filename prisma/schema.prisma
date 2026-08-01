@@ -286,8 +286,11 @@ enum DiscordUpdateTrigger {
 
 enum DiscordDestinationPurpose {
   LIVE_UPDATES
-  REPORTS
-  OPERATIONS
+  FINAL_SCORES
+  CORRECTIONS
+  SUMMARIES
+  ERRORS
+  DIGESTS
 }
 
 enum DiscordControlAction {
@@ -1570,6 +1573,9 @@ model DiscordChannelDestination {
   channelReference String
   displayName    String?
   enabled        Boolean  @default(true)
+  canView        Boolean  @default(true)
+  canSend        Boolean  @default(true)
+  lastVerifiedAt DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -1581,7 +1587,7 @@ model DiscordChannelDestination {
   @@unique([accountId, externalId])
   @@unique([installationId, channelId])
   @@unique([installationId, channelReference])
-  @@index([accountId, installationId, enabled])
+  @@index([accountId, installationId, enabled, canView, canSend])
 }
 
 model DiscordIntegrationSettings {
