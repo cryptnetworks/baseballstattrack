@@ -37,7 +37,7 @@ Exit criteria: a documented production release can be deployed, monitored, rolle
 
 ## M5 — Integrations and ecosystem
 
-Turn the versioned statistics API, Discord bot, webhooks, calendar synchronization, notifications, and exports into a safe integration surface.
+Turn the versioned statistics API, Discord bot, webhooks, pull-only calendar feeds, notifications, and exports into a safe integration surface.
 
 Exit criteria: at least one external consumer uses a documented read contract; credentials, quotas, privacy, retries, deprecation, and support workflows are operational.
 
@@ -47,8 +47,8 @@ Primary epic: [#97](https://github.com/cryptnetworks/baseballstattrack/issues/97
 The accepted production trust tiers, surface ownership, onboarding,
 credentials, quotas, compatibility, deprecation, and support contract are in
 [Integrations and partner API program](INTEGRATIONS_AND_PARTNER_API_PROGRAM.md).
-The implemented Account-scoped, one-way external calendar contract is in
-[Calendar synchronization](CALENDAR_SYNCHRONIZATION.md).
+The implemented Account-scoped, pull-only ICS contract is in
+[Calendar feeds](CALENDAR_SYNCHRONIZATION.md).
 
 Primary issues: #73, #91–#99, #108–#121.
 

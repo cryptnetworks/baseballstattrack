@@ -47,7 +47,7 @@ partner registration, and third-party score mutation are unsupported.
 | Durable outbound webhooks     | Integrations  | Application/platform  | Security               | Integrations      | `WEBHOOKS.md`, strict event envelopes, signing and replay rules                                  |
 | Discord statistics consumer   | Integrations  | Discord service owner | Security/privacy       | Integrations      | `services/discord-bot/README.md`, API v1 consumer tests                                          |
 | Account export/import dry run | Data          | Application/data      | Security/privacy       | Data              | `DATA_EXPORT_AND_IMPORT.md`, canonical manifest and replay validation                            |
-| Calendar synchronization      | Integrations  | Application/platform  | Security/privacy       | Integrations      | M5 issue #98; game schedule remains authoritative                                                |
+| Pull-only ICS calendar feeds  | Integrations  | Application/platform  | Security/privacy       | Integrations      | M5 issue #98; game schedule remains authoritative                                                |
 | Outbound user notifications   | Integrations  | Application/platform  | Security/privacy       | Integrations      | M5 issue #99; versioned source event and recipient preferences                                   |
 | External provider ingestion   | Data          | Data/platform         | Security/privacy/legal | Data              | `EXTERNAL_DATA_INGESTION.md`; written provider approval, staging, provenance, and reconciliation |
 
@@ -209,7 +209,7 @@ A consumer is production-ready only when:
 - the exact artifact and contract versions pass the release workflow.
 
 The reference Discord consumer satisfies the documented read-contract and
-repeatable compatibility requirements. Calendar synchronization, outbound
+repeatable compatibility requirements. Pull-only calendar feeds, outbound
 notifications, and the Discord configuration control plane remain separate M5
 delivery issues and cannot claim production readiness from this program
 document alone.

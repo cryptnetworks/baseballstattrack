@@ -1,3 +1,4 @@
+import nodemailer, { type Transporter } from "nodemailer";
 import { z } from "zod";
 
 import {
@@ -32,16 +33,25 @@ function providerUrl(value: string, name: string): URL {
 
 export class ConfiguredNotificationDestinationResolver implements NotificationDestinationResolver {
   private readonly destinations: z.infer<typeof destinationConfigurationSchema>;
+  private readonly enabledChannels: ReadonlySet<NotificationChannel>;
 
-  constructor(encodedConfiguration: string) {
+  constructor(
+    encodedConfiguration: string,
+    enabledChannels: readonly NotificationChannel[] = notificationChannels,
+  ) {
     this.destinations = destinationConfigurationSchema.parse(
       JSON.parse(encodedConfiguration),
     );
+    this.enabledChannels = new Set(enabledChannels);
   }
 
   resolve(reference: string, expectedChannel: NotificationChannel) {
     const destination = this.destinations[reference];
-    if (!destination || destination.channel !== expectedChannel) {
+    if (
+      !this.enabledChannels.has(expectedChannel) ||
+      !destination ||
+      destination.channel !== expectedChannel
+    ) {
       throw new NotificationProviderError("DESTINATION_UNAVAILABLE", false);
     }
     return destination;
@@ -49,29 +59,53 @@ export class ConfiguredNotificationDestinationResolver implements NotificationDe
 }
 
 type Fetch = typeof fetch;
+type Mailer = Pick<Transporter, "sendMail">;
 
-export class HttpNotificationTransport implements NotificationTransport {
-  private readonly emailEndpoint: URL;
-  private readonly discordApiBase: URL;
+export type SmtpConfiguration = Readonly<{
+  host: string;
+  port: number;
+  secure: boolean;
+  username: string;
+  password: string;
+  from: string;
+}>;
+
+export class ConfiguredNotificationTransport implements NotificationTransport {
+  private readonly discordApiBase: URL | null;
+  private readonly mailer: Mailer | null;
 
   constructor(
-    emailEndpoint: string,
-    private readonly emailToken: string,
-    discordApiBase: string,
-    private readonly discordToken: string,
+    private readonly configuration: {
+      smtp: SmtpConfiguration | null;
+      discord: { apiBase: string; token: string } | null;
+    },
     private readonly fetcher: Fetch = fetch,
+    mailer?: Mailer,
   ) {
-    this.emailEndpoint = providerUrl(
-      emailEndpoint,
-      "NOTIFICATION_EMAIL_PROVIDER_URL",
-    );
-    this.discordApiBase = providerUrl(
-      discordApiBase,
-      "NOTIFICATION_DISCORD_API_BASE_URL",
-    );
-    if (emailToken.length < 16 || discordToken.length < 16) {
-      throw new Error("Notification provider credentials are unavailable.");
+    this.discordApiBase = configuration.discord
+      ? providerUrl(
+          configuration.discord.apiBase,
+          "NOTIFICATION_DISCORD_API_BASE_URL",
+        )
+      : null;
+    if (configuration.discord && configuration.discord.token.length < 16) {
+      throw new Error("Discord notification credentials are unavailable.");
     }
+    this.mailer = configuration.smtp
+      ? (mailer ??
+        nodemailer.createTransport({
+          host: configuration.smtp.host,
+          port: configuration.smtp.port,
+          secure: configuration.smtp.secure,
+          auth: {
+            user: configuration.smtp.username,
+            pass: configuration.smtp.password,
+          },
+          connectionTimeout: 10_000,
+          greetingTimeout: 10_000,
+          socketTimeout: 15_000,
+        }))
+      : null;
   }
 
   async send(input: {
@@ -84,43 +118,76 @@ export class HttpNotificationTransport implements NotificationTransport {
     if (!notificationChannels.includes(input.channel)) {
       throw new NotificationProviderError("DESTINATION_UNAVAILABLE", false);
     }
-    const request =
-      input.channel === "EMAIL"
-        ? {
-            url: this.emailEndpoint,
-            token: `Bearer ${this.emailToken}`,
-            body: {
-              to: input.destination,
-              subject: input.message.subject,
-              text: input.message.text,
-              idempotencyKey: input.idempotencyKey,
-            },
-          }
-        : {
-            url: new URL(
-              `channels/${encodeURIComponent(input.destination)}/messages`,
-              this.discordApiBase.toString().replace(/\/?$/u, "/"),
-            ),
-            token: `Bot ${this.discordToken}`,
-            body: {
-              content: `**${input.message.subject}**\n${input.message.text}`,
-              nonce: input.idempotencyKey,
-              enforce_nonce: true,
-              allowed_mentions: { parse: [] },
-            },
-          };
+    if (input.channel === "EMAIL") return this.sendEmail(input);
+    return this.sendDiscord(input);
+  }
 
+  private async sendEmail(input: {
+    destination: string;
+    idempotencyKey: string;
+    message: NotificationMessage;
+  }) {
+    const smtp = this.configuration.smtp;
+    if (!smtp || !this.mailer) {
+      throw new NotificationProviderError("DESTINATION_UNAVAILABLE", false);
+    }
+    try {
+      await this.mailer.sendMail({
+        from: smtp.from,
+        to: input.destination,
+        subject: input.message.subject,
+        text: input.message.text,
+        messageId: `<${input.idempotencyKey}@baseballstattrack.local>`,
+        headers: { "X-Baseball-Stat-Track-Delivery": input.idempotencyKey },
+      });
+      return { status: 250 };
+    } catch (error) {
+      const smtpError = error as { code?: string; responseCode?: number };
+      if (smtpError.code === "EAUTH") {
+        throw new NotificationProviderError("AUTHENTICATION_FAILED", false);
+      }
+      if (
+        smtpError.responseCode === 421 ||
+        (smtpError.responseCode !== undefined &&
+          smtpError.responseCode >= 450 &&
+          smtpError.responseCode <= 452) ||
+        ["ECONNECTION", "ESOCKET", "ETIMEDOUT"].includes(smtpError.code ?? "")
+      ) {
+        throw new NotificationProviderError("PROVIDER_UNAVAILABLE", true);
+      }
+      throw new NotificationProviderError("DESTINATION_UNAVAILABLE", false);
+    }
+  }
+
+  private async sendDiscord(input: {
+    destination: string;
+    idempotencyKey: string;
+    message: NotificationMessage;
+    timeoutMs: number;
+  }) {
+    if (!this.configuration.discord || !this.discordApiBase) {
+      throw new NotificationProviderError("DESTINATION_UNAVAILABLE", false);
+    }
+    const url = new URL(
+      `channels/${encodeURIComponent(input.destination)}/messages`,
+      this.discordApiBase.toString().replace(/\/?$/u, "/"),
+    );
     let response: Response;
     try {
-      response = await this.fetcher(request.url, {
+      response = await this.fetcher(url, {
         method: "POST",
         headers: {
-          Authorization: request.token,
+          Authorization: `Bot ${this.configuration.discord.token}`,
           "Content-Type": "application/json",
           "Idempotency-Key": input.idempotencyKey,
           "User-Agent": "BaseballStatTrack-Notifications/1",
         },
-        body: JSON.stringify(request.body),
+        body: JSON.stringify({
+          content: `**${input.message.subject}**\n${input.message.text}`,
+          nonce: input.idempotencyKey,
+          enforce_nonce: true,
+          allowed_mentions: { parse: [] },
+        }),
         signal: AbortSignal.timeout(input.timeoutMs),
       });
     } catch {
