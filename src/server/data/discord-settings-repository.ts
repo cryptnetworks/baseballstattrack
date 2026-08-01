@@ -138,6 +138,7 @@ function settingsView(installation: InstallationWithSettings) {
           },
           catchUpPolicy: stored.catchUpPolicy,
           triggers: [...stored.triggers],
+          messageStrategy: stored.messageStrategy,
           messageFormat: stored.messageFormat,
           quietHours: {
             enabled: stored.quietHoursEnabled,
@@ -169,6 +170,7 @@ function auditSummary(input: {
   digest: { enabled: boolean; minute: number };
   catchUpPolicy: string;
   triggers: readonly string[];
+  messageStrategy: string;
   messageFormat: string;
   quietHours: { enabled: boolean; timeZone: string };
   trackedScopes: readonly unknown[];
@@ -183,6 +185,7 @@ function auditSummary(input: {
     digestMinute: input.digest.minute,
     catchUpPolicy: input.catchUpPolicy,
     triggerCount: input.triggers.length,
+    messageStrategy: input.messageStrategy,
     messageFormat: input.messageFormat,
     quietHoursEnabled: input.quietHours.enabled,
     quietTimeZone: input.quietHours.timeZone,
@@ -361,6 +364,7 @@ export class PrismaDiscordSettingsRepository {
           digestMinute: input.digest.minute,
           catchUpPolicy: input.catchUpPolicy,
           triggers: input.triggers,
+          messageStrategy: input.messageStrategy,
           messageFormat: input.messageFormat,
           quietHoursEnabled: input.quietHours.enabled,
           quietStartMinute: input.quietHours.startMinute,
@@ -460,6 +464,7 @@ export class PrismaDiscordSettingsRepository {
                     },
                     catchUpPolicy: current.catchUpPolicy,
                     triggers: current.triggers,
+                    messageStrategy: current.messageStrategy,
                     messageFormat: current.messageFormat,
                     quietHours: {
                       enabled: current.quietHoursEnabled,

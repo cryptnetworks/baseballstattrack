@@ -6,8 +6,10 @@ bot's current read-only command behavior. Installation and onboarding are
 defined in
 [`DISCORD_INSTALLATION_AND_ONBOARDING.md`](DISCORD_INSTALLATION_AND_ONBOARDING.md).
 Permissions (#117), routing UI (#112), tracked-scope UI (#120), and schedules
-(#118) extend this contract. Message strategy (#115) and workers (#119) consume
-it in later issues.
+(#118) extend this contract. Update triggers, message strategy, correction
+presentation, and payload budgets (#115) are defined in
+[`DISCORD_UPDATE_CONTENT.md`](DISCORD_UPDATE_CONTENT.md). Workers (#119)
+consume the combined contract.
 
 The authorized web shell and its navigation/state contract are defined in
 [`DISCORD_SETTINGS_WEB_UI.md`](DISCORD_SETTINGS_WEB_UI.md).
@@ -32,7 +34,7 @@ tokens are never stored in PostgreSQL.
 
 `DiscordIntegrationSettings` is the user-editable record. It links to one
 installation and contains schema version, optimistic revision, enablement,
-cadence, triggers, message format, and quiet hours. Normalized child records
+cadence, triggers, message strategy, message format, and quiet hours. Normalized child records
 link settings to exact Account-owned `TeamSeason` rows and enabled destinations
 from the same installation. Composite foreign keys reject cross-Account or
 cross-server references even if application validation is bypassed.
@@ -48,12 +50,13 @@ defaults:
 
 - disabled;
 - no tracked team-season scopes or destinations;
-- 300-second cadence;
+- fixed five-minute cadence;
 - game completed, verified, and corrected triggers;
+- final-only message strategy;
 - standard formatting; and
 - quiet hours disabled, with a dormant 22:00–07:00 UTC window.
 
-Cadence is bounded from 15 seconds through 24 hours. Triggers, scopes,
+Cadence is bounded from 60 seconds through 60 minutes. Triggers, scopes,
 destinations, and destination purposes must be unique. Quiet-hour minutes are
 0–1439, start and end must differ, and the time zone must be recognized by the
 IANA time-zone implementation. At most 50 team-season scopes and 20 channel
@@ -98,8 +101,9 @@ the Account becomes unavailable. A disconnected or revoked installation may be
 inspected or reset but cannot be enabled. Database constraints preserve
 lifecycle and immutable identity; application rollback is roll-forward and
 does not reverse migrations `20260731230000_discord_settings_contract`,
-`20260801040000_discord_channel_routing`, or
-`20260801050000_discord_update_cadence` after configuration exists.
+`20260801040000_discord_channel_routing`,
+`20260801050000_discord_update_cadence`, or
+`20260801060000_discord_update_content` after configuration exists.
 
 The Python bot continues to use deployment configuration until #119 introduces
 an authenticated, version-aware configuration consumer. No process should read

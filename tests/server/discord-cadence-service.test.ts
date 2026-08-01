@@ -69,7 +69,8 @@ function configuration(enabled = true) {
       gameDayWindow: { enabled: false, startMinute: 480, endMinute: 1_380 },
       digest: { enabled: false, minute: 540 },
       catchUpPolicy: "LATEST_ONLY" as const,
-      triggers: ["SCORE_CHANGED" as const],
+      triggers: ["SCORE_CHANGED" as const, "GAME_CORRECTED" as const],
+      messageStrategy: "EDIT_LIVE_MESSAGE" as const,
       messageFormat: "STANDARD" as const,
       quietHours: {
         enabled: false,
@@ -123,7 +124,8 @@ describe("Discord cadence administration", () => {
         cadenceMode: "EVENT_DRIVEN",
         trackedScopes: current.settings.trackedScopes,
         destinations: [expect.objectContaining({ purposes: ["LIVE_UPDATES"] })],
-        triggers: ["SCORE_CHANGED"],
+        triggers: ["SCORE_CHANGED", "GAME_CORRECTED"],
+        messageStrategy: "EDIT_LIVE_MESSAGE",
         reasonCode: "UPDATE_SCHEDULE_CHANGED",
       }),
     );

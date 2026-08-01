@@ -272,11 +272,21 @@ enum DiscordMessageFormat {
   DETAILED
 }
 
+enum DiscordMessageStrategy {
+  EDIT_LIVE_MESSAGE
+  APPEND_EVENTS
+  PERIODIC_SUMMARY
+  FINAL_ONLY
+}
+
 enum DiscordUpdateTrigger {
   GAME_SCHEDULED
   GAME_STARTED
   SCORE_CHANGED
+  LEAD_CHANGED
+  SCORING_PLAY
   INNING_ENDED
+  PITCHING_CHANGED
   GAME_COMPLETED
   GAME_VERIFIED
   GAME_CORRECTED
@@ -1618,6 +1628,7 @@ model DiscordIntegrationSettings {
   digestMinute       Int                   @default(540)
   catchUpPolicy      DiscordCatchUpPolicy  @default(LATEST_ONLY)
   triggers          DiscordUpdateTrigger[]  @default([GAME_COMPLETED, GAME_VERIFIED, GAME_CORRECTED])
+  messageStrategy   DiscordMessageStrategy @default(FINAL_ONLY)
   messageFormat     DiscordMessageFormat   @default(STANDARD)
   quietHoursEnabled Boolean                @default(false)
   quietStartMinute  Int                    @default(1320)

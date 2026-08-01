@@ -63,7 +63,8 @@ const configuration = {
     gameDayWindow: { enabled: false, startMinute: 480, endMinute: 1_380 },
     digest: { enabled: false, minute: 540 },
     catchUpPolicy: "LATEST_ONLY" as const,
-    triggers: ["GAME_COMPLETED"],
+    triggers: ["GAME_COMPLETED", "GAME_CORRECTED"],
+    messageStrategy: "FINAL_ONLY",
     messageFormat: "STANDARD",
     quietHours: {
       enabled: false,
