@@ -29,6 +29,7 @@
     "db:backup": "bash scripts/backup-database.sh",
     "db:restore": "bash scripts/restore-database.sh",
     "db:restore:verify": "bash scripts/verify-backup-restore.sh",
+    "db:storage:check": "bash scripts/check-database-storage.sh",
     "policy:validate": "node scripts/verify-defect-policy.mjs",
     "container:config": "docker compose --env-file compose.production.env.example config --quiet",
     "container:production:build": "bash scripts/build-production-images.sh",

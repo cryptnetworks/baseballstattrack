@@ -39,6 +39,71 @@ The first usable release boundary, personas, MVP workflow, non-goals, success me
 
 See docs/ROADMAP.md, CONTRIBUTING.md, and SECURITY.md.
 
+## System Requirements
+
+These are sizing baselines, not concurrency guarantees. Measure the actual
+scorekeeping, report, integration, backup, and migration workload before
+increasing traffic. The application and database may share a development host;
+production should preserve independent CPU, memory, and storage headroom.
+
+### Minimum Requirements
+
+| Area               | Minimum supported baseline                       | Workload assumption                                                                                                                                           |
+| ------------------ | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Application CPU    | 2 vCPU                                           | Development, evaluation, or a small scorekeeping workload without concurrent builds.                                                                          |
+| Application memory | 4 GiB RAM                                        | Next.js runtime and ordinary request processing. Run production builds separately when possible.                                                              |
+| Database CPU       | 2 vCPU                                           | PostgreSQL 17 with a small active dataset and low concurrent scoring/report activity.                                                                         |
+| Database memory    | 4 GiB RAM                                        | PostgreSQL, migrations, and modest report queries; monitor for swapping or memory pressure.                                                                   |
+| Combined host      | 4 vCPU and 8 GiB RAM                             | Minimum when application and PostgreSQL are colocated; resources are additive, not alternatives.                                                              |
+| Storage            | 40 GiB free SSD capacity before data and backups | Allows an initial application/container area and a database volume with maintenance headroom. Keep active database usage below 75% of its backing filesystem. |
+
+SSD-backed storage is strongly recommended for PostgreSQL. Backup retention is
+additional capacity and should use a separate failure domain; it is not part of
+the active-volume allowance. Builds, image pulls, migrations, logs, temporary
+files, WAL, and restore work all require free host space.
+
+Software and client requirements:
+
+- source development and builds require Node.js 24 or newer and npm 11 or newer;
+- the database migration and backup contract targets PostgreSQL 17 and
+  PostgreSQL 17-compatible tools;
+- production uses `linux/amd64` containers on a 64-bit Linux host with a current
+  Docker Engine and Docker Compose v2; the current publication workflow does
+  not produce a multi-architecture image manifest;
+- local development is supported on current macOS or Linux; Windows users
+  should use WSL2 or Docker Desktop because repository operations use Bash;
+- clients need a maintained version of Chrome, Edge, Firefox, or Safari with
+  JavaScript, cookies, and TLS enabled on phone, tablet, or desktop; and
+- production needs reliable HTTPS ingress through a TLS-terminating reverse
+  proxy plus outbound HTTPS/DNS access to configured Supabase identity,
+  notification, calendar, webhook, and integration providers.
+
+### Recommended Production Requirements
+
+For a small production deployment, start with 2–4 vCPU and 4–8 GiB RAM for the
+application, 4 vCPU and 8 GiB RAM for PostgreSQL, and at least a 100 GiB
+SSD-backed database filesystem. Only 75 GiB of that example filesystem is the
+maximum policy boundary; warning begins at 70 GiB. Keep backup storage separate
+and sized for the retention policy and restore drills. Monitor CPU, memory,
+database latency, database storage, backup storage, logs, artifacts, container
+images, and network/provider failures.
+
+For a larger deployment, separate the application and database hosts, begin
+load testing around 4+ application vCPU with 8+ GiB RAM and 8+ database vCPU
+with 16+ GiB RAM, then size instances, IOPS, and storage from measured peak
+scorekeeping, report, worker, migration, and restore behavior. Add application
+instances only through a deployment design that preserves the existing
+database and worker coordination contracts. This repository does not claim a
+supported PostgreSQL cluster, automatic failover, or multi-region topology.
+
+The supported production contract is the repository's Linux Docker Compose
+stack with PostgreSQL 17. Provider-managed PostgreSQL/Supabase may supply the
+same application boundary, but provider compatibility, backups, disk metrics,
+and recovery must be validated in that environment. See
+[Database storage capacity](docs/DATABASE_STORAGE_CAPACITY.md),
+[Container operations](docs/CONTAINER_OPERATIONS.md), and
+[Backup and restore](docs/BACKUP_AND_RESTORE.md).
+
 ## Local development
 
 Prerequisites:
@@ -96,6 +161,7 @@ public GHCR images and keeps migrations explicit and dependency ordered.
 - Defect-policy and issue-form validation: `npm run policy:validate`
 - Production dependency audit: `npm run audit:prod`
 - Database migration: `npm run db:migrate` after `DATABASE_URL` and `DIRECT_URL` are configured
+- Database storage health: `npm run db:storage:check` where the database filesystem is visible
 - Production build: `npm run build`
 - Container configuration: `npm run container:config`
 - Production image build: `npm run container:production:build`
