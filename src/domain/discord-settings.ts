@@ -46,6 +46,117 @@ export type DiscordUpdateTrigger = (typeof discordUpdateTriggers)[number];
 export type DiscordDestinationPurpose =
   (typeof discordDestinationPurposes)[number];
 
+export function discordDestinationPurposeForTrigger(
+  trigger: DiscordUpdateTrigger,
+): DiscordDestinationPurpose {
+  if (trigger === "GAME_COMPLETED" || trigger === "GAME_VERIFIED") {
+    return "FINAL_SCORES";
+  }
+  if (trigger === "GAME_CORRECTED") return "CORRECTIONS";
+  if (trigger === "REPORT_READY") return "SUMMARIES";
+  if (trigger === "OPERATIONAL_FAILURE") return "ERRORS";
+  return "LIVE_UPDATES";
+}
+
+type CompatibilityInput = Readonly<{
+  enabled: boolean;
+  destinations: readonly Readonly<{
+    purposes: readonly DiscordDestinationPurpose[];
+  }>[];
+  triggers: readonly DiscordUpdateTrigger[];
+  digest: Readonly<{ enabled: boolean }>;
+  cadenceMode: string;
+  messageStrategy: string;
+  gameDayWindow: Readonly<{
+    enabled: boolean;
+    startMinute: number;
+    endMinute: number;
+  }>;
+  quietHours: Readonly<{
+    enabled: boolean;
+    startMinute: number;
+    endMinute: number;
+  }>;
+}>;
+
+function inMinuteWindow(
+  minute: number,
+  startMinute: number,
+  endMinute: number,
+) {
+  return startMinute < endMinute
+    ? minute >= startMinute && minute < endMinute
+    : minute >= startMinute || minute < endMinute;
+}
+
+export function discordConfigurationCompatibilityErrors(
+  input: CompatibilityInput,
+) {
+  const errors: Array<{
+    path: ["destinations"] | ["gameDayWindow"] | ["cadenceMode"];
+    message: string;
+  }> = [];
+  if (input.enabled) {
+    const routed = new Set(
+      input.destinations.flatMap(({ purposes }) => purposes),
+    );
+    const required = new Set(
+      input.triggers.map(discordDestinationPurposeForTrigger),
+    );
+    if (input.digest.enabled) required.add("DIGESTS");
+    const labels: Readonly<Record<DiscordDestinationPurpose, string>> = {
+      LIVE_UPDATES: "live updates",
+      FINAL_SCORES: "final scores",
+      CORRECTIONS: "corrections",
+      SUMMARIES: "summaries",
+      ERRORS: "operational errors",
+      DIGESTS: "digests",
+    };
+    for (const purpose of required) {
+      if (!routed.has(purpose)) {
+        errors.push({
+          path: ["destinations"],
+          message: `Enabled Discord settings require a routable destination for ${labels[purpose]}.`,
+        });
+      }
+    }
+  }
+  if (input.gameDayWindow.enabled && input.quietHours.enabled) {
+    const hasEligibleMinute = Array.from({ length: 1_440 }, (_, minute) =>
+      Boolean(
+        inMinuteWindow(
+          minute,
+          input.gameDayWindow.startMinute,
+          input.gameDayWindow.endMinute,
+        ) &&
+        !inMinuteWindow(
+          minute,
+          input.quietHours.startMinute,
+          input.quietHours.endMinute,
+        ),
+      ),
+    ).some(Boolean);
+    if (!hasEligibleMinute) {
+      errors.push({
+        path: ["gameDayWindow"],
+        message:
+          "Discord quiet hours cannot cover the entire game-day delivery window.",
+      });
+    }
+  }
+  if (
+    input.cadenceMode === "EVENT_DRIVEN" &&
+    input.messageStrategy === "PERIODIC_SUMMARY"
+  ) {
+    errors.push({
+      path: ["cadenceMode"],
+      message:
+        "Periodic summary delivery requires a fixed, manual, or digest schedule; event-driven delivery is unsupported.",
+    });
+  }
+  return errors;
+}
+
 const id = z.string().trim().min(1).max(128);
 const externalId = z.uuid();
 const timeZone = z
@@ -162,6 +273,13 @@ export const discordSettingsUpdateSchema = z
       });
     }
     for (const issue of discordContentPolicyErrors(value)) {
+      context.addIssue({
+        code: "custom",
+        path: issue.path,
+        message: issue.message,
+      });
+    }
+    for (const issue of discordConfigurationCompatibilityErrors(value)) {
       context.addIssue({
         code: "custom",
         path: issue.path,

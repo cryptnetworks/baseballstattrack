@@ -51,9 +51,12 @@ Re-enabling requires current View and Send evidence.
 
 An exact-Account administrator with `discord.settings.preview` can send one
 fixed, non-sensitive test message to an enabled, accessible destination. The
-administrator selects standard or compact format. Test content contains no
-game, player, tenant, or user data; Discord mentions are disabled. Test sends
-are never automatically retried.
+administrator selects compact, standard, or detailed format. Test content is
+headed `TEST ONLY — SYNTHETIC — NOT A LIVE UPDATE` and contains no game,
+player, tenant, or user data; Discord mentions are disabled. Test sends are
+never automatically retried. The dedicated
+[configuration preview](DISCORD_CONFIGURATION_PREVIEW.md) further restricts
+its selector to saved routes.
 
 Refresh, enablement, route-save, and test-delivery outcomes create secret-free
 audit records. Metadata contains only operation categories, formats, counts,

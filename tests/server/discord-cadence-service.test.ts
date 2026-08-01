@@ -61,7 +61,11 @@ function configuration(enabled = true) {
           channelReference: "managed/channel",
           displayName: "scores",
           available: true,
-          purposes: ["LIVE_UPDATES" as const],
+          purposes: [
+            "LIVE_UPDATES" as const,
+            "CORRECTIONS" as const,
+            "DIGESTS" as const,
+          ],
         },
       ],
       cadenceMode: "FIXED_INTERVAL" as const,
@@ -123,7 +127,11 @@ describe("Discord cadence administration", () => {
         enabled: true,
         cadenceMode: "EVENT_DRIVEN",
         trackedScopes: current.settings.trackedScopes,
-        destinations: [expect.objectContaining({ purposes: ["LIVE_UPDATES"] })],
+        destinations: [
+          expect.objectContaining({
+            purposes: ["LIVE_UPDATES", "CORRECTIONS", "DIGESTS"],
+          }),
+        ],
         triggers: ["SCORE_CHANGED", "GAME_CORRECTED"],
         messageStrategy: "EDIT_LIVE_MESSAGE",
         reasonCode: "UPDATE_SCHEDULE_CHANGED",

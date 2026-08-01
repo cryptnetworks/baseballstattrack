@@ -39,7 +39,10 @@ function update() {
     enabled: true,
     trackedScopes: [{ teamId: TEAM, seasonId: SEASON }],
     destinations: [
-      { destinationId: DESTINATION, purposes: ["LIVE_UPDATES" as const] },
+      {
+        destinationId: DESTINATION,
+        purposes: ["LIVE_UPDATES" as const, "CORRECTIONS" as const],
+      },
     ],
     cadenceMode: "FIXED_INTERVAL" as const,
     cadenceSeconds: 60,

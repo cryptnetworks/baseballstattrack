@@ -394,4 +394,35 @@ export class PrismaDiscordChannelRoutingRepository {
       },
     });
   }
+
+  async recordConfigurationPreview(input: {
+    accountId: string;
+    installationInternalId: string;
+    settingsRevision: number;
+    errorCount: number;
+    warningCount: number;
+    actor: TrustedActorContext;
+  }) {
+    await this.prisma.securityAuditRecord.create({
+      data: {
+        scope: AuditScope.ACCOUNT,
+        accountId: input.accountId,
+        actorKind: actorKind(input.actor.actorKind),
+        actorId: input.actor.actorId,
+        actorUserId: input.actor.actorUserId,
+        action: "discord.settings.preview",
+        capability: input.actor.capability,
+        targetType: "DiscordInstallation",
+        targetId: input.installationInternalId,
+        outcome: AuditOutcome.SUCCEEDED,
+        metadata: {
+          category: "configuration-preview",
+          settingsRevision: input.settingsRevision,
+          errorCount: input.errorCount,
+          warningCount: input.warningCount,
+          syntheticDataOnly: true,
+        },
+      },
+    });
+  }
 }

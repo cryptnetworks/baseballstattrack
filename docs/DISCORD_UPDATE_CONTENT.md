@@ -75,9 +75,10 @@ categories—not message content or Discord/baseball identifiers.
 
 The workspace renders synthetic examples for all four strategies using the
 saved verbosity. These examples prove the strategy and correction presentation
-contract without sending Discord messages or using real game data. Issue #113
-owns interactive whole-configuration validation, live/final/correction/error
-preview, and clearly marked test delivery.
+contract without sending Discord messages or using real game data. The
+[configuration preview](DISCORD_CONFIGURATION_PREVIEW.md) adds whole-settings
+validation, live/final/correction/error rendering, and clearly marked test
+delivery.
 
 ## Compatibility and rollout
 
