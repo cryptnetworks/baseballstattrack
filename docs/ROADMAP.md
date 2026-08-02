@@ -117,6 +117,11 @@ Primary epic: [#106](https://github.com/cryptnetworks/baseballstattrack/issues/1
 
 Primary issues: #4, #26, #101, #106–#107, #122–#127.
 
+The identity, immutable-version, ownership, activation, compatibility, and
+historical game-binding foundation is defined in the
+[Ruleset contract](RULESET_CONTRACT.md) and
+[ADR 0010](decisions/0010-ruleset-identity-versioning-and-historical-binding.md).
+
 The low-maintenance fantasy baseball option is defined by [#122](https://github.com/cryptnetworks/baseballstattrack/issues/122): weekly lineup decisions, automatic scoring, scheduled transactions, and low-noise notifications.
 
 Native GitHub milestones M5–M8 are now materialized and assigned to their backlog issues. Use the native milestones together with the title prefixes, Target metadata, roadmap, and Projects Target field; issue #96 tracks final reconciliation of board views and planning metadata.
