@@ -175,14 +175,22 @@ integration("Discord update worker persistence", () => {
   });
 
   it("creates once, then deterministically edits the successful message", async () => {
-    const first = await repository.claimDeliveries("worker-119-four", now, 25);
+    const [deliveryClock] = await prisma.$queryRaw<
+      Array<{ deliveryNow: Date }>
+    >`SELECT clock_timestamp() + interval '1 minute' AS "deliveryNow"`;
+    const deliveryNow = deliveryClock!.deliveryNow;
+    const first = await repository.claimDeliveries(
+      "worker-119-four",
+      deliveryNow,
+      25,
+    );
     expect(first).toHaveLength(1);
     expect(first[0]).toMatchObject({ sourceRevision: 7, operation: "CREATE" });
     await repository.completeDeliveryAttempt({
       deliveryId: first[0]!.id,
       workerId: "worker-119-four",
-      startedAt: now,
-      completedAt: now,
+      startedAt: deliveryNow,
+      completedAt: deliveryNow,
       durationMs: 10,
       responseStatus: 200,
       failureCode: null,
@@ -192,7 +200,7 @@ integration("Discord update worker persistence", () => {
     });
     const second = await repository.claimDeliveries(
       "worker-119-five",
-      new Date(now.getTime() + 1_000),
+      new Date(deliveryNow.getTime() + 1_000),
       25,
     );
     expect(second).toHaveLength(1);
@@ -201,7 +209,7 @@ integration("Discord update worker persistence", () => {
       operation: "EDIT",
       targetProviderMessageId: "123456789012345678",
     });
-    const retryAt = new Date(now.getTime() + 1_000);
+    const retryAt = new Date(deliveryNow.getTime() + 1_000);
     await repository.completeDeliveryAttempt({
       deliveryId: second[0]!.id,
       workerId: "worker-119-five",
