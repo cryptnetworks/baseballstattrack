@@ -3,6 +3,8 @@
 The M8 producer, provenance, ruleset-resolution, identity-review, quarantine,
 and future atomic-promotion contract is defined in
 [Import portability and portable baseball data contract](IMPORT_PORTABILITY.md).
+[ADR 0011](decisions/0011-import-portability-quarantine-and-atomic-promotion.md)
+records its quarantine and atomic-promotion decision.
 The implementation documented here remains the safe versioned Account export
 and mutation-free dry-run foundation; it does not claim commit eligibility.
 

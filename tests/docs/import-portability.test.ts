@@ -6,11 +6,19 @@ const contract = readFileSync(
   new URL("../../docs/IMPORT_PORTABILITY.md", import.meta.url),
   "utf8",
 );
+const decision = readFileSync(
+  new URL(
+    "../../docs/decisions/0011-import-portability-quarantine-and-atomic-promotion.md",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 describe("import portability contract", () => {
   it.each([
     "## Import package identity",
     "## Provenance model",
+    "## External provider boundary",
     "## Ruleset handling",
     "## Entity portability matrix",
     "## Identity resolution",
@@ -18,10 +26,12 @@ describe("import portability contract", () => {
     "## Validation and review report",
     "## Atomicity, retries, and recovery",
     "## Correction and verification behavior",
+    "## Authorization boundary",
     "## Privacy and security",
     "## Derived statistics and reports",
     "## Schema and migration policy",
     "## Focused test contract",
+    "### Current executable coverage and deferred validation",
     "## Adversarial review findings",
   ])("documents %s", (heading) => {
     expect(contract).toContain(heading);
@@ -49,7 +59,7 @@ describe("import portability contract", () => {
   });
 
   it("defines every portable entity and rejects ambiguous identity", () => {
-    for (const entity of [
+    const entities = [
       "Account",
       "Team",
       "Player",
@@ -61,8 +71,17 @@ describe("import portability contract", () => {
       "Correction",
       "Statistics",
       "Reports",
-    ]) {
+    ];
+    for (const entity of entities) {
       expect(contract).toMatch(new RegExp(`\\|\\s+${entity}\\s+\\|`, "u"));
+    }
+    const auditSection = contract.slice(
+      contract.indexOf("### Per-entity audit behavior"),
+      contract.indexOf("Team-season participation"),
+    );
+    expect(auditSection).toContain("Required audit behavior");
+    for (const entity of entities) {
+      expect(auditSection).toMatch(new RegExp(`\\|\\s+${entity}\\s+\\|`, "u"));
     }
     expect(contract).toContain("Never fuzzy/name-only match");
     expect(contract).toContain("silent team merging");
@@ -79,6 +98,8 @@ describe("import portability contract", () => {
       "AVAILABLE",
       "PARTIALLY_VALIDATED",
       "QUARANTINED",
+      "INVALID",
+      "UNSUPPORTED",
       "REJECTED",
     ]) {
       expect(contract).toContain(state);
@@ -87,5 +108,68 @@ describe("import portability contract", () => {
     expect(contract).toContain("original immutable source events");
     expect(contract).toContain("authentication records");
     expect(contract).toContain("exact target Account");
+  });
+
+  it("keeps dry runs hypothetical and canonical baseball data immutable", () => {
+    for (const finding of [
+      "records found",
+      "conflicts",
+      "missing dependencies",
+      "ruleset dispositions",
+      "identity resolutions",
+      "privacy issues",
+      "expected changes",
+    ]) {
+      expect(contract).toContain(finding);
+    }
+    for (const canonicalEntity of [
+      "events",
+      "corrections",
+      "statistics",
+      "projection checkpoints",
+    ]) {
+      expect(contract).toContain(canonicalEntity);
+    }
+    expect(contract).toContain("mutationCount: 0");
+    expect(contract).toContain("never reserve identifiers");
+  });
+
+  it("requires authenticated least-privilege authorization and safe audits", () => {
+    expect(contract).toContain("trusted application");
+    expect(contract).toContain("data.import.validate");
+    expect(contract).toContain("data.import.review");
+    expect(contract).toContain("data.import.commit");
+    expect(contract).toMatch(/can never select an owner/iu);
+    expect(contract).toMatch(/fail closed/iu);
+    expect(contract).toMatch(/another\s+Account/iu);
+  });
+
+  it("keeps provider evidence versioned and non-canonical", () => {
+    for (const evidence of [
+      "provider identity",
+      "source version",
+      "retrieval time",
+      "confidence",
+      "correction/supersession state",
+    ]) {
+      expect(contract).toContain(evidence);
+    }
+    expect(contract).toMatch(/does not make provider data\s+canonical truth/iu);
+    expect(contract).toContain("never publishes automatically");
+  });
+});
+
+describe("ADR 0011", () => {
+  it("accepts quarantine and atomic promotion as the architecture", () => {
+    expect(decision).toContain("# ADR 0011");
+    expect(decision).toMatch(/## Status\s+Accepted/iu);
+    expect(decision).toContain("exact version/content-digest");
+    expect(decision).toContain("partial canonical graph is impossible");
+    expect(decision).toContain(
+      "Retrieval does not make provider data canonical",
+    );
+    expect(decision).toMatch(
+      /This ADR does not add\s+that schema or endpoint/iu,
+    );
   });
 });

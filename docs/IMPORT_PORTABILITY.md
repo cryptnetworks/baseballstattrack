@@ -5,7 +5,8 @@ defines how authorized baseball history moves between systems without changing
 its ownership, provenance, ruleset lineage, corrections, verification state, or
 historical meaning. It builds on the [Ruleset contract](RULESET_CONTRACT.md)
 from #106 and the existing versioned Account export and mutation-free import
-dry run.
+dry run. [ADR 0011](decisions/0011-import-portability-quarantine-and-atomic-promotion.md)
+records the architectural decision.
 
 This document is the contract for import packages, identity resolution,
 quarantine, review, atomic promotion, and reconciliation. It does not implement
@@ -170,6 +171,25 @@ references needed for reconciliation. It does not copy upstream secrets,
 internal database ids, raw authentication subjects, or unnecessary operator
 personal data.
 
+## External provider boundary
+
+Provider imports use the approved staging boundary from
+[External baseball data ingestion](EXTERNAL_DATA_INGESTION.md). Each provider
+record preserves its stable provider identity, record identity, source version,
+retrieval time, effective time when supplied, payload digest, provenance,
+confidence, and correction/supersession state. The package also references the
+approved source capability and non-secret license/terms evidence needed to
+interpret permitted use and retention.
+
+Retrieval, normalization, or successful staging does not make provider data
+canonical truth. Provider records remain restricted evidence until exact
+Account authority, identity resolution, ruleset disposition, dependency
+completeness, replay/reconciliation, correction lineage, privacy, and review
+all succeed. A provider correction appends a new version and declared lineage;
+it cannot update or delete accepted manual or imported events. Unsupported,
+ambiguous, incomplete, or conflicting provider evidence quarantines with safe
+diagnostics and never publishes automatically.
+
 ## Ruleset handling
 
 Each source ruleset version receives exactly one disposition before a game can
@@ -225,6 +245,28 @@ mapping is explicit and Account-scoped.
 | Correction     | Stable correction event id and exact target/replacement graph                    | Preserve original events and append-only correction lineage; missing/cyclic/cross-game targets reject or quarantine          | Reason category, source correction revision, target/replacement ids, verification invalidation |
 | Statistics     | Derived identity includes game/source/ruleset/statistic derivation versions      | Never authoritative import truth; replay and compare, then rebuild or label unavailable on mismatch                          | Source revisions, ruleset/statistic versions, generated time, confidence                       |
 | Reports        | Derived artifact id plus source and presentation versions                        | Validate against canonical replay; may be regenerated. A report cannot overwrite game history                                | Source entities/revisions, ruleset/derivation/privacy versions, generation tool                |
+
+### Per-entity audit behavior
+
+Audit evidence is append-only, Account-scoped, and minimized. It identifies the
+package/import, actor or service identity, current capability, target Account,
+action, entity kind, opaque source and target references, mapping/ruleset
+resolution, outcome, accepted timestamp, and safe reason code. It never copies
+player names, raw event payloads, private notes, credentials, or package bytes.
+
+| Entity         | Required audit behavior                                                                                                                                                             |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Account        | Record the authenticated actor, exact target Account, capability, package/source scope, and non-enumerating authorization outcome; never audit an uploaded Account id as authority. |
+| Team           | Record exact/create/review/quarantine disposition and mapping evidence digest; omit display labels.                                                                                 |
+| Player         | Record exact/review/quarantine disposition, mapping basis, confidence, and privacy decision using opaque ids only.                                                                  |
+| Season         | Record boundary/mapping disposition and any overlap or target-conflict finding.                                                                                                     |
+| Roster         | Record effective-period resolution, dependency findings, and dependent setup quarantine count.                                                                                      |
+| Game           | Record source revision/digest, target disposition, ruleset resolution, replay result, verification state, and manual-history conflict outcome.                                      |
+| Setup revision | Record source revision, accepted ruleset resolution, participant dependency result, and sealed target reference.                                                                    |
+| Event          | Record sequence/schema/evidence verification and duplicate/conflict disposition without copying payload content.                                                                    |
+| Correction     | Record graph verification, target/replacement resolution, provenance digest, and verification invalidation/re-verification state.                                                   |
+| Statistics     | Record derivation versions, replay comparison outcome, confidence, and rebuild/unavailable disposition; never audit full stat lines.                                                |
+| Reports        | Record source/derivation/privacy versions, digest comparison, and regenerate/restrict/quarantine disposition.                                                                       |
 
 Team-season participation is an explicit relationship between the mapped team
 and season. It is never inferred from roster names or game labels. Lineup
@@ -307,8 +349,16 @@ Failure/holding states are:
   cannot be reviewed or committed;
 - **QUARANTINED:** package or dependent entity graph requires resolution and is
   invisible to canonical reads;
-- **REJECTED:** terminal unsupported, malicious, unauthorized, or invalid
-  package; no retry without a new package identity/digest; and
+- **INVALID:** the exact bytes fail encoding, manifest, schema, digest,
+  reference, correction, replay, or privacy validation; corrected bytes require
+  a new package identity/digest;
+- **UNSUPPORTED:** the package is well-formed but declares an unavailable
+  format, schema, ruleset feature, derivation, or required capability; it cannot
+  silently downgrade and may be revalidated only after explicit support is
+  installed;
+- **REJECTED:** terminal malicious, unauthorized, prohibited-data, or policy
+  outcome; no retry without a new authorized request and, when content changes,
+  a new package identity/digest; and
 - **FAILED:** safe operational failure before commit; exact retry may resume
   from verified staging checkpoints.
 
@@ -326,12 +376,15 @@ report contains:
 - package/manifest digests and supported format/schema versions;
 - producer/source/provenance confidence;
 - exact target Account selector as a safe opaque reference;
-- entity counts and dependency graph;
+- records found by entity kind and the dependency graph;
 - ruleset dispositions;
 - identity resolutions and unresolved findings;
+- conflicts and missing dependencies with stable safe finding codes;
 - event/correction/replay/statistic/report comparison results;
-- privacy filtering and prohibited-field results;
+- privacy issues, filtering, and prohibited-field results;
 - target conflict and duplicate-import results;
+- expected changes by `CREATE`, `MAP`, `IDEMPOTENT_SKIP`, `QUARANTINE`, and
+  `REJECT` disposition, all with `mutationCount: 0` during dry run;
 - commit eligibility, required approvals, and plan expiry; and
 - validator/replay/derivation versions.
 
@@ -346,6 +399,14 @@ Dry run performs every validation possible without canonical mutation. The
 existing endpoint remains `DRY_RUN_ONLY`; it cannot be upgraded to commit by a
 client flag. A future commit consumes a server-stored sealed validation plan,
 not client-resubmitted findings or mappings.
+
+The validation engine does not write the database, and the dry-run operation
+does not mutate teams, players, seasons, rosters, games, setup revisions,
+events, corrections, statistics, reports, or projection checkpoints. The only
+permitted operation-level side effect is the existing minimized security audit
+record written outside canonical baseball history; if that audit cannot be
+written, validation fails closed. Expected changes describe a hypothetical
+sealed plan and never reserve identifiers, create mappings, or imply commit.
 
 ### Commit boundary
 
@@ -406,6 +467,30 @@ package may be idempotent. Any divergent same-source revision, manual/imported
 collision, or proposed consolidation quarantines the entire game graph pending
 a separately accepted merge policy. Manual history is never silently declared
 less authoritative.
+
+## Authorization boundary
+
+Every receive, validate, review, commit, reconcile, availability, retry,
+quarantine-read, and deletion operation authenticates a trusted application
+user or explicit service actor and re-resolves current authority for one exact
+target Account. A future implementation separates at least
+`data.import.validate`, `data.import.review`, and `data.import.commit` (or proves
+equivalent least-privilege capabilities). The current dry-run route's
+exact-Account `account.manage` check is a compatibility foundation, not
+permission for future commit.
+
+The Account in the request is a selector only. A package's logical Account,
+source scope, provider claim, mapping, file name, manifest field, opaque id, or
+possession of bytes can never select an owner, create membership, grant a
+capability, or broaden access. Authorization is checked again before promotion
+and availability; revoked authority fails the next boundary.
+
+Required audit attribution records actor/service identity, Account and action
+scope, capability, package/import digest, sealed-plan revision, result, accepted
+timestamp, and safe reason code. Privileged operations fail closed when their
+required audit evidence cannot be committed. Errors do not reveal whether an
+entity, mapping, ruleset, package, or quarantine record exists in another
+Account.
 
 ## Privacy and security
 
@@ -494,9 +579,33 @@ ruleset disposition, identity mapping, dependency quarantine, correction graph,
 domain replay/statistics comparison, Account authorization, persistence
 atomicity/idempotency, migration/restore, and adversarial privacy fixtures.
 
+### Current executable coverage and deferred validation
+
+- `tests/domain/portable-data.test.ts` covers valid round trip, supported and
+  unsupported versions, malformed manifests, checksum failure, duplicate ids,
+  prohibited fields, target conflicts, references, correction replay, summary
+  equivalence, and privacy-safe output.
+- `tests/domain/portable-data-service.test.ts` covers authenticated exact-Account
+  capabilities, deterministic duplicate dry runs, safe failure audits, and zero
+  canonical mutations.
+- `tests/persistence/portable-data-repository.integration.test.ts` covers exact
+  Account catalog access, privacy overlays, target-id conflicts, and minimized
+  audit persistence when a test database is configured.
+- Replay, correction, verification, statistics, privacy, and authorization
+  suites remain regression evidence for the source-of-truth boundaries this
+  contract consumes.
+- `tests/docs/import-portability.test.ts` locks the architectural rules that
+  cannot yet execute: #106 digest resolution, reviewed semantic mappings,
+  dependency quarantine, provider publication gates, dedicated import
+  capabilities, atomic promotion/rollback, and `AVAILABLE` reconciliation.
+
+Production commit, concurrency, rollback, migration/restore, and quarantine
+persistence tests are intentionally deferred until their forward schema and
+service are implemented. Final M8 validation is not claimed by #101.
+
 ## Adversarial review findings
 
-- **Data migration engineer:** separated staging from canonical promotion,
+- **Database migration engineer:** separated staging from canonical promotion,
   sealed the review plan, defined exact retry identity, and prohibited partial
   canonical graphs.
 - **Baseball historian:** preserved setup revisions, original/correction events,
@@ -509,12 +618,18 @@ atomicity/idempotency, migration/restore, and adversarial privacy fixtures.
 - **Database engineer:** required tenant-scoped relationships, immutable mapping
   evidence, isolated staging, atomic promotion, idempotency constraints, and
   roll-forward repair.
+- **Data platform engineer:** aligned package provenance with the approved #143
+  provider staging boundary and prevented retrieval or normalization from
+  becoming automatic publication.
 
 Material findings resolved were: a checksum is not producer authentication;
 legacy packages are not commit-ready without provenance; reviewed ruleset
 mapping must prove equivalence; ambiguous entities quarantine dependents;
-derived reports cannot repair events; and post-commit recovery cannot delete
-accepted history silently.
+derived reports cannot repair events; unsupported and invalid packages need
+distinct visible states; dry-run expected changes are hypothetical; uploaded
+ownership claims cannot grant access; provider staging is not canonical truth;
+per-entity decisions need minimized audits; and post-commit recovery cannot
+delete accepted history silently.
 
 ## Downstream boundary
 
