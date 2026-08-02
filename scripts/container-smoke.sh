@@ -16,6 +16,7 @@ export APP_IMAGE="${app_image}"
 export MIGRATION_IMAGE="${migration_image}"
 export DISCORD_BOT_IMAGE="${discord_bot_image}"
 export IMAGE_PULL_POLICY=never
+export COMPOSE_PROFILES=discord-control-plane
 export APP_ENV_FILE=./app.production.env.example
 export APP_PORT="${app_port}"
 export POSTGRES_DB=baseballstattrack_smoke
@@ -35,6 +36,7 @@ export ICS_FEED_SIGNING_KEY=synthetic-ics-signing-key-1234567890
 export ICS_FEED_DETAIL_LEVEL=private
 export FEATURE_EMAIL_NOTIFICATIONS_ENABLED=false
 export FEATURE_DISCORD_NOTIFICATIONS_ENABLED=false
+export FEATURE_DISCORD_UPDATES_ENABLED=false
 export NOTIFICATION_WORKER_TOKEN=synthetic-notification-worker-token-1234567890
 export NOTIFICATION_EVENT_TOKEN=synthetic-notification-event-token-1234567890
 export NOTIFICATION_DESTINATIONS_JSON='{"notifications/email/test":{"channel":"EMAIL","destination":"coach@example.test"},"notifications/discord/test":{"channel":"DISCORD","destination":"123456789012345678"}}'
@@ -42,11 +44,16 @@ export NOTIFICATION_DISCORD_API_BASE_URL=https://discord.com/api/v10/
 export NOTIFICATION_DISCORD_BOT_TOKEN=synthetic-notification-discord-token-1234567890
 export EXTERNAL_DATA_PROVIDER_BASE_URL=https://provider.example.test
 export EXTERNAL_DATA_PROVIDER_API_KEY=synthetic-provider-api-key
-export DISCORD_TOKEN=synthetic-discord-token-long-enough-for-validation
-export BST_API_TOKEN=synthetic-api-token-long-enough-for-validation
+export DISCORD_PROVIDER_MODE=stub
+export DISCORD_TOKEN=
+export BST_API_TOKEN=
 export BST_API_BASE_URL=https://app.example.test
 export BST_WEB_BASE_URL=https://app.example.test
-export DISCORD_TEAM_BINDINGS='[{"guildId":"100","accountId":"00000000-0000-4000-8000-000000000001","teamId":"00000000-0000-4000-8000-000000000002","channelIds":["200"],"roleIds":["300"]}]'
+export DISCORD_TEAM_BINDINGS='[]'
+export DISCORD_UPDATE_WORKER_TOKEN=synthetic-discord-update-worker-token-1234567890
+export DISCORD_UPDATE_WORKER_ID=discord-smoke-worker
+export DISCORD_UPDATE_WORKER_INTERVAL_SECONDS=5
+export DISCORD_UPDATE_WORKER_TIMEOUT_SECONDS=10
 export VCS_REF="${GITHUB_SHA:-local-smoke}"
 
 cleanup() {
@@ -65,7 +72,8 @@ cleanup() {
   "${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
   docker image rm \
     "${app_image}" \
-    "${migration_image}" >/dev/null 2>&1 || true
+    "${migration_image}" \
+    "${discord_bot_image}" >/dev/null 2>&1 || true
 
   exit "${exit_code}"
 }
@@ -125,6 +133,10 @@ docker build \
   --build-arg "VCS_REF=${VCS_REF}" \
   --tag "${migration_image}" \
   .
+docker build \
+  --build-arg "VCS_REF=${VCS_REF}" \
+  --tag "${discord_bot_image}" \
+  services/discord-bot
 
 image_configuration="$(
   docker image inspect "${app_image}" \
@@ -140,7 +152,13 @@ runtime_user="${image_configuration%%|*}"
 
 docker run --rm --entrypoint node "${app_image}" --input-type=commonjs -e '
   const fs = require("node:fs");
-  const required = ["/app/server.js", "/app/.next/static", "/app/public", "/app/container/start.mjs"];
+  const required = [
+    "/app/server.js",
+    "/app/.next/static",
+    "/app/public",
+    "/app/container/start.mjs",
+    "/app/container/discord-update-scheduler.mjs",
+  ];
   const forbidden = [
     "/app/.git",
     "/app/.env",
@@ -161,6 +179,16 @@ docker run --rm --entrypoint node "${app_image}" --input-type=commonjs -e '
     if (fs.existsSync(path)) throw new Error(`forbidden runtime path is present: ${path}`);
   }
 '
+
+bot_configuration="$(
+  docker image inspect "${discord_bot_image}" \
+    --format '{{.Config.User}}|{{json .Config.Entrypoint}}|{{json .Config.Healthcheck.Test}}'
+)"
+bot_runtime_user="${bot_configuration%%|*}"
+[[ -n "${bot_runtime_user}" && "${bot_runtime_user}" != "0" && "${bot_runtime_user}" != "root" ]] ||
+  fail "Discord bot image does not declare a non-root runtime user"
+[[ "${bot_configuration}" == *"/readyz"* ]] ||
+  fail "Discord bot image health check does not use readiness"
 
 image_history="$(docker history --no-trunc "${app_image}")"
 [[ "${image_history}" != *"${POSTGRES_PASSWORD}"* ]] ||
@@ -220,6 +248,42 @@ wait_for_status "http://127.0.0.1:${app_port}/status" "200"
 readiness_body="$(curl --silent --show-error "http://127.0.0.1:${app_port}/api/ready")"
 [[ "${readiness_body}" == *'"status":"ready"'* ]] ||
   fail "readiness response did not report ready"
+
+echo "Starting the secretless Discord control plane."
+"${compose[@]}" up --detach --wait discord-bot discord-update-worker
+"${compose[@]}" exec --no-TTY discord-bot sh -c '
+  test "$(id -u)" -ne 0
+  test -z "${DISCORD_TOKEN}"
+  test -z "${BST_API_TOKEN}"
+  test -z "${DATABASE_URL:-}"
+  ! touch /app/bot-runtime-write-check 2>/dev/null
+  python -c "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8080/readyz\", timeout=2)"
+'
+"${compose[@]}" exec --no-TTY discord-update-worker sh -c '
+  test "$(id -u)" -ne 0
+  test -z "${DATABASE_URL:-}"
+  ! touch /app/worker-runtime-write-check 2>/dev/null
+  node -e "fetch(\"http://127.0.0.1:8080/readyz\").then((response) => { if (!response.ok) process.exit(1); })"
+'
+
+control_plane_logs="$(
+  "${compose[@]}" logs --no-color discord-bot discord-update-worker
+)"
+[[ "${control_plane_logs}" == *"discord_provider_stub_ready"* ]] ||
+  fail "Discord provider stub did not report readiness"
+[[ "${control_plane_logs}" == *"worker_cycle_succeeded"* ]] ||
+  fail "Discord update scheduler did not complete a synthetic cycle"
+[[ "${control_plane_logs}" != *"${DISCORD_UPDATE_WORKER_TOKEN}"* ]] ||
+  fail "Discord update worker logs disclosed its token"
+
+echo "Exercising Discord control-plane graceful shutdown."
+"${compose[@]}" stop --timeout 15 discord-bot discord-update-worker
+[[ "$(docker inspect "${project_name}-discord-bot-1" --format '{{.State.ExitCode}}')" == "0" ]] ||
+  fail "Discord bot did not exit cleanly after SIGTERM"
+[[ "$(docker inspect "${project_name}-discord-update-worker-1" --format '{{.State.ExitCode}}')" == "0" ]] ||
+  fail "Discord update scheduler did not exit cleanly after SIGTERM"
+"${compose[@]}" start discord-bot discord-update-worker
+"${compose[@]}" up --detach --wait discord-bot discord-update-worker
 
 "${compose[@]}" exec --no-TTY app sh -c '
   test "$(id -u)" -ne 0

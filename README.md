@@ -144,6 +144,10 @@ docker compose --env-file .env.production up --detach --wait
 
 Container architecture, development usage, readiness, migration, reset, security, and troubleshooting are defined in [docs/CONTAINER_OPERATIONS.md](docs/CONTAINER_OPERATIONS.md).
 
+The Discord web settings, OAuth callback, Python gateway, isolated update
+scheduler, secret rotation, and credential-free CI proof are defined in
+[docs/DISCORD_CONTROL_PLANE_DEPLOYMENT.md](docs/DISCORD_CONTROL_PLANE_DEPLOYMENT.md).
+
 The deployable production stack, including PostgreSQL and the Discord bot, is
 the repository's only Compose manifest, `docker-compose.yml`, and is documented in
 [docs/PRODUCTION_COMPOSE.md](docs/PRODUCTION_COMPOSE.md). It pulls matching

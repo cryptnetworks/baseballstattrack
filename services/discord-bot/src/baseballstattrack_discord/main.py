@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import signal
 import sys
 from datetime import UTC, datetime
 
@@ -40,7 +41,36 @@ def configure_logging() -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
+async def run_stub(settings: Settings, stop: asyncio.Event | None = None) -> None:
+    stop_event = stop or asyncio.Event()
+    loop = asyncio.get_running_loop()
+    installed_signals: list[signal.Signals] = []
+    if stop is None:
+        for shutdown_signal in (signal.SIGINT, signal.SIGTERM):
+            try:
+                loop.add_signal_handler(shutdown_signal, stop_event.set)
+                installed_signals.append(shutdown_signal)
+            except NotImplementedError:  # pragma: no cover - Windows fallback
+                pass
+
+    server = await start_health_server(
+        settings.health_host, settings.health_port, lambda: True
+    )
+    logging.getLogger(__name__).info("discord_provider_stub_ready")
+    try:
+        await stop_event.wait()
+    finally:
+        server.close()
+        await server.wait_closed()
+        for shutdown_signal in installed_signals:
+            loop.remove_signal_handler(shutdown_signal)
+
+
 async def run(settings: Settings) -> None:
+    if settings.provider_mode == "stub":
+        await run_stub(settings)
+        return
+
     api = StatisticsApiClient(
         settings.api_base_url,
         settings.api_token,
@@ -55,14 +85,34 @@ async def run(settings: Settings) -> None:
     server = await start_health_server(
         settings.health_host, settings.health_port, bot.is_ready
     )
+    loop = asyncio.get_running_loop()
+    installed_signals: list[signal.Signals] = []
+    shutdown_task: asyncio.Task[None] | None = None
+
+    def request_shutdown() -> None:
+        nonlocal shutdown_task
+        if shutdown_task is None:
+            logging.getLogger(__name__).info("discord_gateway_shutdown_requested")
+            shutdown_task = loop.create_task(bot.close())
+
+    for shutdown_signal in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(shutdown_signal, request_shutdown)
+            installed_signals.append(shutdown_signal)
+        except NotImplementedError:  # pragma: no cover - Windows fallback
+            pass
     try:
         await bot.start(settings.discord_token, reconnect=True)
     finally:
+        for shutdown_signal in installed_signals:
+            loop.remove_signal_handler(shutdown_signal)
         server.close()
         await server.wait_closed()
         await api.close()
         if not bot.is_closed():
             await bot.close()
+        if shutdown_task is not None:
+            await shutdown_task
 
 
 def main() -> None:

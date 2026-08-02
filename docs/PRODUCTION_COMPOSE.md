@@ -1,8 +1,8 @@
 # Production Docker Compose deployment
 
 `docker-compose.yml` is the repository's only Compose manifest. It runs the
-production application, its one-shot migration runner, PostgreSQL 17, and
-optional Discord bot and Cloudflare Tunnel services. It pulls three matching
+production application, its one-shot migration runner, PostgreSQL 17, an
+optional Discord control plane, and Cloudflare Tunnel. It pulls three matching
 application images from public GHCR packages:
 
 - `ghcr.io/cryptnetworks/baseballstattrack`
@@ -64,10 +64,11 @@ Email and Discord notifications are independently controlled by
 `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`.
 Disabled channels do not require their provider credentials.
 
-Optional containers use Compose profiles. Set `COMPOSE_PROFILES=discord-bot`
-for only the bot, `COMPOSE_PROFILES=cloudflare-tunnel` for only the tunnel, or a
-comma-separated list for both. With no profiles, only PostgreSQL, migration,
-and the application run.
+Optional containers use Compose profiles. Set
+`COMPOSE_PROFILES=discord-control-plane` for the Python bot and update
+scheduler, `COMPOSE_PROFILES=discord-bot` for the legacy bot-only profile,
+`COMPOSE_PROFILES=cloudflare-tunnel` for only the tunnel, or a comma-separated
+list. With no profiles, only PostgreSQL, migration, and the application run.
 
 For the tunnel, create a remotely managed tunnel in Cloudflare, configure its
 public hostname service as `http://app:3000`, and copy its token to
@@ -130,6 +131,10 @@ database measurement, safe overrides, exit codes, and operator actions.
 
 The bot readiness endpoint exists only inside its container network. Its image
 health check reports Discord gateway readiness through Compose.
+The update scheduler has a separate internal readiness endpoint and no
+database credentials or outbound network. See
+[`DISCORD_CONTROL_PLANE_DEPLOYMENT.md`](DISCORD_CONTROL_PLANE_DEPLOYMENT.md)
+for the topology, callback and secret inventory, rotation, and stub-mode proof.
 
 ## Upgrade and rollback
 

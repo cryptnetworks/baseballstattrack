@@ -2,7 +2,8 @@
 
 `docker-compose.yml` is the repository's only Docker Compose manifest. It is a
 production-mode deployment contract for PostgreSQL, the one-shot migration
-runner, the Next.js application, and the read-only Discord bot.
+runner, the Next.js application, the isolated Discord update scheduler, and
+the read-only Discord bot.
 
 Compose never builds application source. The `app`, `migrate`, and
 `discord-bot` services are sourced only from the images named by `APP_IMAGE`,
@@ -68,27 +69,29 @@ Startup is fail-closed and dependency ordered:
 1. PostgreSQL must become healthy.
 2. The migration image runs `prisma migrate deploy` once and must exit zero.
 3. The application starts and `/api/ready` must succeed.
-4. Enabled profile services start; the Discord bot must connect to the Discord
-   gateway and Cloudflare Tunnel must connect to the configured tunnel.
+4. Enabled profile services start; the Discord update scheduler must complete
+   an authenticated app invocation, the bot must connect to the Discord
+   gateway, and Cloudflare Tunnel must connect to the configured tunnel.
 
 A migration failure prevents both the app and bot from starting. Application
 startup never applies migrations.
 
 ## Services and isolation
 
-| Service       | Purpose                        | Host exposure               |
-| ------------- | ------------------------------ | --------------------------- |
-| `db`          | PostgreSQL 17                  | None                        |
-| `migrate`     | One-shot Prisma migration      | None                        |
-| `app`         | Production Next.js application | `127.0.0.1:3000` by default |
-| `discord-bot` | Read-only statistics bot       | None                        |
+| Service                 | Purpose                        | Host exposure               |
+| ----------------------- | ------------------------------ | --------------------------- |
+| `db`                    | PostgreSQL 17                  | None                        |
+| `migrate`               | One-shot Prisma migration      | None                        |
+| `app`                   | Production Next.js application | `127.0.0.1:3000` by default |
+| `discord-bot`           | Read-only statistics bot       | None                        |
+| `discord-update-worker` | Isolated worker scheduler      | None                        |
 
 PostgreSQL joins only the internal `database` network. The app joins that
 network and an outbound network for identity-provider and webhook traffic. The
 bot joins only the outbound network and calls the public HTTPS API; it cannot
 reach PostgreSQL and receives no database credential.
 
-The app, migration runner, and bot run as non-root users with all Linux
+The app, migration runner, scheduler, and bot run as non-root users with all Linux
 capabilities dropped, `no-new-privileges`, read-only root filesystems, bounded
 temporary filesystems, rotated local logs, and health checks where applicable.
 
@@ -99,6 +102,8 @@ temporary filesystems, rotated local logs, and health checks where applicable.
   the migration required by the runtime image.
 - PostgreSQL uses `pg_isready`.
 - The Discord bot image checks its internal `/readyz` endpoint.
+- The Discord update scheduler reports ready only after a recent successful
+  authenticated invocation of the application worker endpoint.
 - The operator-invoked database storage check measures the PostgreSQL data
   filesystem; it is intentionally separate from application and database
   readiness.
@@ -157,10 +162,14 @@ npm run release:rehearse
 ```
 
 `container:verify` builds local runtime and migration images directly, injects
-them through the Compose image variables with pulling disabled, and exercises
+them and the bot image through the Compose image variables with pulling disabled, and exercises
 the same production manifest against a disposable database. It checks explicit
 migration completion, readiness, non-root/read-only execution, persistence,
-reset behavior, graceful shutdown, and secret-safe failure paths.
+reset behavior, control-plane isolation, secretless provider-stub readiness,
+graceful shutdown, and secret-safe failure paths.
+
+The complete Discord topology and credential lifecycle are in
+[`DISCORD_CONTROL_PLANE_DEPLOYMENT.md`](DISCORD_CONTROL_PLANE_DEPLOYMENT.md).
 
 Production deployment details, GHCR package links, and the one-time public
 visibility procedure are in `docs/PRODUCTION_COMPOSE.md`.
