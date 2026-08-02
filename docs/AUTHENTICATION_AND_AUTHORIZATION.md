@@ -1,5 +1,13 @@
 # Authentication and authorization boundaries
 
+The production authorization path remains Account-scoped. The accepted future
+Organization and League principal, explicit Account delegation, approval, and
+privacy boundary is documented in
+[League delegation and organization authorization model](LEAGUE_DELEGATION_MODEL.md)
+and [ADR 0012](decisions/0012-organization-and-league-delegation.md). Those
+documents grant no production authority until the complete persistence and
+service boundary is implemented.
+
 This is the M0 contract for identity, account membership, authorization, recovery, sessions, invitations, and security auditing. The production session and database-authority implementation is documented in [PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md](PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md); privacy/data-minimization and threat rules are in [PRIVACY_AND_THREAT_MODEL.md](PRIVACY_AND_THREAT_MODEL.md). Invitations and recovery remain outside the implemented authentication slice.
 
 ## Decisions at a glance
