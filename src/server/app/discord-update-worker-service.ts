@@ -307,6 +307,7 @@ export class DiscordUpdateWorkerService {
       severity: deliveryOutcome === "dead_letter" ? "warning" : "info",
       category: "background_job",
       name: "discord_update_delivery",
+      correlationId: delivery.externalId,
       outcome:
         deliveryOutcome === "succeeded"
           ? "succeeded"

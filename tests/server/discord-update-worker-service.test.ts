@@ -99,7 +99,9 @@ function service(repository: Record<string, unknown>, overrides = {}) {
         ? (overrides as { transport: object }).transport
         : {}),
     } as never,
-    { emit: vi.fn() },
+    "events" in overrides
+      ? (overrides as { events: { emit: (event: unknown) => void } }).events
+      : { emit: vi.fn() },
     "clock" in overrides
       ? (overrides as { clock: () => Date }).clock
       : () => NOW,
@@ -222,8 +224,9 @@ describe("Discord update delivery", () => {
         .fn()
         .mockResolvedValue({ status: 200, messageId: "323456789012345678" }),
     };
+    const events = { emit: vi.fn() };
     await expect(
-      service(repository, { transport }).deliverBatch(WORKER),
+      service(repository, { transport, events }).deliverBatch(WORKER),
     ).resolves.toEqual([{ deliveryId: "delivery-7", outcome: "succeeded" }]);
     expect(transport.send).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -235,6 +238,12 @@ describe("Discord update delivery", () => {
     expect(repository.claimDeliveries).toHaveBeenCalledWith(WORKER, NOW, 25);
     expect(repository.completeDeliveryAttempt).toHaveBeenCalledWith(
       expect.objectContaining({ startedAt: NOW, completedAt: NOW }),
+    );
+    expect(events.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "discord_update_delivery",
+        correlationId: "00000000-0000-4000-8000-000000000120",
+      }),
     );
   });
 
