@@ -23,6 +23,8 @@ requested tag and `sha-<full source SHA>`.
 - A dedicated Discord application and least-privilege API identity
 - A protected host directory for the deployment environment file
 - A tested PostgreSQL backup and restore destination
+- CPU, memory, SSD, and network capacity from the production profile in the
+  README, with the PostgreSQL filesystem kept below 75% usage
 
 The application binds to `127.0.0.1:3000` by default so an existing host proxy
 can forward HTTPS traffic without exposing Next.js or PostgreSQL directly. The
@@ -106,6 +108,25 @@ docker compose \
 
 curl --fail http://127.0.0.1:3000/api/ready
 ```
+
+Confirm the active database volume is below the warning threshold:
+
+```sh
+docker compose \
+  --env-file /etc/baseballstattrack/production.env \
+  exec --no-TTY \
+  -e DB_STORAGE_PATH=/var/lib/postgresql/data \
+  -e DB_STORAGE_VOLUME_NAME=postgres-production-data \
+  -e DB_STORAGE_WARNING_PERCENT=70 \
+  -e DB_STORAGE_CRITICAL_PERCENT=75 \
+  db bash -s < scripts/check-database-storage.sh
+```
+
+Schedule this check through host monitoring at least every five minutes. Usage
+below 70% is healthy, 70–75% is warning, and above 75% is critical. The check
+only detects and alerts; it never deletes data or changes database availability.
+See [`DATABASE_STORAGE_CAPACITY.md`](DATABASE_STORAGE_CAPACITY.md) for managed
+database measurement, safe overrides, exit codes, and operator actions.
 
 The bot readiness endpoint exists only inside its container network. Its image
 health check reports Discord gateway readiness through Compose.

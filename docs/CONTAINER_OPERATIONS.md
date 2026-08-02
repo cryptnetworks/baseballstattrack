@@ -16,6 +16,8 @@ silently building a different artifact from a checkout.
 - A TLS-terminating reverse proxy and DNS name for the application
 - Production Supabase, Discord, and provider credentials
 - A tested PostgreSQL backup and restore destination
+- Host capacity that satisfies the minimum production profile and keeps the
+  PostgreSQL data filesystem below the storage policy ceiling
 
 ## Image contract
 
@@ -97,6 +99,9 @@ temporary filesystems, rotated local logs, and health checks where applicable.
   the migration required by the runtime image.
 - PostgreSQL uses `pg_isready`.
 - The Discord bot image checks its internal `/readyz` endpoint.
+- The operator-invoked database storage check measures the PostgreSQL data
+  filesystem; it is intentionally separate from application and database
+  readiness.
 
 Useful commands:
 
@@ -105,6 +110,24 @@ docker compose --env-file /etc/baseballstattrack/production.env ps --all
 docker compose --env-file /etc/baseballstattrack/production.env logs app migrate discord-bot
 curl --fail http://127.0.0.1:3000/api/ready
 ```
+
+Run the read-only capacity check at least every five minutes and before a large
+migration or restore. Its warning/critical exit does not stop PostgreSQL or an
+authorized emergency recovery:
+
+```sh
+docker compose \
+  --env-file /etc/baseballstattrack/production.env \
+  exec --no-TTY \
+  -e DB_STORAGE_PATH=/var/lib/postgresql/data \
+  -e DB_STORAGE_VOLUME_NAME=postgres-production-data \
+  -e DB_STORAGE_WARNING_PERCENT=70 \
+  -e DB_STORAGE_CRITICAL_PERCENT=75 \
+  db bash -s < scripts/check-database-storage.sh
+```
+
+Interpretation, provider-managed boundaries, exit codes, and remediation are in
+[`DATABASE_STORAGE_CAPACITY.md`](DATABASE_STORAGE_CAPACITY.md).
 
 The application binds to loopback by default for a host reverse proxy. Change
 `APP_BIND_ADDRESS` only with an intentional host firewall and TLS design.

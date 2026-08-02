@@ -58,21 +58,29 @@ cross-Account search surface to ordinary Account members.
   lag;
 - migrations: revision, start, completion, failure, and applied-schema pin;
 - health: process liveness and dependency/schema/migration readiness.
+- capacity: `database_storage_usage_percent` from the filesystem containing
+  active PostgreSQL data, or the equivalent provider-reported disk metric.
 
 ## Alerts and ownership
 
-| Condition                                                          | Severity                                                | Action                                                                                               | Owner                |
-| ------------------------------------------------------------------ | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------- |
-| Required audit write fails                                         | Critical/page                                           | fail the operation; preserve transaction evidence; investigate database and authorization boundaries | Security/on-call     |
-| Readiness fails for 2 consecutive minutes                          | Critical/page                                           | stop traffic or deployment; compare configuration, database, schema, and migration checks            | Platform/on-call     |
-| Unexpected scoring acceptance failures exceed 1% for 5 minutes     | Critical/page                                           | pause rollout; preserve correlation IDs; verify accepted history before retry                        | Scorekeeping/on-call |
-| Projection/report freshness exceeds 5 minutes                      | Warning/ticket                                          | inspect checkpoint, source/privacy revisions, and rebuild worker                                     | Reports              |
-| Background job exhausts retries                                    | Warning/ticket, critical if scoring recovery is blocked | inspect typed failure and checkpoint; do not skip failed work silently                               | Owning service       |
-| Webhook delivery enters the dead-letter queue                      | Warning/ticket                                          | inspect the retained attempt history, endpoint health, and replay eligibility                        | Integrations         |
-| Authorization rejection rate changes by 3× baseline for 10 minutes | Warning/security review                                 | distinguish expired membership and expected denial from attack or deploy regression                  | Security             |
+| Condition                                                          | Severity                                                | Action                                                                                                  | Owner                |
+| ------------------------------------------------------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------- |
+| Required audit write fails                                         | Critical/page                                           | fail the operation; preserve transaction evidence; investigate database and authorization boundaries    | Security/on-call     |
+| Readiness fails for 2 consecutive minutes                          | Critical/page                                           | stop traffic or deployment; compare configuration, database, schema, and migration checks               | Platform/on-call     |
+| Unexpected scoring acceptance failures exceed 1% for 5 minutes     | Critical/page                                           | pause rollout; preserve correlation IDs; verify accepted history before retry                           | Scorekeeping/on-call |
+| Projection/report freshness exceeds 5 minutes                      | Warning/ticket                                          | inspect checkpoint, source/privacy revisions, and rebuild worker                                        | Reports              |
+| Background job exhausts retries                                    | Warning/ticket, critical if scoring recovery is blocked | inspect typed failure and checkpoint; do not skip failed work silently                                  | Owning service       |
+| Webhook delivery enters the dead-letter queue                      | Warning/ticket                                          | inspect the retained attempt history, endpoint health, and replay eligibility                           | Integrations         |
+| Authorization rejection rate changes by 3× baseline for 10 minutes | Warning/security review                                 | distinguish expired membership and expected denial from attack or deploy regression                     | Security             |
+| Database storage is 70–75%                                         | Warning/ticket                                          | review growth, backups, retention, logs, and artifacts; schedule capacity expansion                     | Platform/on-call     |
+| Database storage exceeds 75% or cannot be measured                 | Critical/page                                           | expand or restore visibility; investigate growth; preserve emergency recovery and never delete silently | Platform/on-call     |
 
 Expected domain rejections, validation errors, and idempotent retries do not page.
 Owners review alert thresholds after each incident and at least quarterly.
+Database storage thresholds may be lowered but never raised above 70% warning
+and 75% critical. The signal and operator runbook are defined in
+[`DATABASE_STORAGE_CAPACITY.md`](DATABASE_STORAGE_CAPACITY.md); it is not part
+of public application health output.
 
 ## Retention, privacy, and access
 

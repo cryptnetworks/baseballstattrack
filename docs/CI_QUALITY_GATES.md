@@ -26,6 +26,11 @@ npm run verify
 
 The independently runnable commands above are the local reproduction commands for a failed CI step. `npm run format:write` is intentionally separate because it changes files. `npm run db:migrate`, seeding, and any destructive database command are not part of verification.
 
+The unit suite exercises the database storage checker with synthetic `df`
+output for healthy, warning, and critical usage plus missing, denied, and
+unsupported filesystem inspection. CI never fills a runner disk and never
+inspects production storage.
+
 ## GitHub Actions contract
 
 `.github/workflows/ci.yml` preserves the stable workflow **CI** and one required job named **`verify`**. The exact branch-protection required check name is:

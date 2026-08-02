@@ -22,6 +22,15 @@ is enabled. The restore-verification RTO target is four hours.
 - alert on missed backup, checksum failure, unexpected size change, restore
   failure, key failure, or an archive exceeding retention.
 
+The active PostgreSQL filesystem must remain below the capacity thresholds in
+[`DATABASE_STORAGE_CAPACITY.md`](DATABASE_STORAGE_CAPACITY.md). That limit does
+not make backup storage unlimited. Monitor the database volume, each backup
+volume, host logs, build/release artifacts, temporary restore space, and
+container-image storage independently. Keep backups in a separate failure
+domain and verify enough free working space exists before a dump, migration, or
+restore. Never delete a current archive or shorten retention merely to clear an
+active-database alert without an authorized retention decision.
+
 `npm run db:backup` creates a custom archive and SHA-256 sidecar with mode 0600.
 `npm run db:restore` requires the sidecar, validates the archive, rejects a
 nonempty target, and restores in one transaction. Run these commands in a
@@ -31,8 +40,10 @@ logs, source control, or image layers.
 ## Restore procedure
 
 1. Declare a recovery incident and authorize two operators.
-2. Select an archive by timestamp, checksum, application revision, migration
-   pin, deletion ledger, and privacy-overlay checkpoint.
+2. Confirm the isolated target and temporary restore filesystems have enough
+   capacity and that emergency recovery is not blocked by an ordinary storage
+   alert. Then select an archive by timestamp, checksum, application revision,
+   migration pin, deletion ledger, and privacy-overlay checkpoint.
 3. Create an isolated empty target with networking restricted to recovery
    operators. Revoke restored sessions, provider tokens, webhook secrets, and
    service credentials before allowing application traffic.
