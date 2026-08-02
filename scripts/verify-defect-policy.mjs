@@ -47,6 +47,9 @@ const parseYaml = async (relativePath) => {
 
 const bugForm = await parseYaml(".github/ISSUE_TEMPLATE/bug_report.yml");
 const issueConfig = await parseYaml(".github/ISSUE_TEMPLATE/config.yml");
+const ciWorkflow = await parseYaml(".github/workflows/ci.yml");
+await parseYaml(".github/workflows/publish-containers.yml");
+await parseYaml(".github/workflows/release.yml");
 const securityPolicy = await read("SECURITY.md");
 const defectPolicy = await read("docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md");
 const pullRequestTemplate = await read(".github/PULL_REQUEST_TEMPLATE.md");
@@ -113,6 +116,17 @@ assert(
 assert(
   issueConfig.blank_issues_enabled === false,
   "Blank issues must remain disabled so safety guidance is not bypassed.",
+);
+
+assert(ciWorkflow.name === "CI", "CI workflow must keep its stable name.");
+assert(
+  ciWorkflow.jobs?.verify?.name === "verify",
+  "CI workflow must keep the required verify job name.",
+);
+assert(
+  Array.isArray(ciWorkflow.jobs?.verify?.needs) &&
+    ciWorkflow.jobs.verify.needs.includes("scope"),
+  "Required verify job must enforce the path-scoped CI plan.",
 );
 
 const contactLinks = issueConfig.contact_links;

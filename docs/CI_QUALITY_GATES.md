@@ -18,11 +18,15 @@ npm run verify
 3. `npm run typecheck` — Next.js route type generation and TypeScript checking.
 4. `npm run test` — one non-watch Vitest run.
 5. `npm run policy:validate` — defect-policy issue-form YAML, required process files, safety invariants, and internal links.
-6. `npm run db:validate` — Prisma schema validation only.
-7. `npm run build` — production Next.js build.
-8. `npm run experience:verify` — deterministic client-route, CSS, and
+6. `npm run api:contract` — versioned statistics API specification, examples,
+   and compatibility lock validation.
+7. `npm run db:validate` — Prisma schema validation only.
+8. `npm run build` — production Next.js build.
+9. `npm run experience:verify` — deterministic client-route, CSS, and
    route-isolation budgets against the fresh production build.
-9. `npm run audit:prod` — high-or-critical production dependency audit.
+10. `npm run pwa:verify` — manifest, icon, service-worker boundary, and storage
+    policy checks.
+11. `npm run audit:prod` — high-or-critical production dependency audit.
 
 The independently runnable commands above are the local reproduction commands for a failed CI step. `npm run format:write` is intentionally separate because it changes files. `npm run db:migrate`, seeding, and any destructive database command are not part of verification.
 
@@ -33,22 +37,57 @@ inspects production storage.
 
 ## GitHub Actions contract
 
-`.github/workflows/ci.yml` preserves the stable workflow **CI** and one required job named **`verify`**. The exact branch-protection required check name is:
+`.github/workflows/ci.yml` preserves the stable workflow **CI** and one required
+result job named **`verify`**. The exact branch-protection required check name is:
 
 ```text
 verify
 ```
 
-The workflow runs for pull requests targeting `main` and pushes to `main`. It uses a single combined job so contributors and branch protection share the exact canonical command. Workflow concurrency cancels obsolete runs for the same pull request or branch; it never cancels a different pull request's run.
+The workflow runs for pull requests targeting `main`, merge-queue groups targeting
+`main`, and pushes to `main`. The workflow itself intentionally has no path
+filter: GitHub leaves a skipped required workflow pending, which could block a
+pull request indefinitely. Instead, a fail-safe scope-planning job inspects the
+complete Git diff and conditionally starts the relevant internal jobs. The final
+`verify` job always evaluates the plan and fails unless every job selected by the
+plan succeeded. Workflow concurrency cancels obsolete runs for the same pull
+request, merge group, or branch; it never cancels a different pull request's run.
 
-The job uses a GitHub-hosted Ubuntu runner, Node 24, npm's dependency cache keyed from the lockfile, `npm ci`, a disposable PostgreSQL 17 service, the complete migration chain, and `npm run verify`. The cache only accelerates download; `npm ci` remains authoritative and fails on a package-lock mismatch. The migration step runs deploy, status, catalog verification, and the transaction-scoped relational representability proof against the empty CI database, so invalid SQL, unapplied migrations, missing database-only constraints, and lossy representative mappings fail before application verification. The job has a 30-minute timeout and named checkout, setup, install, migration, and verification steps so failures are visible in GitHub Actions logs. No required step uses `continue-on-error`, `|| true`, or a failure-masking pipe.
+The path scopes are:
 
-After canonical verification, CI independently proves backup/restore, the
-representative stale-projection detection/recovery drill, and the production
-container contract. These operational checks use only disposable synthetic
-PostgreSQL and Docker state.
+| Changed boundary                                                              | Jobs and proofs                                                                                 |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Documentation and repository-policy files only                                | Prettier plus defect-policy, YAML, and internal-link validation                                 |
+| Next.js, TypeScript, shared scripts, configuration, or tests                  | Complete `npm run verify` with PostgreSQL-backed integration tests                              |
+| Prisma schema or migrations                                                   | Application verification plus backup/restore, stale-projection, and production-container proofs |
+| Discord bot service                                                           | Ruff, formatting, pytest, and the Discord bot container build                                   |
+| Docker, Compose, runtime entrypoint, or container scripts                     | Production container build and smoke tests                                                      |
+| Workflow definitions, dependency manifests, an empty diff, or an unknown path | All gates, so classification changes fail safe                                                  |
 
-Authentication and Account-isolation tests run in this same job. Because the
+API compatibility against the pull request's base is limited to changes in the
+versioned API boundary or its executable contract. Canonical application
+verification still validates the checked-in API contract on every application
+run.
+
+The application job uses a GitHub-hosted Ubuntu runner, Node 24, npm's
+dependency cache keyed from the lockfile, `npm ci`, a disposable PostgreSQL 17
+service, the complete migration chain, and `npm run verify`. The cache only
+accelerates download; `npm ci` remains authoritative and fails on a package-lock
+mismatch. The migration step runs deploy, status, catalog verification, and the
+transaction-scoped relational representability proof against the empty CI
+database, so invalid SQL, unapplied migrations, missing database-only
+constraints, and lossy representative mappings fail before application
+verification. Every job has a bounded timeout and named steps so failures are
+visible in GitHub Actions logs. No required step uses `continue-on-error`,
+`|| true`, or a failure-masking pipe.
+
+For database, migration, operational-script, dependency, and CI-policy changes,
+CI independently proves backup/restore and the representative stale-projection
+detection/recovery drill. Production-container checks run for container/runtime,
+migration, dependency, and CI-policy changes. These checks use only disposable
+synthetic PostgreSQL and Docker state.
+
+Authentication and Account-isolation tests run in the application job. Because the
 migration chain is applied first, current membership, scoped role and grant,
 revocation, and cross-Account database tests run against disposable PostgreSQL
 instead of being skipped.

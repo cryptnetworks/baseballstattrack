@@ -7,22 +7,121 @@ on:
   push:
     branches:
       - main
+  merge_group:
+    branches:
+      - main
 
 permissions:
   contents: read
 
 concurrency:
-  group: quality-gates-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: quality-gates-${{ github.workflow }}-${{ github.event.pull_request.number || github.event.merge_group.head_ref || github.ref }}
   cancel-in-progress: true
 
 env:
   NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
-  verify:
-    name: verify
+  scope:
+    name: Plan required checks
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      application: ${{ steps.plan.outputs.application }}
+      api: ${{ steps.plan.outputs.api }}
+      containers: ${{ steps.plan.outputs.containers }}
+      database: ${{ steps.plan.outputs.database }}
+      discord: ${{ steps.plan.outputs.discord }}
+      documentation: ${{ steps.plan.outputs.documentation }}
+      operations: ${{ steps.plan.outputs.operations }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+
+      - name: Classify changed paths
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+          PULL_REQUEST_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+        run: |
+          set -Eeuo pipefail
+
+          case "${EVENT_NAME}" in
+            pull_request) base_sha="${PULL_REQUEST_BASE}" ;;
+            push) base_sha="${PUSH_BASE}" ;;
+            merge_group) base_sha="${MERGE_GROUP_BASE}" ;;
+            *) base_sha="" ;;
+          esac
+
+          if [[ -z "${base_sha}" || "${base_sha}" =~ ^0+$ ]] ||
+             ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
+            echo "A reliable base commit is unavailable; enabling every gate."
+            node scripts/plan-ci.mjs --full >> "${GITHUB_OUTPUT}"
+          else
+            git diff --name-only -z "${base_sha}" "${GITHUB_SHA}" |
+              node scripts/plan-ci.mjs >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Record plan
+        env:
+          APPLICATION: ${{ steps.plan.outputs.application }}
+          API: ${{ steps.plan.outputs.api }}
+          CONTAINERS: ${{ steps.plan.outputs.containers }}
+          DATABASE: ${{ steps.plan.outputs.database }}
+          DISCORD: ${{ steps.plan.outputs.discord }}
+          DOCUMENTATION: ${{ steps.plan.outputs.documentation }}
+          OPERATIONS: ${{ steps.plan.outputs.operations }}
+        run: |
+          {
+            echo "### CI execution plan"
+            echo "| Scope | Required |"
+            echo "| --- | --- |"
+            echo "| Application | ${APPLICATION} |"
+            echo "| API compatibility | ${API} |"
+            echo "| Containers | ${CONTAINERS} |"
+            echo "| Database | ${DATABASE} |"
+            echo "| Discord service | ${DISCORD} |"
+            echo "| Documentation | ${DOCUMENTATION} |"
+            echo "| Operational drills | ${OPERATIONS} |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  documentation:
+    name: Documentation and repository policy
+    needs: scope
+    if: needs.scope.outputs.documentation == 'true' && needs.scope.outputs.application != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install verification dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Verify formatting and repository policy
+        run: npm run format && npm run policy:validate
+
+  application:
+    name: Application and database
+    needs: scope
+    if: needs.scope.outputs.application == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:17-alpine
@@ -37,11 +136,8 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-
     env:
-      NEXT_TELEMETRY_DISABLED: "1"
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/baseballstattrack_ci?schema=public
-
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -54,6 +150,37 @@ jobs:
           node-version: "24"
           cache: npm
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate migration chain
+        run: npm run db:migrate:deploy && npm run db:migrate:status && npm run db:migrate:verify && npm run db:representability
+
+      - name: Reject breaking statistics API changes
+        if: needs.scope.outputs.api == 'true' && github.event_name == 'pull_request'
+        run: npm run api:contract -- --baseline-ref "origin/${GITHUB_BASE_REF}"
+
+      - name: Run canonical quality verification
+        run: npm run verify
+
+      - name: Prove backup and restore
+        if: needs.scope.outputs.operations == 'true'
+        run: npm run db:restore:verify
+
+      - name: Run stale-projection reliability drill
+        if: needs.scope.outputs.operations == 'true'
+        run: npm run reliability:drill
+
+  discord:
+    name: Discord service
+    needs: scope
+    if: needs.scope.outputs.discord == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
       - name: Setup Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
@@ -62,33 +189,93 @@ jobs:
           cache-dependency-path: services/discord-bot/requirements-dev.lock
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Install Discord bot dependencies
         run: python -m pip install --disable-pip-version-check --no-deps --require-hashes --requirement services/discord-bot/requirements-dev.lock
 
       - name: Verify Discord bot
         working-directory: services/discord-bot
         run: python -m ruff check . && python -m ruff format --check . && python -m pytest
 
-      - name: Validate migration chain
-        run: npm run db:migrate:deploy && npm run db:migrate:status && npm run db:migrate:verify && npm run db:representability
-
-      - name: Reject breaking statistics API changes
-        if: github.event_name == 'pull_request'
-        run: npm run api:contract -- --baseline-ref "origin/${GITHUB_BASE_REF}"
-
-      - name: Run canonical quality verification
-        run: npm run verify
-
-      - name: Prove backup and restore
-        run: npm run db:restore:verify
-
-      - name: Run stale-projection reliability drill
-        run: npm run reliability:drill
-
-      - name: Build and smoke-test containers
-        run: npm run container:verify
-
       - name: Build Discord bot container
         run: docker build --tag baseballstattrack-discord:ci services/discord-bot
+
+  containers:
+    name: Production containers
+    needs: scope
+    if: needs.scope.outputs.containers == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Build and smoke-test containers
+        run: bash scripts/container-smoke.sh
+
+  verify:
+    name: verify
+    needs:
+      - scope
+      - documentation
+      - application
+      - discord
+      - containers
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enforce planned results
+        env:
+          APPLICATION_PLANNED: ${{ needs.scope.outputs.application }}
+          APPLICATION_RESULT: ${{ needs.application.result }}
+          CONTAINERS_PLANNED: ${{ needs.scope.outputs.containers }}
+          CONTAINERS_RESULT: ${{ needs.containers.result }}
+          DISCORD_PLANNED: ${{ needs.scope.outputs.discord }}
+          DISCORD_RESULT: ${{ needs.discord.result }}
+          DOCUMENTATION_PLANNED: ${{ needs.scope.outputs.documentation }}
+          DOCUMENTATION_RESULT: ${{ needs.documentation.result }}
+          SCOPE_RESULT: ${{ needs.scope.result }}
+        run: |
+          set -Eeuo pipefail
+
+          [[ "${SCOPE_RESULT}" == "success" ]] || {
+            echo "CI scope planning did not succeed." >&2
+            exit 1
+          }
+
+          require_result() {
+            local name=$1
+            local planned=$2
+            local result=$3
+
+            if [[ "${planned}" == "true" ]]; then
+              [[ "${result}" == "success" ]] || {
+                echo "${name} was required but finished with ${result}." >&2
+                return 1
+              }
+            else
+              [[ "${result}" == "skipped" ]] || {
+                echo "${name} was not required but finished with ${result}." >&2
+                return 1
+              }
+            fi
+          }
+
+          documentation_job=false
+          if [[ "${DOCUMENTATION_PLANNED}" == "true" && "${APPLICATION_PLANNED}" != "true" ]]; then
+            documentation_job=true
+          fi
+
+          require_result "Application validation" "${APPLICATION_PLANNED}" "${APPLICATION_RESULT}"
+          require_result "Container validation" "${CONTAINERS_PLANNED}" "${CONTAINERS_RESULT}"
+          require_result "Discord validation" "${DISCORD_PLANNED}" "${DISCORD_RESULT}"
+          require_result "Documentation validation" "${documentation_job}" "${DOCUMENTATION_RESULT}"
+
+          if [[ "${APPLICATION_PLANNED}" != "true" &&
+                "${CONTAINERS_PLANNED}" != "true" &&
+                "${DISCORD_PLANNED}" != "true" &&
+                "${documentation_job}" != "true" ]]; then
+            echo "The CI plan selected no validation job." >&2
+            exit 1
+          fi
+
+          echo "Every planned CI job passed."
