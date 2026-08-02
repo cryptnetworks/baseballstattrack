@@ -121,6 +121,9 @@ The identity, immutable-version, ownership, activation, compatibility, and
 historical game-binding foundation is defined in the
 [Ruleset contract](RULESET_CONTRACT.md) and
 [ADR 0010](decisions/0010-ruleset-identity-versioning-and-historical-binding.md).
+The producer, provenance, ruleset-resolution, identity-review, quarantine, and
+atomic-promotion boundary for portable baseball history is defined in
+[Import portability](IMPORT_PORTABILITY.md).
 
 The low-maintenance fantasy baseball option is defined by [#122](https://github.com/cryptnetworks/baseballstattrack/issues/122): weekly lineup decisions, automatic scoring, scheduled transactions, and low-noise notifications.
 

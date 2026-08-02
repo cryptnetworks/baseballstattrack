@@ -1,5 +1,11 @@
 # Data export and import validation
 
+The M8 producer, provenance, ruleset-resolution, identity-review, quarantine,
+and future atomic-promotion contract is defined in
+[Import portability and portable baseball data contract](IMPORT_PORTABILITY.md).
+The implementation documented here remains the safe versioned Account export
+and mutation-free dry-run foundation; it does not claim commit eligibility.
+
 ## Scope and initial policy
 
 Issue #26 implements the canonical format and dry run; issue #88 hardens the
