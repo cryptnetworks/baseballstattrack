@@ -31,21 +31,44 @@ Navigation requests, API requests, authentication routes, and all other
 dynamic responses bypass the cache. The worker never stores HTML, Account
 data, player data, scoring events, commands, credentials, cookies, or private
 reports. Cache names are versioned and old M7 static caches are deleted on
-activation. The worker is an asset delivery optimization, not an application
-state authority.
+activation. A replacement worker waits for existing controlled tabs to close
+instead of forcing immediate takeover, which prevents an open page from mixing
+runtime revisions. The worker is an asset delivery optimization, not an
+application state authority.
 
 ## Online-first and authentication behavior
 
-The connection banner distinguishes online from interrupted connectivity and
-states that saved server state remains authoritative. It tells a scorer to
-wait for reconnection before saving new scoring actions; it never claims that
-scoring can continue offline.
+The connection banner distinguishes connected, degraded, disconnected, and
+reconnecting states. Browser network-quality signals identify degraded links;
+after a disconnection, a no-store health request confirms server reachability
+before the banner returns to connected. It states that saved server state
+remains authoritative, tells a scorer to wait for reconnection before saving
+new scoring actions, and never claims that scoring can continue offline.
 
 Authentication, session expiration, membership checks, Account authorization,
-server validation, idempotency, replay, and corrections remain unchanged. No
-authentication token or private page is placed in browser storage or a service
-worker cache. Existing M2 recovery behavior remains the supported way to
-resume an interrupted session.
+server validation, idempotency, replay, and corrections remain unchanged.
+Dynamic responses covered by the authentication proxy are marked
+`private, no-store`; the manifest, worker script, hashed Next.js assets, and
+public icons bypass session refresh. No authentication token or private page is
+placed in browser storage or a service-worker cache. Existing M2 recovery
+behavior remains the supported way to resume an interrupted session.
+
+## Browser storage and clearing data
+
+M7 stores only the dismissible install-prompt preference in `localStorage`.
+Authentication credentials remain in secure, HTTP-only, same-site cookies, and
+the service worker stores only the public static resources listed above. The
+existing M2 scoring recovery boundary may retain one strictly scoped,
+unaccepted draft per scoring surface; it is not accepted server state and is
+never submitted automatically.
+
+Signing out clears the local Supabase session cookies but intentionally does
+not clear the install preference or an unaccepted M2 recovery draft. On a
+shared or transferred device, sign out and then use the browser's site-data
+controls to clear cookies, local storage, the worker registration, and its
+public cache. Clearing site data removes local preferences and recovery drafts
+and signs the browser out; it does not delete any server-authoritative Account,
+game, or scoring record.
 
 ## Mobile shell and accessibility
 
