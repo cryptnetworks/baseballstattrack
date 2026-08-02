@@ -27,6 +27,15 @@ append requests enable nonce enforcement. Edits target the pinned prior
 provider message. Restarts can therefore retry the same durable delivery
 without silently creating another message.
 
+The application owns delivery scheduling timestamps. The worker supplies one
+controlled evaluation-completion instant and the repository persists that
+instant explicitly as both `createdAt` and the initial `nextAttemptAt`, making
+the delivery immediately claimable at that instant without consulting the
+database clock. PostgreSQL's `CURRENT_TIMESTAMP` defaults remain only as a
+safety fallback for non-application inserts; no application delivery path
+depends on them. Retry scheduling continues from the explicit attempt
+completion instant.
+
 ## Freshness, failure, and recovery
 
 Statistics are loaded only through the authenticated versioned box-score API.

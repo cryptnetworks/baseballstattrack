@@ -100,6 +100,9 @@ function service(repository: Record<string, unknown>, overrides = {}) {
         : {}),
     } as never,
     { emit: vi.fn() },
+    "clock" in overrides
+      ? (overrides as { clock: () => Date }).clock
+      : () => NOW,
   );
 }
 
@@ -155,6 +158,9 @@ describe("Discord update evaluation", () => {
         ([value]) => value.evaluationId,
       ),
     ).toEqual(["evaluation-7", "evaluation-8"]);
+    expect(repository.completeEvaluation).toHaveBeenCalledWith(
+      expect.objectContaining({ completedAt: NOW }),
+    );
     expect(repository.failEvaluation).not.toHaveBeenCalled();
   });
 
@@ -225,6 +231,10 @@ describe("Discord update delivery", () => {
         idempotencyKey: "00000000-0000-4000-8000-000000000120",
         targetMessageId: "123456789012345678",
       }),
+    );
+    expect(repository.claimDeliveries).toHaveBeenCalledWith(WORKER, NOW, 25);
+    expect(repository.completeDeliveryAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ startedAt: NOW, completedAt: NOW }),
     );
   });
 

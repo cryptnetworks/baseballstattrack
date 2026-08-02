@@ -479,6 +479,8 @@ export class PrismaDiscordUpdateRepository {
             targetProviderMessageId:
               operation === "EDIT" ? previous!.providerMessageId : null,
             retentionUntil: evaluation.retentionUntil,
+            createdAt: input.completedAt,
+            nextAttemptAt: input.completedAt,
           },
           skipDuplicates: true,
         });
