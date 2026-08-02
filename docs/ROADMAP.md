@@ -52,7 +52,11 @@ The implemented Account-scoped, pull-only ICS contract is in
 
 Primary issues: #73, #91–#99, #108–#121.
 
-Discord control-plane delivery is tracked by [#108](https://github.com/cryptnetworks/baseballstattrack/issues/108) and its child issues covering settings, installation, web UI, routing, cadence, delivery, permissions, previews, health, testing, and deployment.
+Discord control-plane delivery is complete under
+[#108](https://github.com/cryptnetworks/baseballstattrack/issues/108). Its
+settings, installation, web UI, routing, cadence, delivery, permissions,
+preview, health, testing, and deployment evidence is recorded in the
+[M5 Discord control-plane reconciliation](M5_DISCORD_CONTROL_PLANE_RECONCILIATION.md).
 The implemented trigger, message-strategy, correction-presentation, and payload
 budget contract is in [Discord update content](DISCORD_UPDATE_CONTENT.md).
 The durable, version-aware execution boundary is in
