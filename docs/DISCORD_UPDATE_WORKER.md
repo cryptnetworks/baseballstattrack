@@ -87,3 +87,6 @@ evidence or reset provider IDs.
 Migrations `20260801070000_discord_update_delivery` and
 `20260801071000_discord_update_delivery_indexes` are forward-only after work
 exists. Rollback is feature disablement followed by a roll-forward repair.
+
+The synthetic end-to-end coverage and its failure/isolation matrix are
+documented in [Discord end-to-end fixtures](./DISCORD_END_TO_END_FIXTURES.md).
