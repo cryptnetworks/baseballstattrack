@@ -90,3 +90,6 @@ exists. Rollback is feature disablement followed by a roll-forward repair.
 
 The synthetic end-to-end coverage and its failure/isolation matrix are
 documented in [Discord end-to-end fixtures](./DISCORD_END_TO_END_FIXTURES.md).
+The isolated scheduler process, service credentials, health contract, and
+secretless container proof are documented in
+[Discord control-plane deployment](./DISCORD_CONTROL_PLANE_DEPLOYMENT.md).

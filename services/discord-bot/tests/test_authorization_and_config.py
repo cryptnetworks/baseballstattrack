@@ -45,6 +45,30 @@ def test_settings_keep_secrets_out_of_repr_and_require_safe_urls() -> None:
         Settings.from_environment(unsafe)
 
 
+def test_explicit_stub_mode_needs_no_discord_credentials() -> None:
+    settings = Settings.from_environment(
+        {
+            "DISCORD_PROVIDER_MODE": "stub",
+            "BST_API_BASE_URL": "https://app.example.test",
+            "BST_WEB_BASE_URL": "https://app.example.test",
+            "DISCORD_TEAM_BINDINGS": "[]",
+        }
+    )
+
+    assert settings.provider_mode == "stub"
+    assert settings.discord_token == ""
+    assert settings.api_token == ""
+    assert settings.bindings == ()
+
+
+@pytest.mark.parametrize("provider_mode", ["", "sandbox", "STUBBED"])
+def test_unknown_provider_mode_fails_closed(provider_mode: str) -> None:
+    with pytest.raises(ConfigurationError):
+        Settings.from_environment(
+            {**environment(), "DISCORD_PROVIDER_MODE": provider_mode}
+        )
+
+
 def test_binding_requires_exact_server_channel_role_and_team() -> None:
     binding = Settings.from_environment(environment()).bindings[0]
     authorizer = BindingAuthorizer((binding,))

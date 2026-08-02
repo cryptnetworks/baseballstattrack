@@ -36,6 +36,8 @@ excluded from object representations and logs.
 
 Required variables are shown in [`.env.example`](.env.example):
 
+- `DISCORD_PROVIDER_MODE`: `gateway` for production or explicit `stub` for
+  local/CI process proof;
 - `DISCORD_TOKEN`: Discord bot token, stored as a secret;
 - `BST_API_TOKEN`: least-privilege API bearer token, stored as a secret;
 - `BST_API_BASE_URL`: HTTPS application origin;
@@ -83,6 +85,11 @@ Copy `.env.example` to an ignored `.env` only for local secret injection; the
 service does not load dotenv files itself. Export variables from a secret-aware
 shell or container runtime.
 
+To prove startup, health, logging, and shutdown without contacting Discord or
+the statistics API, set `DISCORD_PROVIDER_MODE=stub`, leave both token
+variables empty, and set `DISCORD_TEAM_BINDINGS=[]`. Stub mode is explicit and
+must not be used as evidence of production provider connectivity.
+
 ## Container deployment and monitoring
 
 ```bash
@@ -104,6 +111,10 @@ then revoking the old credential. An API 401/403 is shown as an administrator
 action rather than retried. Discord reconnects are automatic; API timeouts,
 5xx responses, invalid contracts, and 429 responses return safe ephemeral
 errors. `Retry-After` is honored in user guidance, never by an unbounded retry.
+
+The complete service topology, callback inventory, scheduler, secret rotation,
+and credential-free Compose proof are in
+[`docs/DISCORD_CONTROL_PLANE_DEPLOYMENT.md`](../../docs/DISCORD_CONTROL_PLANE_DEPLOYMENT.md).
 
 ## Release scope
 

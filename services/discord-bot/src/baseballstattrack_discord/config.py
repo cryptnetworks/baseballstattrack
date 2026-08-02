@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Mapping
+from typing import Literal, Mapping
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -80,6 +80,7 @@ class Settings:
     api_base_url: str
     web_base_url: str
     bindings: tuple[TeamBinding, ...]
+    provider_mode: Literal["gateway", "stub"] = "gateway"
     health_host: str = "0.0.0.0"  # noqa: S104 - container health listener
     health_port: int = 8080
     request_timeout_seconds: float = 8.0
@@ -87,11 +88,16 @@ class Settings:
     @classmethod
     def from_environment(cls, environment: Mapping[str, str] | None = None) -> Settings:
         env = os.environ if environment is None else environment
+        provider_mode = env.get("DISCORD_PROVIDER_MODE", "gateway").strip().lower()
+        if provider_mode not in {"gateway", "stub"}:
+            raise ConfigurationError(
+                "DISCORD_PROVIDER_MODE must be either gateway or stub"
+            )
         discord_token = env.get("DISCORD_TOKEN", "").strip()
         api_token = env.get("BST_API_TOKEN", "").strip()
-        if len(discord_token) < 20:
+        if provider_mode == "gateway" and len(discord_token) < 20:
             raise ConfigurationError("DISCORD_TOKEN is required")
-        if len(api_token) < 20:
+        if provider_mode == "gateway" and len(api_token) < 20:
             raise ConfigurationError("BST_API_TOKEN is required")
 
         api_base_url = _url(env.get("BST_API_BASE_URL"), "BST_API_BASE_URL")
@@ -103,8 +109,14 @@ class Settings:
             raise ConfigurationError(
                 "DISCORD_TEAM_BINDINGS must be valid JSON"
             ) from error
-        if not isinstance(decoded, list) or not decoded:
-            raise ConfigurationError("DISCORD_TEAM_BINDINGS must be a non-empty array")
+        if not isinstance(decoded, list) or (
+            provider_mode == "gateway" and not decoded
+        ):
+            raise ConfigurationError(
+                "DISCORD_TEAM_BINDINGS must be a non-empty array"
+                if provider_mode == "gateway"
+                else "DISCORD_TEAM_BINDINGS must be an array"
+            )
         bindings = tuple(TeamBinding.from_mapping(item) for item in decoded)
         if len({(item.guild_id, item.team_id) for item in bindings}) != len(bindings):
             raise ConfigurationError("Discord guild/team bindings must be unique")
@@ -125,6 +137,7 @@ class Settings:
             api_base_url=api_base_url,
             web_base_url=web_base_url,
             bindings=bindings,
+            provider_mode=provider_mode,
             health_host=env.get(
                 "HEALTH_HOST",
                 "0.0.0.0",  # noqa: S104 - container health listener

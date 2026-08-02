@@ -58,6 +58,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
       DIRECT_URL: ${DIRECT_URL:-${DATABASE_URL}}
+      DISCORD_UPDATE_WORKER_TOKEN: ${DISCORD_UPDATE_WORKER_TOKEN:-}
       NODE_ENV: production
       PORT: 3000
     depends_on:
@@ -69,6 +70,7 @@ services:
       - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3000}:3000"
     networks:
       - database
+      - control-plane
       - outbound
     read_only: true
     init: true
@@ -83,13 +85,14 @@ services:
     stop_grace_period: 30s
 
   discord-bot:
-    profiles: ["discord-bot"]
+    profiles: ["discord-bot", "discord-control-plane"]
     image: ${DISCORD_BOT_IMAGE:-ghcr.io/cryptnetworks/baseballstattrack-discord-bot:latest}
     pull_policy: ${IMAGE_PULL_POLICY:-always}
     environment:
+      DISCORD_PROVIDER_MODE: ${DISCORD_PROVIDER_MODE:-gateway}
       DISCORD_TOKEN: ${DISCORD_TOKEN:-}
       BST_API_TOKEN: ${BST_API_TOKEN:-}
-      BST_API_BASE_URL: ${BST_API_BASE_URL:-http://app:3000}
+      BST_API_BASE_URL: ${BST_API_BASE_URL:-${NEXT_PUBLIC_SITE_URL}}
       BST_WEB_BASE_URL: ${BST_WEB_BASE_URL:-${NEXT_PUBLIC_SITE_URL}}
       DISCORD_TEAM_BINDINGS: ${DISCORD_TEAM_BINDINGS:-[]}
       BST_API_TIMEOUT_SECONDS: ${BST_API_TIMEOUT_SECONDS:-8}
@@ -111,6 +114,48 @@ services:
       - /tmp:size=32m,mode=1777
     restart: unless-stopped
     stop_grace_period: 30s
+
+  discord-update-worker:
+    profiles: ["discord-control-plane"]
+    image: ${APP_IMAGE:-ghcr.io/cryptnetworks/baseballstattrack:latest}
+    pull_policy: ${IMAGE_PULL_POLICY:-always}
+    entrypoint: ["node", "container/discord-update-scheduler.mjs"]
+    environment:
+      DISCORD_UPDATE_WORKER_BASE_URL: http://app:3000
+      DISCORD_UPDATE_WORKER_TOKEN: ${DISCORD_UPDATE_WORKER_TOKEN:-}
+      DISCORD_UPDATE_WORKER_ID: ${DISCORD_UPDATE_WORKER_ID:-discord-compose-worker}
+      DISCORD_UPDATE_WORKER_INTERVAL_SECONDS: ${DISCORD_UPDATE_WORKER_INTERVAL_SECONDS:-15}
+      DISCORD_UPDATE_WORKER_TIMEOUT_SECONDS: ${DISCORD_UPDATE_WORKER_TIMEOUT_SECONDS:-55}
+      DISCORD_UPDATE_WORKER_HEALTH_HOST: 0.0.0.0
+      DISCORD_UPDATE_WORKER_HEALTH_PORT: 8080
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - control-plane
+    read_only: true
+    init: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/readyz').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 20s
+    logging:
+      driver: json-file
+      options: { max-file: "5", max-size: 10m }
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    restart: unless-stopped
+    stop_grace_period: 60s
 
   cloudflare-tunnel:
     profiles: ["cloudflare-tunnel"]
@@ -135,6 +180,9 @@ services:
 
 networks:
   database:
+    driver: bridge
+    internal: true
+  control-plane:
     driver: bridge
     internal: true
   outbound:
