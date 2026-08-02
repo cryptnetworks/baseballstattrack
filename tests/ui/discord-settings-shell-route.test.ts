@@ -24,6 +24,8 @@ describe("Discord settings shell route", () => {
     expect(page).toContain("getDiscordInstallationService().list");
     expect(page).toContain('redirect("/login")');
     expect(page).toContain('error.code === "INSUFFICIENT_CAPABILITY"');
+    expect(page).toContain("getDiscordActivityService().get");
+    expect(page).toContain('"discord.settings.operate"');
     expect(page).not.toContain("guildId");
     expect(page).not.toContain("credentialReference");
   });

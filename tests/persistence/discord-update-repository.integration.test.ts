@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaDiscordUpdateRepository } from "@/server/data/discord-update-repository";
+import { PrismaDiscordActivityRepository } from "@/server/data/discord-activity-repository";
 
 const databaseUrl = process.env.DATABASE_URL;
 const integration = databaseUrl ? describe : describe.skip;
@@ -29,6 +30,7 @@ integration("Discord update worker persistence", () => {
     adapter: new PrismaPg({ connectionString: databaseUrl! }),
   });
   const repository = new PrismaDiscordUpdateRepository(prisma);
+  const activityRepository = new PrismaDiscordActivityRepository(prisma);
   const accountId = `${prefix}-account`;
   const otherAccountId = `${prefix}-other`;
   const teamId = `${prefix}-team`;
@@ -37,6 +39,7 @@ integration("Discord update worker persistence", () => {
   const gameId = `${prefix}-game`;
   let gameExternalId = "";
   let settingsId = "";
+  let installationExternalId = "";
 
   beforeAll(async () => {
     await prisma.account.createMany({
@@ -74,6 +77,7 @@ integration("Discord update worker persistence", () => {
         installedAt: now,
       },
     });
+    installationExternalId = installation.externalId;
     const destination = await prisma.discordChannelDestination.create({
       data: {
         accountId,
@@ -358,5 +362,33 @@ integration("Discord update worker persistence", () => {
       status: "CANCELLED",
       lastFailureCode: "SETTINGS_OR_SCOPE_CHANGED",
     });
+  });
+
+  it("returns bounded Account-scoped activity without private delivery data", async () => {
+    const activity = await activityRepository.getWorkspace(
+      accountId,
+      installationExternalId,
+    );
+    expect(activity).toMatchObject({
+      installation: { id: installationExternalId, status: "ACTIVE" },
+      deliveryEnabled: true,
+      lastApiReadAt: new Date(now.getTime() + 1_000),
+      lastDeliveryAt: new Date(now.getTime() + 91_001),
+      errors: [],
+    });
+    expect(activity?.deliveries).toHaveLength(2);
+    expect(activity?.deliveries[0]).toEqual(
+      expect.objectContaining({
+        correlationId: expect.any(String),
+        attemptCount: 2,
+        status: "SUCCEEDED",
+      }),
+    );
+    expect(JSON.stringify(activity)).not.toMatch(
+      /content|providerMessageId|targetProviderMessageId|channelId|gameId/iu,
+    );
+    await expect(
+      activityRepository.getWorkspace(otherAccountId, installationExternalId),
+    ).resolves.toBeNull();
   });
 });

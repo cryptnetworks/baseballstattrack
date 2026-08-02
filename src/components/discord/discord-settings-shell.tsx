@@ -67,8 +67,8 @@ const workspaceCopy: Record<
   activity: {
     title: "Activity",
     description:
-      "Review installation and configuration changes for this server.",
-    empty: "No settings activity is available yet.",
+      "Review connection health, worker activity, current errors, and recent deliveries.",
+    empty: "No delivery activity is available yet.",
   },
 };
 

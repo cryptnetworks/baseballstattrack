@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { selectDiscordAccount } from "@/app/discord/actions";
 import { ApplicationShell } from "@/components/app/application-shell";
+import { DiscordActivityPanel } from "@/components/discord/discord-activity-panel";
 import { DiscordChannelRoutingPanel } from "@/components/discord/discord-channel-routing-panel";
 import { DiscordCadencePanel } from "@/components/discord/discord-cadence-panel";
 import { DiscordConfigurationPreviewPanel } from "@/components/discord/discord-configuration-preview-panel";
@@ -11,6 +12,7 @@ import { DiscordSettingsShell } from "@/components/discord/discord-settings-shel
 import { DiscordTrackedScopesPanel } from "@/components/discord/discord-tracked-scopes-panel";
 import { DiscordUpdateContentPanel } from "@/components/discord/discord-update-content-panel";
 import { discordSettingsSectionSchema } from "@/domain/discord-settings-navigation";
+import { getDiscordActivityService } from "@/server/app/discord-activity-service";
 import { getDiscordInstallationService } from "@/server/app/discord-installation-service";
 import { getDiscordChannelRoutingService } from "@/server/app/discord-channel-routing-service";
 import { getDiscordCadenceService } from "@/server/app/discord-cadence-service";
@@ -158,6 +160,21 @@ export default async function DiscordSettingsPage({
           ),
         )
       : null;
+  const activityWorkspace =
+    parsedSection.data === "activity" &&
+    workspace.selectedAccountId &&
+    workspace.selectedInstallationId &&
+    workspace.identity
+      ? await getDiscordActivityService().get(
+          workspace.selectedAccountId,
+          workspace.selectedInstallationId,
+          await getAuthorizationService().authorize(
+            workspace.identity,
+            { kind: "ACCOUNT", accountId: workspace.selectedAccountId },
+            "discord.settings.operate",
+          ),
+        )
+      : null;
 
   return (
     <ApplicationShell>
@@ -173,7 +190,8 @@ export default async function DiscordSettingsPage({
         channelWorkspace ||
         trackedScopesWorkspace ||
         cadenceWorkspace ||
-        previewWorkspace ? (
+        previewWorkspace ||
+        activityWorkspace ? (
           <div>
             {workspace.invalidServerSelection ? (
               <div className="mt-6">
@@ -267,6 +285,9 @@ export default async function DiscordSettingsPage({
                 testDestinations={previewWorkspace.testDestinations}
                 validation={previewWorkspace.validation}
               />
+            ) : null}
+            {activityWorkspace ? (
+              <DiscordActivityPanel activity={activityWorkspace} />
             ) : null}
           </div>
         ) : undefined}
