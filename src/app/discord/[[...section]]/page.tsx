@@ -5,6 +5,7 @@ import { selectDiscordAccount } from "@/app/discord/actions";
 import { ApplicationShell } from "@/components/app/application-shell";
 import { DiscordChannelRoutingPanel } from "@/components/discord/discord-channel-routing-panel";
 import { DiscordCadencePanel } from "@/components/discord/discord-cadence-panel";
+import { DiscordConfigurationPreviewPanel } from "@/components/discord/discord-configuration-preview-panel";
 import { DiscordSettingsFeedback } from "@/components/discord/discord-settings-feedback";
 import { DiscordSettingsShell } from "@/components/discord/discord-settings-shell";
 import { DiscordTrackedScopesPanel } from "@/components/discord/discord-tracked-scopes-panel";
@@ -64,6 +65,7 @@ async function loadDiscordWorkspace(requestedServer: string | undefined) {
       selectedInstallationId: null,
       invalidServerSelection: false,
       actor: null,
+      identity,
     };
   }
   const selectedCookie = (await cookies()).get(
@@ -89,6 +91,7 @@ async function loadDiscordWorkspace(requestedServer: string | undefined) {
     selectedInstallationId: (requested ?? fallback)?.id ?? null,
     invalidServerSelection: Boolean(requestedServer && !requested),
     actor: selected.actor,
+    identity,
   };
 }
 
@@ -140,6 +143,21 @@ export default async function DiscordSettingsPage({
           workspace.actor,
         )
       : null;
+  const previewWorkspace =
+    parsedSection.data === "preview" &&
+    workspace.selectedAccountId &&
+    workspace.selectedInstallationId &&
+    workspace.identity
+      ? await getDiscordChannelRoutingService().preview(
+          workspace.selectedAccountId,
+          workspace.selectedInstallationId,
+          await getAuthorizationService().authorize(
+            workspace.identity,
+            { kind: "ACCOUNT", accountId: workspace.selectedAccountId },
+            "discord.settings.preview",
+          ),
+        )
+      : null;
 
   return (
     <ApplicationShell>
@@ -154,7 +172,8 @@ export default async function DiscordSettingsPage({
         {workspace.invalidServerSelection ||
         channelWorkspace ||
         trackedScopesWorkspace ||
-        cadenceWorkspace ? (
+        cadenceWorkspace ||
+        previewWorkspace ? (
           <div>
             {workspace.invalidServerSelection ? (
               <div className="mt-6">
@@ -234,6 +253,20 @@ export default async function DiscordSettingsPage({
                   settings={cadenceWorkspace.settings}
                 />
               </>
+            ) : null}
+            {previewWorkspace ? (
+              <DiscordConfigurationPreviewPanel
+                accountId={workspace.selectedAccountId!}
+                enabled={previewWorkspace.enabled}
+                {...(search.error ? { error: search.error } : {})}
+                installationId={workspace.selectedInstallationId!}
+                messageFormat={previewWorkspace.messageFormat}
+                {...(search.notice ? { notice: search.notice } : {})}
+                previews={previewWorkspace.previews}
+                settingsRevision={previewWorkspace.settingsRevision}
+                testDestinations={previewWorkspace.testDestinations}
+                validation={previewWorkspace.validation}
+              />
             ) : null}
           </div>
         ) : undefined}

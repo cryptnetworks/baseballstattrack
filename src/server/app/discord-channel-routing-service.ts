@@ -6,6 +6,14 @@ import {
   groupDiscordRoutes,
 } from "@/domain/discord-channel-routing";
 import {
+  discordDestinationPurposes,
+  type DiscordDestinationPurpose,
+} from "@/domain/discord-settings";
+import {
+  representativeDiscordConfigurationPreviews,
+  validateDiscordConfiguration,
+} from "@/domain/discord-configuration-preview";
+import {
   getRateLimitService,
   noRateLimit,
   type RateLimitEnforcer,
@@ -38,6 +46,7 @@ type RoutingRepository = Pick<
   | "setChannelEnabled"
   | "resolveTestDestination"
   | "recordTestDelivery"
+  | "recordConfigurationPreview"
 >;
 type SettingsRepository = Pick<
   PrismaDiscordSettingsRepository,
@@ -103,6 +112,70 @@ export class DiscordChannelRoutingService {
       permissionEvidenceStale:
         !workspace.lastVerifiedAt ||
         Date.now() - workspace.lastVerifiedAt.getTime() > 5 * 60 * 1_000,
+    };
+  }
+
+  async preview(
+    accountId: string,
+    installationId: string,
+    actorInput: TrustedActorContext,
+  ) {
+    const actor = accountActor(
+      actorInput,
+      accountId,
+      "discord.settings.preview",
+    );
+    await this.enforce(accountId, actor);
+    const [workspace, configuration, identity] = await Promise.all([
+      this.repository.getWorkspace(accountId, installationId),
+      this.settingsRepository.getConfiguration(accountId, installationId),
+      this.repository.providerIdentity(accountId, installationId),
+    ]);
+    if (!workspace || !configuration || !identity) this.unavailable();
+    const permissionEvidenceStale =
+      !workspace.lastVerifiedAt ||
+      Date.now() - workspace.lastVerifiedAt.getTime() > 5 * 60 * 1_000;
+    const validation = validateDiscordConfiguration({
+      installationStatus: configuration.installation.status,
+      permissionEvidenceStale,
+      missingPermissions: workspace.missingPermissions,
+      settings: configuration.settings,
+    });
+    const previews = representativeDiscordConfigurationPreviews({
+      messageFormat: configuration.settings.messageFormat,
+      messageStrategy: configuration.settings.messageStrategy,
+      triggers: configuration.settings.triggers,
+    });
+    const channelNames = new Map(
+      workspace.channels.map(({ id, displayName }) => [id, displayName]),
+    );
+    const testDestinations = configuration.settings.destinations
+      .filter(({ available }) => available)
+      .map(({ destinationId, displayName, purposes }) => ({
+        id: destinationId,
+        displayName:
+          displayName ?? channelNames.get(destinationId) ?? "Discord channel",
+        purposes: purposes.filter((purpose) =>
+          discordDestinationPurposes.includes(
+            purpose as DiscordDestinationPurpose,
+          ),
+        ) as DiscordDestinationPurpose[],
+      }));
+    await this.repository.recordConfigurationPreview({
+      accountId,
+      installationInternalId: identity.id,
+      settingsRevision: configuration.settings.revision,
+      errorCount: validation.errorCount,
+      warningCount: validation.warningCount,
+      actor,
+    });
+    return {
+      validation,
+      previews,
+      testDestinations,
+      messageFormat: configuration.settings.messageFormat,
+      settingsRevision: configuration.settings.revision,
+      enabled: configuration.settings.enabled,
     };
   }
 

@@ -55,7 +55,7 @@ const configuration = {
         channelReference: "managed/channel",
         displayName: "scores",
         available: true,
-        purposes: ["LIVE_UPDATES"],
+        purposes: ["FINAL_SCORES", "CORRECTIONS"],
       },
     ],
     cadenceMode: "FIXED_INTERVAL" as const,
@@ -181,7 +181,7 @@ describe("Discord tracked scope administration", () => {
           {
             destinationId:
               configuration.settings.destinations[0]!.destinationId,
-            purposes: ["LIVE_UPDATES"],
+            purposes: ["FINAL_SCORES", "CORRECTIONS"],
           },
         ],
         cadenceSeconds: 300,

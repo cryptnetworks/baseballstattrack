@@ -33,9 +33,14 @@ async function authorize(account: string, capability: Capability) {
   });
 }
 
-function resultUrl(server: string, result: "notice" | "error", code: string) {
+function resultUrl(
+  server: string,
+  result: "notice" | "error",
+  code: string,
+  section: "channels" | "preview" = "channels",
+) {
   const search = new URLSearchParams({ server, [result]: code });
-  return `/discord/channels?${search.toString()}`;
+  return `/discord/${section}?${search.toString()}`;
 }
 
 function safeError(error: unknown) {
@@ -145,6 +150,10 @@ export async function testDiscordChannelDelivery(formData: FormData) {
   const account = accountId.parse(formData.get("accountId"));
   const installation = installationId.parse(formData.get("installationId"));
   const actor = await authorize(account, "discord.settings.preview");
+  const returnSection = z
+    .enum(["channels", "preview"])
+    .catch("channels")
+    .parse(formData.get("returnSection"));
   let errorCode: string | null = null;
   try {
     await getDiscordChannelRoutingService().testDelivery(
@@ -166,6 +175,7 @@ export async function testDiscordChannelDelivery(formData: FormData) {
       installation,
       errorCode ? "error" : "notice",
       errorCode ?? "tested",
+      returnSection,
     ),
   );
 }

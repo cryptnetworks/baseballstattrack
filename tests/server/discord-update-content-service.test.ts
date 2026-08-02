@@ -55,7 +55,12 @@ function configuration(status: "ACTIVE" | "REVOKED" = "ACTIVE") {
           channelReference: "managed/channel",
           displayName: "scores",
           available: true,
-          purposes: ["LIVE_UPDATES" as const],
+          purposes: [
+            "LIVE_UPDATES" as const,
+            "FINAL_SCORES" as const,
+            "CORRECTIONS" as const,
+            "DIGESTS" as const,
+          ],
         },
       ],
       cadenceMode: "EVENT_DRIVEN" as const,

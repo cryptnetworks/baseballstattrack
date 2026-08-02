@@ -249,6 +249,7 @@ export function DiscordSettingsShell({
                             item.id,
                             selectedInstallationId,
                           )}
+                          prefetch={item.id !== "preview"}
                         >
                           {item.label}
                         </Link>

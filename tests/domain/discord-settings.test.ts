@@ -19,7 +19,15 @@ function update() {
     enabled: true,
     trackedScopes: [{ teamId: TEAM, seasonId: SEASON }],
     destinations: [
-      { destinationId: DESTINATION, purposes: ["LIVE_UPDATES" as const] },
+      {
+        destinationId: DESTINATION,
+        purposes: [
+          "LIVE_UPDATES" as const,
+          "FINAL_SCORES" as const,
+          "CORRECTIONS" as const,
+          "DIGESTS" as const,
+        ],
+      },
     ],
     cadenceMode: "FIXED_INTERVAL" as const,
     cadenceSeconds: 60,
@@ -106,6 +114,43 @@ describe("Discord settings contract", () => {
         destinations: [],
       }),
     ).toThrow("require a tracked team-season and destination");
+  });
+
+  it("rejects enabled trigger routes and schedules that cannot deliver", () => {
+    expect(() =>
+      discordSettingsUpdateSchema.parse({
+        ...update(),
+        destinations: [
+          {
+            destinationId: DESTINATION,
+            purposes: ["LIVE_UPDATES", "FINAL_SCORES", "DIGESTS"],
+          },
+        ],
+      }),
+    ).toThrow("destination for corrections");
+    expect(() =>
+      discordSettingsUpdateSchema.parse({
+        ...update(),
+        gameDayWindow: {
+          enabled: true,
+          startMinute: 480,
+          endMinute: 600,
+        },
+        quietHours: {
+          enabled: true,
+          startMinute: 420,
+          endMinute: 660,
+          timeZone: "UTC",
+        },
+      }),
+    ).toThrow("cover the entire game-day delivery window");
+    expect(() =>
+      discordSettingsUpdateSchema.parse({
+        ...update(),
+        cadenceMode: "EVENT_DRIVEN",
+        messageStrategy: "PERIODIC_SUMMARY",
+      }),
+    ).toThrow("event-driven delivery is unsupported");
   });
 
   it("rejects duplicate routes, triggers, scopes, and invalid quiet hours", () => {

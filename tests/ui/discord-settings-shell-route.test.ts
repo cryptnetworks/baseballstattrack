@@ -11,6 +11,10 @@ const appShell = readFileSync(
   "src/components/app/application-shell.tsx",
   "utf8",
 );
+const settingsShell = readFileSync(
+  "src/components/discord/discord-settings-shell.tsx",
+  "utf8",
+);
 
 describe("Discord settings shell route", () => {
   it("rechecks session, Account membership, and exact Discord view capability", () => {
@@ -43,5 +47,6 @@ describe("Discord settings shell route", () => {
     expect(error).toContain('state="failure"');
     expect(error).toContain("onRetry={reset}");
     expect(appShell).toContain('href="/discord"');
+    expect(settingsShell).toContain('prefetch={item.id !== "preview"}');
   });
 });

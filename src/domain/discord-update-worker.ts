@@ -1,10 +1,9 @@
 import { z } from "zod";
 
 import {
+  discordDestinationPurposeForTrigger,
   discordUpdateTriggers,
-  type DiscordDestinationPurpose,
   type DiscordMessageFormat,
-  type DiscordUpdateTrigger,
 } from "@/domain/discord-settings";
 import { discordGameUpdateSnapshotSchema } from "@/domain/discord-update-content";
 
@@ -58,17 +57,7 @@ export function discordUpdateRetryAt(
   return new Date(completedAt.getTime() + seconds * 1_000);
 }
 
-export function discordDestinationPurposeForTrigger(
-  trigger: DiscordUpdateTrigger,
-): DiscordDestinationPurpose {
-  if (trigger === "GAME_COMPLETED" || trigger === "GAME_VERIFIED") {
-    return "FINAL_SCORES";
-  }
-  if (trigger === "GAME_CORRECTED") return "CORRECTIONS";
-  if (trigger === "REPORT_READY") return "SUMMARIES";
-  if (trigger === "OPERATIONAL_FAILURE") return "ERRORS";
-  return "LIVE_UPDATES";
-}
+export { discordDestinationPurposeForTrigger };
 
 export interface DiscordStatisticsProvider {
   loadGame(input: {
