@@ -28,6 +28,16 @@ integration("Discord channel routing persistence", () => {
     scope: { kind: "ACCOUNT" },
     authorizedAt: "2026-08-01T04:00:00.000Z",
   });
+  const previewActor = trustedActorForTest({
+    accountId: accountA,
+    actorId: `${prefix}-previewer`,
+    actorKind: "SERVICE",
+    actorUserId: null,
+    membershipId: null,
+    capability: "discord.settings.preview",
+    scope: { kind: "ACCOUNT" },
+    authorizedAt: "2026-08-01T04:00:00.000Z",
+  });
 
   beforeAll(async () => {
     await prisma.account.createMany({
@@ -154,5 +164,35 @@ integration("Discord channel routing persistence", () => {
     expect(
       JSON.stringify(await repository.getWorkspace(accountA, installationA)),
     ).not.toContain(resolved?.channelId);
+  });
+
+  it("stores a secret-free configuration preview audit summary", async () => {
+    const identity = await repository.providerIdentity(accountA, installationA);
+    await repository.recordConfigurationPreview({
+      accountId: accountA,
+      installationInternalId: identity!.id,
+      settingsRevision: 7,
+      errorCount: 2,
+      warningCount: 1,
+      actor: previewActor,
+    });
+    const audit = await prisma.securityAuditRecord.findFirstOrThrow({
+      where: { accountId: accountA, action: "discord.settings.preview" },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(audit).toMatchObject({
+      capability: "discord.settings.preview",
+      outcome: "SUCCEEDED",
+      targetType: "DiscordInstallation",
+    });
+    expect(audit.metadata).toMatchObject({
+      settingsRevision: 7,
+      errorCount: 2,
+      warningCount: 1,
+      syntheticDataOnly: true,
+    });
+    expect(JSON.stringify(audit.metadata)).not.toMatch(
+      /guild|channel|credential|token/iu,
+    );
   });
 });

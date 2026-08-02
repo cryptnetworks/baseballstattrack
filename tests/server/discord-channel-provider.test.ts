@@ -144,6 +144,9 @@ describe("Discord channel provider", () => {
       (fetcher.mock.calls[0]![1] as RequestInit).body as string,
     );
     expect(body).toMatchObject({ allowed_mentions: { parse: [] } });
+    expect(body.content).toMatch(
+      /^\[TEST ONLY — SYNTHETIC — NOT A LIVE UPDATE\]/u,
+    );
     expect(body.content).toContain("Format: Detailed");
     expect(body.content).not.toMatch(/player name|game result/iu);
     await expect(

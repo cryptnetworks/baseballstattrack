@@ -117,19 +117,24 @@ export function effectiveDiscordChannelPermissions(input: {
 }
 
 function testMessage(format: DiscordMessageFormat) {
-  if (format === "COMPACT") return "Baseball Stat Track test • Compact";
+  const marker = "[TEST ONLY — SYNTHETIC — NOT A LIVE UPDATE]";
+  if (format === "COMPACT") {
+    return `${marker}\nBaseball Stat Track test • Compact • No game data`;
+  }
   if (format === "DETAILED") {
     return [
-      "Baseball Stat Track test delivery",
+      marker,
+      "Baseball Stat Track configuration test delivery",
       "Format: Detailed",
       "• Channel permissions verified",
       "• No game or player data included",
     ].join("\n");
   }
   return [
-    "Baseball Stat Track test delivery",
+    marker,
+    "Baseball Stat Track configuration test delivery",
     "Format: Standard",
-    "No game or player data is included.",
+    "This is synthetic. No game or player data is included.",
   ].join("\n");
 }
 

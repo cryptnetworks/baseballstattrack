@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { DiscordChannelRoutingService } from "@/server/app/discord-channel-routing-service";
+import type { RateLimitEnforcer } from "@/server/app/rate-limit-service";
 import {
   createTrustedActorContext,
   type Capability,
@@ -89,7 +90,10 @@ const workspace = {
   lastVerifiedAt: new Date(),
 };
 
-function harness(overrides: Record<string, unknown> = {}) {
+function harness(
+  overrides: Record<string, unknown> = {},
+  rateLimits?: RateLimitEnforcer,
+) {
   const repository = {
     getWorkspace: vi.fn().mockResolvedValue(workspace),
     providerIdentity: vi.fn().mockResolvedValue({
@@ -105,6 +109,7 @@ function harness(overrides: Record<string, unknown> = {}) {
       channelId: "223456789012345601",
     }),
     recordTestDelivery: vi.fn().mockResolvedValue(undefined),
+    recordConfigurationPreview: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
   const settings = {
@@ -137,6 +142,7 @@ function harness(overrides: Record<string, unknown> = {}) {
         apiBaseUrl: "https://discord.example.test/api/v10/",
       }) as never,
     () => provider,
+    rateLimits,
   );
   return { service, repository, settings, provider };
 }
@@ -163,7 +169,7 @@ describe("Discord channel routing administration", () => {
         routes: {
           LIVE_UPDATES: destination,
           FINAL_SCORES: destination,
-          CORRECTIONS: null,
+          CORRECTIONS: destination,
           SUMMARIES: null,
           ERRORS: null,
           DIGESTS: null,
@@ -181,7 +187,7 @@ describe("Discord channel routing administration", () => {
         destinations: [
           {
             destinationId: destination,
-            purposes: ["LIVE_UPDATES", "FINAL_SCORES"],
+            purposes: ["LIVE_UPDATES", "FINAL_SCORES", "CORRECTIONS"],
           },
         ],
         auditAction: "update",
@@ -254,5 +260,45 @@ describe("Discord channel routing administration", () => {
         failureCode: "PERMISSION_REQUIRED",
       }),
     );
+  });
+
+  it("rate-limits and audits a synthetic preview without returning provider identifiers", async () => {
+    const rateLimits = { enforce: vi.fn().mockResolvedValue(undefined) };
+    const result = harness({}, rateLimits);
+    result.settings.getConfiguration.mockResolvedValue({
+      ...configuration,
+      settings: {
+        ...configuration.settings,
+        destinations: [
+          {
+            destinationId: destination,
+            channelReference: "discord/channels/safe-reference",
+            displayName: "scores",
+            available: true,
+            purposes: ["LIVE_UPDATES", "CORRECTIONS"],
+          },
+        ],
+      },
+    });
+    const preview = await result.service.preview(
+      account,
+      installation,
+      actor("discord.settings.preview"),
+    );
+    expect(rateLimits.enforce).toHaveBeenCalledWith(
+      { accountId: account, endpointClass: "ADMINISTRATION" },
+      expect.anything(),
+    );
+    expect(result.repository.recordConfigurationPreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: account,
+        settingsRevision: 4,
+      }),
+    );
+    expect(preview.previews).toHaveLength(4);
+    expect(preview.testDestinations).toEqual([
+      expect.objectContaining({ id: destination, displayName: "scores" }),
+    ]);
+    expect(JSON.stringify(preview)).not.toMatch(/guildId|channelId/iu);
   });
 });
