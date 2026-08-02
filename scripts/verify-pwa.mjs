@@ -43,10 +43,18 @@ for (const required of [
   'url.pathname.startsWith("/api/")',
   'url.pathname.startsWith("/auth/")',
   'url.pathname.startsWith("/_next/static/")',
-  "self.clients.claim()",
+  "cache.put(event.request, response.clone())",
 ]) {
   if (!serviceWorker.includes(required)) {
     throw new Error(`Service worker boundary is missing ${required}`);
+  }
+}
+
+for (const forbidden of ["self.skipWaiting()", "self.clients.claim()"]) {
+  if (serviceWorker.includes(forbidden)) {
+    throw new Error(
+      `Service worker updates must not take over active pages via ${forbidden}`,
+    );
   }
 }
 
@@ -69,6 +77,11 @@ if (
 }
 if (!pwaExperience.includes("beforeinstallprompt")) {
   throw new Error("The application does not expose the install flow");
+}
+for (const state of ["connected", "degraded", "disconnected", "reconnecting"]) {
+  if (!pwaExperience.includes(`\"${state}\"`)) {
+    throw new Error(`PWA connectivity experience is missing ${state}`);
+  }
 }
 if (!pwaExperience.includes("localStorage")) {
   throw new Error(

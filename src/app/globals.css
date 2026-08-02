@@ -45,11 +45,13 @@ body {
   text-align: center;
 }
 
-.pwa-connection-status--online {
+.pwa-connection-status--connected {
   background: var(--accent-soft);
 }
 
-.pwa-connection-status--offline {
+.pwa-connection-status--degraded,
+.pwa-connection-status--disconnected,
+.pwa-connection-status--reconnecting {
   background: #fff3d6;
 }
 
@@ -61,7 +63,9 @@ body {
   background: var(--accent);
 }
 
-.pwa-connection-status--offline .pwa-connection-status__dot {
+.pwa-connection-status--degraded .pwa-connection-status__dot,
+.pwa-connection-status--disconnected .pwa-connection-status__dot,
+.pwa-connection-status--reconnecting .pwa-connection-status__dot {
   background: #9a6200;
 }
 

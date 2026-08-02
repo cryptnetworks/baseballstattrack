@@ -4,7 +4,10 @@ A production-quality baseball scorekeeping and statistics platform for coaches a
 
 ## Project status
 
-The repository is in the foundation phase. The initial application shell uses Next.js App Router, React, strict TypeScript, Tailwind CSS, Prisma, Supabase boundaries, TanStack Query, Zod, Vitest, and GitHub Actions.
+The repository includes the event-oriented scoring, season reporting,
+production-readiness, integrations, analytics-governance, and online-first PWA
+milestones. The application uses Next.js App Router, React, strict TypeScript,
+Tailwind CSS, Prisma, Supabase boundaries, Zod, Vitest, and GitHub Actions.
 
 ## Product direction
 
@@ -26,6 +29,9 @@ quotas, compatibility, deprecation, and support ownership are documented in
 The pull-only ICS schedule feed and its privacy and rotation contract are
 documented in
 [docs/CALENDAR_SYNCHRONIZATION.md](docs/CALENDAR_SYNCHRONIZATION.md).
+The installable, mobile-first, online-only application shell, safe public-asset
+cache, connectivity states, and explicit offline deferral are documented in
+[docs/PWA_APPLICATION_EXPERIENCE.md](docs/PWA_APPLICATION_EXPERIENCE.md).
 
 The first usable release boundary, personas, MVP workflow, non-goals, success metrics, privacy assumptions, and unresolved product decisions are documented in [docs/PRODUCT_SCOPE.md](docs/PRODUCT_SCOPE.md). Canonical scoring semantics and event vocabulary are documented in [docs/SCORING_SEMANTICS.md](docs/SCORING_SEMANTICS.md), with the implemented replay and acceptance boundary in [docs/IMMUTABLE_GAME_EVENT_MODEL.md](docs/IMMUTABLE_GAME_EVENT_MODEL.md), exact calculation contract in [docs/STATISTIC_DERIVATION.md](docs/STATISTIC_DERIVATION.md), executable representative-game coverage in [docs/SCORING_FIXTURES.md](docs/SCORING_FIXTURES.md), managed identity/roster behavior in [docs/TEAM_SEASON_ROSTER_MANAGEMENT.md](docs/TEAM_SEASON_ROSTER_MANAGEMENT.md), the immutable pre-scoring contract in [docs/GAME_SETUP_AND_LINEUPS.md](docs/GAME_SETUP_AND_LINEUPS.md), and the responsive setup experience in [docs/GAME_SETUP_WORKFLOW.md](docs/GAME_SETUP_WORKFLOW.md). Persistence, tenancy, migration, and projection rules are documented in [docs/PERSISTENCE_AND_TENANCY.md](docs/PERSISTENCE_AND_TENANCY.md), with the implemented relational mapping in [docs/RELATIONAL_DOMAIN_SCHEMA.md](docs/RELATIONAL_DOMAIN_SCHEMA.md). Authentication and authorization boundaries are documented in [docs/AUTHENTICATION_AND_AUTHORIZATION.md](docs/AUTHENTICATION_AND_AUTHORIZATION.md), with the production Supabase and database-authority implementation in [docs/PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md](docs/PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md) and the decision recorded in [ADR 0007](docs/decisions/0007-authentication-and-authorization-boundaries.md). The privacy/threat-model baseline is [docs/PRIVACY_AND_THREAT_MODEL.md](docs/PRIVACY_AND_THREAT_MODEL.md), with [ADR 0008](docs/decisions/0008-privacy-and-threat-model.md).
 
@@ -36,6 +42,8 @@ The first usable release boundary, personas, MVP workflow, non-goals, success me
 3. Scorekeeping MVP — fast game entry, substitutions, corrections, save/replay, and box score.
 4. Season experience — dashboards, player/team summaries, exports, and printable reports.
 5. Operational readiness — authentication, authorization, observability, backups, performance, and release hardening.
+6. Advanced analytics governance — explainable, reproducible insight boundaries and observation feasibility.
+7. Progressive web application experience — an installable, mobile-first, online-only shell with safe static caching.
 
 See docs/ROADMAP.md, CONTRIBUTING.md, and SECURITY.md.
 
@@ -181,7 +189,7 @@ Defect reporting, severity and priority, regression evidence, verification, and 
 - Keep issues small enough to review and deliver independently.
 - Treat game events as the source of truth; derive aggregates from them.
 - Validate baseball scoring rules in domain-level tests.
-- Prefer accessibility, touch-friendly interactions, and offline-tolerant workflows.
+- Prefer accessibility, touch-friendly interactions, and explicit online-first interruption recovery.
 - Never commit secrets or production data.
 
 ## Repository governance

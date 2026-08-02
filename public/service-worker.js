@@ -1,4 +1,4 @@
-const CACHE_NAME = "baseballstattrack-static-v1";
+const CACHE_NAME = "baseballstattrack-static-v2";
 const PRECACHE_URLS = [
   "/manifest.webmanifest",
   "/icons/icon.svg",
@@ -31,7 +31,6 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)),
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -45,7 +44,6 @@ self.addEventListener("activate", (event) => {
       ),
     ),
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
@@ -55,10 +53,10 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname === "/manifest.webmanifest") {
     event.respondWith(
       fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            void caches.open(CACHE_NAME).then((cache) => cache.put(url, copy));
+        .then(async (response) => {
+          if (response.ok && response.type === "basic") {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(event.request, response.clone());
           }
           return response;
         })
@@ -68,8 +66,15 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    caches
-      .match(event.request)
-      .then((cached) => cached || fetch(event.request)),
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const cached = await cache.match(event.request);
+      if (cached) return cached;
+
+      const response = await fetch(event.request);
+      if (response.ok && response.type === "basic") {
+        await cache.put(event.request, response.clone());
+      }
+      return response;
+    }),
   );
 });
