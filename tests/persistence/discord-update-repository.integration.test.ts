@@ -175,20 +175,64 @@ integration("Discord update worker persistence", () => {
   });
 
   it("creates once, then deterministically edits the successful message", async () => {
-    const [deliveryClock] = await prisma.$queryRaw<
-      Array<{ deliveryNow: Date }>
-    >`SELECT clock_timestamp() + interval '1 minute' AS "deliveryNow"`;
-    const deliveryNow = deliveryClock!.deliveryNow;
-    const first = await repository.claimDeliveries(
-      "worker-119-four",
-      deliveryNow,
-      25,
-    );
+    const deliveryNow = now;
+    const queued = await prisma.discordUpdateDelivery.findMany({
+      where: { settingsId },
+      orderBy: { sourceRevision: "asc" },
+      select: { sourceRevision: true, createdAt: true, nextAttemptAt: true },
+    });
+    expect(queued).toEqual([
+      { sourceRevision: 7, createdAt: now, nextAttemptAt: now },
+      {
+        sourceRevision: 8,
+        createdAt: new Date(now.getTime() + 1_000),
+        nextAttemptAt: new Date(now.getTime() + 1_000),
+      },
+    ]);
+    await expect(
+      repository.claimDeliveries(
+        "worker-119-before-schedule",
+        new Date(deliveryNow.getTime() - 1),
+        25,
+      ),
+    ).resolves.toHaveLength(0);
+    const concurrentClaims = await Promise.all([
+      repository.claimDeliveries("worker-119-four-a", deliveryNow, 25),
+      repository.claimDeliveries("worker-119-four-b", deliveryNow, 25),
+    ]);
+    const first = concurrentClaims.flat();
     expect(first).toHaveLength(1);
     expect(first[0]).toMatchObject({ sourceRevision: 7, operation: "CREATE" });
+    const owner = first[0]!.leaseOwner!;
+    const staleWorker =
+      owner === "worker-119-four-a" ? "worker-119-four-b" : "worker-119-four-a";
+    await expect(
+      repository.completeDeliveryAttempt({
+        deliveryId: first[0]!.id,
+        workerId: staleWorker,
+        startedAt: deliveryNow,
+        completedAt: deliveryNow,
+        durationMs: 0,
+        responseStatus: 200,
+        failureCode: null,
+        providerMessageId: "999999999999999999",
+        succeeded: true,
+        terminal: false,
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      prisma.discordUpdateDelivery.findUniqueOrThrow({
+        where: { id: first[0]!.id },
+      }),
+    ).resolves.toMatchObject({
+      status: "PROCESSING",
+      attemptCount: 0,
+      leaseOwner: owner,
+      providerMessageId: null,
+    });
     await repository.completeDeliveryAttempt({
       deliveryId: first[0]!.id,
-      workerId: "worker-119-four",
+      workerId: owner,
       startedAt: deliveryNow,
       completedAt: deliveryNow,
       durationMs: 10,
@@ -198,6 +242,13 @@ integration("Discord update worker persistence", () => {
       succeeded: true,
       terminal: false,
     });
+    await expect(
+      repository.claimDeliveries(
+        "worker-119-five",
+        new Date(deliveryNow.getTime() + 999),
+        25,
+      ),
+    ).resolves.toHaveLength(0);
     const second = await repository.claimDeliveries(
       "worker-119-five",
       new Date(deliveryNow.getTime() + 1_000),

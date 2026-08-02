@@ -52,6 +52,12 @@ describe("Discord update delivery migration", () => {
     expect(migration).toMatch(/"retentionUntil" > "createdAt"/gu);
   });
 
+  it("retains database clock defaults only as insertion safety fallbacks", () => {
+    expect(migration).toMatch(
+      /CREATE TABLE "DiscordUpdateDelivery"[\s\S]*?"nextAttemptAt" TIMESTAMP\(3\) NOT NULL DEFAULT CURRENT_TIMESTAMP[\s\S]*?"createdAt" TIMESTAMP\(3\) NOT NULL DEFAULT CURRENT_TIMESTAMP/u,
+    );
+  });
+
   it("covers each composite foreign-key access path", () => {
     for (const name of [
       "DiscordUpdateEvaluation_accountId_gameId_idx",

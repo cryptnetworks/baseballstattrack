@@ -27,6 +27,10 @@ import {
 
 const batchSizeSchema = z.number().int().min(1).max(100);
 
+type Clock = () => Date;
+
+const systemClock: Clock = () => new Date();
+
 type DiscordUpdateRepository = Pick<
   PrismaDiscordUpdateRepository,
   | "enqueueDueSchedules"
@@ -94,6 +98,7 @@ export class DiscordUpdateWorkerService {
     private readonly statistics: DiscordStatisticsProvider,
     private readonly transport: DiscordUpdateTransport,
     private readonly events: OperationalEventSink = getOperationalEventSink(),
+    private readonly clock: Clock = systemClock,
   ) {}
 
   async evaluateBatch(
@@ -102,7 +107,7 @@ export class DiscordUpdateWorkerService {
   ) {
     const workerId = discordWorkerIdSchema.parse(workerIdInput);
     const limit = batchSizeSchema.parse(options.limit ?? 25);
-    const now = options.now ?? new Date();
+    const now = options.now ?? this.clock();
     await this.repository.enqueueDueSchedules(now, limit);
     const claimed = await this.repository.claimEvaluations(
       workerId,
@@ -158,7 +163,7 @@ export class DiscordUpdateWorkerService {
         const result = await this.repository.completeEvaluation({
           evaluationId: evaluation.id,
           workerId,
-          completedAt: new Date(),
+          completedAt: this.clock(),
           snapshot: contentSnapshot,
         });
         status = result?.status;
@@ -171,7 +176,7 @@ export class DiscordUpdateWorkerService {
         const result = await this.repository.failEvaluation({
           evaluationId: evaluation.id,
           workerId,
-          completedAt: new Date(),
+          completedAt: this.clock(),
           failureCode,
           terminal,
           retryAfterSeconds,
@@ -211,7 +216,7 @@ export class DiscordUpdateWorkerService {
   ) {
     const workerId = discordWorkerIdSchema.parse(workerIdInput);
     const limit = batchSizeSchema.parse(options.limit ?? 25);
-    const now = options.now ?? new Date();
+    const now = options.now ?? this.clock();
     const claimed = await this.repository.claimDeliveries(workerId, now, limit);
     const results: Array<{
       deliveryId: string;
@@ -231,7 +236,7 @@ export class DiscordUpdateWorkerService {
         const cancelled = await this.repository.cancelDelivery({
           deliveryId: delivery.id,
           workerId,
-          completedAt: new Date(),
+          completedAt: this.clock(),
           failureCode: "SETTINGS_OR_DESTINATION_CHANGED",
         });
         results.push({
@@ -242,7 +247,7 @@ export class DiscordUpdateWorkerService {
         continue;
       }
 
-      const startedAt = new Date();
+      const startedAt = this.clock();
       const started = performance.now();
       let responseStatus: number | null = null;
       let providerMessageId: string | null = null;
@@ -270,7 +275,7 @@ export class DiscordUpdateWorkerService {
         terminal = !failure.retryable;
         retryAfterSeconds = failure.retryAfterSeconds;
       }
-      const completedAt = new Date();
+      const completedAt = this.clock();
       const durationMs = Math.max(0, Math.round(performance.now() - started));
       const result = await this.repository.completeDeliveryAttempt({
         deliveryId: delivery.id,
