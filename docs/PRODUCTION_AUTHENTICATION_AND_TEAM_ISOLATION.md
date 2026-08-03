@@ -33,8 +33,9 @@ the next protected operation even if the session remains valid.
 - `POST /api/auth/providers/link` requires a current session and same-origin
   request to prove and link another provider subject.
 - `/accounts` lists only Accounts with current active membership.
-- `/api/auth/context` accepts the application cookie or exact `Authorization:
-Bearer <opaque-application-session>` and returns minimum authority fields.
+- `/api/auth/context` accepts the application cookie or an exact
+  `Authorization: Bearer <opaque-application-session>` header and returns only
+  the minimum authority fields.
 
 Cookie mutations require exact same-origin Origin and effective Host. Page,
 route, and Server Action boundaries authenticate and invoke

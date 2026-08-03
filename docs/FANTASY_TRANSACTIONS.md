@@ -1,16 +1,15 @@
 # Fantasy transactions and roster management
 
-Issue [#124](https://github.com/cryptnetworks/baseballstattrack/issues/124)
-implements the M8 fantasy roster transaction state machine on the immutable
-[fantasy domain model](FANTASY_DOMAIN_MODEL.md). It consumes the transaction
-policy sealed by the [fantasy rules contract](FANTASY_RULES_CONTRACT.md) and
-Account-approved authorization from the
-[league delegation model](LEAGUE_DELEGATION_MODEL.md).
+This framework-independent transaction state machine applies the immutable
+[fantasy domain model](FANTASY_DOMAIN_MODEL.md), the transaction policy in the
+[fantasy rules contract](FANTASY_RULES_CONTRACT.md), and Account-approved
+authorization from the [delegation model](LEAGUE_DELEGATION_MODEL.md).
 
-This implementation is framework-independent. It defines deterministic command
-acceptance, ownership and roster transitions, waiver processing, locks,
-idempotency, rollback, and audit evidence. It does not add a database scheduler,
-API, scoring engine (#126), standings, playoffs, result correction, or UI (#127).
+It defines deterministic command acceptance, ownership and roster transitions,
+waiver processing, locks, idempotency, rollback, and audit evidence.
+It does not add a database scheduler, API, scoring engine (#126), standings,
+playoffs, result correction, or UI (#127). The work was tracked in
+[#124](https://github.com/cryptnetworks/baseballstattrack/issues/124).
 
 ## Non-negotiable invariants
 
