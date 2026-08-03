@@ -48,13 +48,41 @@ describe("CI scope planner", () => {
     });
   });
 
-  it("runs every gate when CI policy or dependencies change", () => {
+  it("runs every gate when the CI planner changes", () => {
     expect(Object.values(planCiScopes([".github/workflows/ci.yml"]))).toEqual(
       Array(7).fill(true),
     );
-    expect(Object.values(planCiScopes(["package-lock.json"]))).toEqual(
-      Array(7).fill(true),
-    );
+  });
+
+  it("limits dependency changes to the Node application and its images", () => {
+    expect(planCiScopes(["package-lock.json"])).toEqual({
+      application: true,
+      api: false,
+      containers: true,
+      database: false,
+      discord: false,
+      documentation: false,
+      operations: false,
+    });
+  });
+
+  it("validates workflow policy without exercising unrelated runtimes", () => {
+    expect(planCiScopes([".github/workflows/main-push-sast.yml"])).toEqual({
+      application: false,
+      api: false,
+      containers: false,
+      database: false,
+      discord: false,
+      documentation: true,
+      operations: false,
+    });
+
+    expect(planCiScopes([".github/workflows/release.yml"])).toMatchObject({
+      application: false,
+      containers: true,
+      discord: false,
+      documentation: true,
+    });
   });
 
   it("fails safe for an unknown path or an unavailable diff", () => {

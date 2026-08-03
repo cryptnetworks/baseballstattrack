@@ -89,6 +89,27 @@ assert(
   "Automatic wiki publication must require main.",
 );
 assert(
+  serialized.includes("needs.scope.outputs.publish == 'true'"),
+  "Automatic wiki publication must require a documentation change.",
+);
+assert(
+  source.includes(
+    'gh api --paginate "repos/${GITHUB_REPOSITORY}/commits/${SOURCE_SHA}"',
+  ),
+  "Wiki publication scope must inspect the exact main commit.",
+);
+assert(
+  serialized.includes(
+    "workflow_run.head_repository.full_name == github.repository",
+  ),
+  "Automatic wiki publication must require the trusted source repository.",
+);
+assert(
+  serialized.includes("docs/*") &&
+    serialized.includes("scripts/publish-docs-wiki.*"),
+  "Wiki publication scope must include documentation and its publisher.",
+);
+assert(
   serialized.includes("GITHUB_EVENT_NAME") &&
     serialized.includes("pull_request") &&
     serialized.includes("MODE=dry-run"),

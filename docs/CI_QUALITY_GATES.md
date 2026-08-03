@@ -18,15 +18,19 @@ npm run verify
 3. `npm run typecheck` — Next.js route type generation and TypeScript checking.
 4. `npm run test` — one non-watch Vitest run.
 5. `npm run policy:validate` — defect-policy issue-form YAML, required process files, safety invariants, and internal links.
-6. `npm run api:contract` — versioned statistics API specification, examples,
+6. `npm run security:workflows:validate` — trigger scope, least privilege,
+   pinned Actions, and security-scanner coverage.
+7. `npm run docs:wiki:validate` — documentation publication manifest,
+   navigation, links, and privacy boundaries.
+8. `npm run api:contract` — versioned statistics API specification, examples,
    and compatibility lock validation.
-7. `npm run db:validate` — Prisma schema validation only.
-8. `npm run build` — production Next.js build.
-9. `npm run experience:verify` — deterministic client-route, CSS, and
-   route-isolation budgets against the fresh production build.
-10. `npm run pwa:verify` — manifest, icon, service-worker boundary, and storage
+9. `npm run db:validate` — Prisma schema validation only.
+10. `npm run build` — production Next.js build.
+11. `npm run experience:verify` — deterministic client-route, CSS, and
+    route-isolation budgets against the fresh production build.
+12. `npm run pwa:verify` — manifest, icon, service-worker boundary, and storage
     policy checks.
-11. `npm run audit:prod` — high-or-critical production dependency audit.
+13. `npm run audit:prod` — high-or-critical production dependency audit.
 
 The independently runnable commands above are the local reproduction commands for a failed CI step. `npm run format:write` is intentionally separate because it changes files. `npm run db:migrate`, seeding, and any destructive database command are not part of verification.
 
@@ -55,14 +59,17 @@ request, merge group, or branch; it never cancels a different pull request's run
 
 The path scopes are:
 
-| Changed boundary                                                              | Jobs and proofs                                                                                 |
-| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Documentation and repository-policy files only                                | Prettier plus defect-policy, YAML, and internal-link validation                                 |
-| Next.js, TypeScript, shared scripts, configuration, or tests                  | Complete `npm run verify` with PostgreSQL-backed integration tests                              |
-| Prisma schema or migrations                                                   | Application verification plus backup/restore, stale-projection, and production-container proofs |
-| Discord bot service                                                           | Ruff, formatting, pytest, and the Discord bot container build                                   |
-| Docker, Compose, runtime entrypoint, or container scripts                     | Production container build and smoke tests                                                      |
-| Workflow definitions, dependency manifests, an empty diff, or an unknown path | All gates, so classification changes fail safe                                                  |
+| Changed boundary                                             | Jobs and proofs                                                                                 |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Documentation and repository-policy files only               | Prettier plus defect-policy, YAML, and internal-link validation                                 |
+| Next.js, TypeScript, shared scripts, configuration, or tests | Complete `npm run verify` with PostgreSQL-backed integration tests                              |
+| Prisma schema or migrations                                  | Application verification plus backup/restore, stale-projection, and production-container proofs |
+| Discord bot service                                          | Ruff, formatting, pytest, and the Discord bot container build                                   |
+| Docker, Compose, runtime entrypoint, or container scripts    | Production container build and smoke tests                                                      |
+| Security or documentation workflow definitions               | Repository-policy validation; Actions CodeQL runs separately                                    |
+| Release or container-publication workflows                   | Repository policy plus production-container proofs                                              |
+| Node dependency manifests                                    | Application verification plus production-container proofs                                       |
+| CI workflow/planner, an empty diff, or an unknown path       | All gates, so classification changes fail safe                                                  |
 
 API compatibility against the pull request's base is limited to changes in the
 versioned API boundary or its executable contract. Canonical application
@@ -81,11 +88,27 @@ verification. Every job has a bounded timeout and named steps so failures are
 visible in GitHub Actions logs. No required step uses `continue-on-error`,
 `|| true`, or a failure-masking pipe.
 
-For database, migration, operational-script, dependency, and CI-policy changes,
+For database, migration, operational-script, and CI-policy changes,
 CI independently proves backup/restore and the representative stale-projection
 detection/recovery drill. Production-container checks run for container/runtime,
-migration, dependency, and CI-policy changes. These checks use only disposable
+migration, Node dependency, release-workflow, and CI-policy changes. These checks use only disposable
 synthetic PostgreSQL and Docker state.
+
+For pushes and pull requests, the main SAST workflow starts only when the diff
+contains an Actions, JavaScript/TypeScript, or Python source path. GitHub Advanced
+Security treats each language/category pair as a required CodeQL configuration,
+so Actions, JavaScript/TypeScript, and Python run together whenever SAST starts;
+omitting an unchanged language would fail the aggregate CodeQL check as an
+incomplete analysis. Dependency-only changes instead use the monthly security
+workflow's independently scoped npm or Python audit and the container audit.
+Pull requests do not duplicate the scheduled full-history secret scan or the
+monthly SAST run. Merge-queue checks use the event's supported
+`checks_requested` activity; GitHub does not support path filters on that event.
+
+Documentation wiki publication still waits for a successful `main` CI run. A
+small follow-up scope job checks the exact successful commit and starts the
+credentialed publisher only when `docs/` or the publication implementation
+changed. Ordinary application pushes therefore do not clone or update the wiki.
 
 Authentication and Account-isolation tests run in the application job. Because the
 migration chain is applied first, current membership, scoped role and grant,
