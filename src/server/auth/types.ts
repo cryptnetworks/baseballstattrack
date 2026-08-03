@@ -56,6 +56,7 @@ export const capabilities = [
   "fantasy.league.view",
   "fantasy.league.manage",
   "fantasy.league.activate",
+  "fantasy.team.manage",
   "fantasy.roster.manage",
   "fantasy.scoring.calculate",
   "fantasy.scoring.view",

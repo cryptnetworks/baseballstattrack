@@ -185,7 +185,7 @@ export class FantasyExperienceService {
     const manageTeam = requireTrustedActor(
       actors.manageTeam,
       input.accountId,
-      "fantasy.league.manage",
+      "fantasy.team.manage",
     );
     const manageRoster = requireTrustedActor(
       actors.manageRoster,
