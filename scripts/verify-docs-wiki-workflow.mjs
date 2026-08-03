@@ -88,8 +88,16 @@ assert(
   "Automatic wiki publication must require a documentation change.",
 );
 assert(
-  source.includes('git diff --name-only -z "${SOURCE_SHA}^1"'),
+  source.includes(
+    'gh api --paginate "repos/${GITHUB_REPOSITORY}/commits/${SOURCE_SHA}"',
+  ),
   "Wiki publication scope must inspect the exact main commit.",
+);
+assert(
+  serialized.includes(
+    "workflow_run.head_repository.full_name == github.repository",
+  ),
+  "Automatic wiki publication must require the trusted source repository.",
 );
 assert(
   serialized.includes("docs/*") &&
