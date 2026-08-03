@@ -46,6 +46,7 @@ export NOTIFICATION_DISCORD_API_BASE_URL=https://discord.com/api/v10/
 export NOTIFICATION_DISCORD_BOT_TOKEN=synthetic-notification-discord-token-1234567890
 export EXTERNAL_DATA_PROVIDER_BASE_URL=https://provider.example.test
 export EXTERNAL_DATA_PROVIDER_API_KEY=synthetic-provider-api-key
+export EXTERNAL_DATA_PROVIDER_ALLOWED_ORIGIN=https://provider.example.test
 export DISCORD_PROVIDER_MODE=stub
 export DISCORD_TOKEN=
 export BST_API_TOKEN=

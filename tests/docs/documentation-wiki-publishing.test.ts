@@ -172,6 +172,21 @@ describe("documentation wiki publication", () => {
     expect(publication.files.get("Home.md")).not.toContain("wiki/./");
   });
 
+  it("removes nested inline HTML before deriving heading anchors", async () => {
+    const context = await fixture(manifest(), {
+      "GUIDE.md": "# Guide\n\n[Details](DETAILS.md#safe-heading).\n",
+      "DETAILS.md": "# <span<em>>Safe</em> heading</span>\n",
+    });
+    const publication = await buildPublication({
+      manifestPath: context.manifest,
+      sourceRoot: context.docs,
+    });
+
+    expect(publication.files.get("_generated/GUIDE.md")).toContain(
+      "wiki/DETAILS#safe-heading",
+    );
+  });
+
   it("fails closed for collisions, unsafe paths, missing sources, and missing anchors", async () => {
     const duplicate = await fixture(
       manifest().replace(

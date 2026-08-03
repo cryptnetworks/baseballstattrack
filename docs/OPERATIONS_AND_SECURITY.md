@@ -23,6 +23,7 @@ Stat Track. Installation commands are collected in
 
 ## Release and service quality
 
+- [Repository security audit](SECURITY_AUDIT.md)
 - [Release and workflow security](RELEASE_AND_WORKFLOW_SECURITY.md)
 - [Performance and load budgets](PERFORMANCE_AND_LOAD_BUDGETS.md)
 
