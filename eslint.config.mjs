@@ -1,3 +1,4 @@
+import { fixupConfigRules } from "@eslint/compat";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
@@ -16,8 +17,7 @@ const [{ default: nextVitals }, { default: nextTs }] = await Promise.all([
 ]);
 
 const eslintConfig = [
-  ...nextVitals,
-  ...nextTs,
+  ...fixupConfigRules([...nextVitals, ...nextTs]),
   {
     ignores: [".next/**", "node_modules/**", "coverage/**"],
   },
