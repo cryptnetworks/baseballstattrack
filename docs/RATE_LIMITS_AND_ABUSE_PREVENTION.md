@@ -25,7 +25,7 @@ Authorization failures retain their existing generic 401/403/404 behavior.
 Only an already authorized caller receives a quota response. This ordering
 prevents the limiter from becoming an Account, actor, or resource oracle.
 
-Authentication and OAuth token issuance are hosted by Supabase and must also
+Authentication and OAuth callback attempts are application-owned and must also
 use provider-side IP, credential, and bot protections. The application does not
 trust `X-Forwarded-For` directly and therefore does not pretend its authenticated
 Account limiter protects the upstream provider endpoints.

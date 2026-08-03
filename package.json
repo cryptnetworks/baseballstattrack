@@ -25,6 +25,7 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:status": "prisma migrate status",
     "db:migrate:verify": "node scripts/verify-migration.mjs",
+    "auth:identity-migration": "node scripts/migrate-authentication-identities.mjs",
     "db:representability": "node scripts/verify-relational-representability.mjs",
     "db:backup": "bash scripts/backup-database.sh",
     "db:restore": "bash scripts/restore-database.sh",
@@ -63,8 +64,6 @@
   "dependencies": {
     "@prisma/adapter-pg": "7.9.0",
     "@prisma/client": "7.9.0",
-    "@supabase/ssr": "0.12.3",
-    "@supabase/supabase-js": "2.110.8",
     "next": "16.2.11",
     "nodemailer": "9.0.3",
     "pg": "8.22.0",

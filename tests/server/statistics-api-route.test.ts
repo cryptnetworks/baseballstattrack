@@ -67,7 +67,7 @@ describe("statistics API v1 HTTP authorization boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.authenticate.mockResolvedValue({
-      provider: "supabase",
+      provider: "google",
       providerSubject: "viewer",
     });
     mocks.resolveAccount.mockResolvedValue({

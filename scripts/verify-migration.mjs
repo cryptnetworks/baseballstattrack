@@ -127,6 +127,15 @@ const expectedConstraints = [
   "AppConfigRevision_account_config_created_idx",
   "ApplicationConfigurationRevision_accountId_configurationId_fkey",
   "ApplicationConfigurationRevision_lineage_fkey",
+  "AuthenticationIdentity_values_check",
+  "AuthenticationIdentity_provider_providerSubject_key",
+  "AuthenticationIdentity_appUserId_id_key",
+  "AuthenticationSession_values_check",
+  "AuthenticationSession_appUserId_identityId_fkey",
+  "AuthenticationSessionEvent_values_check",
+  "OAuthLoginAttempt_values_check",
+  "OAuthLoginAttempt_stateHash_key",
+  "OAuthLoginAttempt_appUserId_initiatingSessionId_fkey",
 ];
 
 const expectedTriggers = [
@@ -173,6 +182,10 @@ const expectedTriggers = [
   "ApplicationConfigurationRevision_append_only",
   "ApplicationConfigurationRevision_lineage_guard",
   "ApplicationConfiguration_history_required",
+  "AuthenticationIdentity_identity_immutable",
+  "AuthenticationSession_identity_immutable",
+  "AuthenticationSessionEvent_append_only",
+  "OAuthLoginAttempt_one_time_consumption",
 ];
 
 const client = new pg.Client({ connectionString: databaseUrl });

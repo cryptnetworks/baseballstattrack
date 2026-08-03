@@ -5,7 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AuthorizationService } from "@/server/auth/authorization-service";
 import { PrismaAuthorizationStore } from "@/server/auth/store";
 import { runAuthorizedTransaction } from "@/server/auth/transaction";
-import { AUTH_PROVIDER, type AuthenticatedIdentity } from "@/server/auth/types";
+import type { AuthenticatedIdentity } from "@/server/auth/types";
+import { PrismaAuthenticationRepository } from "@/server/data/authentication-repository";
 import { seedPersistenceScoringFixture } from "../fixtures/persistence-scoring-fixture";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -17,9 +18,10 @@ integration("production database authorization", () => {
     adapter: new PrismaPg({ connectionString: databaseUrl! }),
   });
   const store = new PrismaAuthorizationStore(prisma);
+  const authentication = new PrismaAuthenticationRepository(prisma);
   const service = new AuthorizationService(store);
   const identity: AuthenticatedIdentity = {
-    provider: AUTH_PROVIDER,
+    provider: "google",
     providerSubject: `${prefix}-subject`,
   };
   let ids: Awaited<ReturnType<typeof seedPersistenceScoringFixture>>;
@@ -30,10 +32,22 @@ integration("production database authorization", () => {
   beforeAll(async () => {
     ids = await seedPersistenceScoringFixture(prisma, prefix);
     const concurrentUsers = await Promise.all(
-      Array.from({ length: 20 }, () => store.resolveOrProvisionUser(identity)),
+      Array.from({ length: 20 }, () =>
+        authentication.resolveOrCreateIdentity(
+          {
+            provider: identity.provider,
+            subject: identity.providerSubject,
+            email: "current@example.test",
+            emailVerified: true,
+          },
+          new Date(),
+        ),
+      ),
     );
-    expect(new Set(concurrentUsers.map(({ id }) => id)).size).toBe(1);
-    appUserId = concurrentUsers[0]!.id;
+    expect(
+      new Set(concurrentUsers.map(({ appUserId }) => appUserId)).size,
+    ).toBe(1);
+    appUserId = concurrentUsers[0]!.appUserId;
     await expect(
       prisma.appUser.count({
         where: {
@@ -69,42 +83,60 @@ integration("production database authorization", () => {
 
   it("keeps existing, distinct, disabled, and immutable identities correct", async () => {
     const existing = await Promise.all(
-      Array.from({ length: 10 }, () => store.resolveOrProvisionUser(identity)),
+      Array.from({ length: 10 }, () => store.resolveUser(identity)),
     );
     expect(new Set(existing.map(({ id }) => id))).toEqual(new Set([appUserId]));
 
     const distinctIdentities = Array.from({ length: 10 }, (_, index) => ({
-      provider: AUTH_PROVIDER,
+      provider: "google" as const,
       providerSubject: `${prefix}-distinct-${index}`,
     })) satisfies AuthenticatedIdentity[];
-    const distinctUsers = await Promise.all(
+    await Promise.all(
       distinctIdentities.map((subject) =>
-        store.resolveOrProvisionUser(subject),
+        authentication.resolveOrCreateIdentity(
+          {
+            provider: subject.provider,
+            subject: subject.providerSubject,
+            email: "same-email-does-not-merge@example.test",
+            emailVerified: true,
+          },
+          new Date(),
+        ),
       ),
+    );
+    const distinctUsers = await Promise.all(
+      distinctIdentities.map((subject) => store.resolveUser(subject)),
     );
     expect(new Set(distinctUsers.map(({ id }) => id)).size).toBe(10);
     await expect(
       prisma.appUser.count({
         where: {
-          provider: AUTH_PROVIDER,
+          provider: "google",
           providerSubject: { startsWith: `${prefix}-distinct-` },
         },
       }),
     ).resolves.toBe(10);
 
     const disabledIdentity = {
-      provider: AUTH_PROVIDER,
+      provider: "google",
       providerSubject: `${prefix}-disabled`,
     } satisfies AuthenticatedIdentity;
-    const disabled = await store.resolveOrProvisionUser(disabledIdentity);
+    await authentication.resolveOrCreateIdentity(
+      {
+        provider: disabledIdentity.provider,
+        subject: disabledIdentity.providerSubject,
+        email: null,
+        emailVerified: null,
+      },
+      new Date(),
+    );
+    const disabled = await store.resolveUser(disabledIdentity);
     await prisma.appUser.update({
       where: { id: disabled.id },
       data: { status: "DISABLED" },
     });
     const disabledResults = await Promise.all(
-      Array.from({ length: 5 }, () =>
-        store.resolveOrProvisionUser(disabledIdentity),
-      ),
+      Array.from({ length: 5 }, () => store.resolveUser(disabledIdentity)),
     );
     expect(disabledResults).toEqual(
       Array.from({ length: 5 }, () => ({
@@ -113,13 +145,18 @@ integration("production database authorization", () => {
       })),
     );
     await expect(
-      prisma.appUser.update({
-        where: { id: disabled.id },
+      prisma.authenticationIdentity.update({
+        where: {
+          provider_providerSubject: {
+            provider: disabledIdentity.provider,
+            providerSubject: disabledIdentity.providerSubject,
+          },
+        },
         data: { providerSubject: `${prefix}-reassigned` },
       }),
     ).rejects.toBeDefined();
     await expect(
-      prisma.appUser.count({
+      prisma.authenticationIdentity.count({
         where: {
           provider: disabledIdentity.provider,
           providerSubject: disabledIdentity.providerSubject,

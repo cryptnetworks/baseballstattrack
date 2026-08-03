@@ -19,10 +19,9 @@ export async function runAuthorizedTransaction<Result>(
     actor: TrustedActorContext,
   ) => Promise<Result>,
 ): Promise<Result> {
-  // Provision outside the serializable authorization transaction. A unique-key
-  // conflict aborts an interactive PostgreSQL transaction, preventing a safe
-  // reread of the winning row inside that transaction.
-  await new PrismaAuthorizationStore(prisma).resolveOrProvisionUser(identity);
+  // OAuth callback processing owns identity provisioning. Authorization only
+  // resolves an exact provider subject and never creates or merges by email.
+  await new PrismaAuthorizationStore(prisma).resolveUser(identity);
   return prisma.$transaction(
     async (transaction) => {
       const authorization = new AuthorizationService(

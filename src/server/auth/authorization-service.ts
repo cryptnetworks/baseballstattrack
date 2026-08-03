@@ -21,7 +21,7 @@ export class AuthorizationService {
   ) {}
 
   private async resolveUser(identity: AuthenticatedIdentity) {
-    const user = await this.store.resolveOrProvisionUser(identity);
+    const user = await this.store.resolveUser(identity);
     if (!user.active) {
       throw new AuthorizationError("USER_DISABLED");
     }

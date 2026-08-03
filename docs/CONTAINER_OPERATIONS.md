@@ -15,7 +15,7 @@ silently building a different artifact from a checkout.
 - Docker Engine and Docker Compose v2
 - A protected production environment file
 - A TLS-terminating reverse proxy and DNS name for the application
-- Production Supabase, Discord, and provider credentials
+- Production authentication-provider, Discord, and integration credentials
 - A tested PostgreSQL backup and restore destination
 - Host capacity that satisfies the minimum production profile and keeps the
   PostgreSQL data filesystem below the storage policy ceiling
