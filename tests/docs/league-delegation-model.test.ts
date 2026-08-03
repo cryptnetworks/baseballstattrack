@@ -101,7 +101,7 @@ describe("league delegation model", () => {
     expect(contract).toMatch(/Fantasy domain \(#123\)/u);
     expect(contract).toMatch(/fantasy data \(#124\)/u);
     expect(contract).toMatch(/fantasy scoring \(#125\/#126\)/u);
-    expect(contract).toMatch(/UI \(#127\)/u);
+    expect(contract).toMatch(/UI\s+\(#127\)/u);
     expect(contract).toContain("offline mode");
     expect(contract).toContain("M9");
   });
