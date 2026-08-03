@@ -8,6 +8,7 @@ describe("security audit scope planner", () => {
       containers: true,
       nodeDependencies: true,
       pythonDependencies: false,
+      sast: false,
     });
     expect(
       planSecurityAuditScopes(["services/discord-bot/requirements.lock"]),
@@ -15,6 +16,7 @@ describe("security audit scope planner", () => {
       containers: true,
       nodeDependencies: false,
       pythonDependencies: true,
+      sast: false,
     });
   });
 
@@ -25,6 +27,7 @@ describe("security audit scope planner", () => {
       containers: true,
       nodeDependencies: false,
       pythonDependencies: false,
+      sast: false,
     });
   });
 
@@ -33,6 +36,23 @@ describe("security audit scope planner", () => {
       containers: true,
       nodeDependencies: true,
       pythonDependencies: true,
+      sast: true,
     });
+  });
+
+  it("selects SAST for analyzable source and workflow changes", () => {
+    expect(planSecurityAuditScopes(["src/app/page.tsx"]).sast).toBe(true);
+    expect(planSecurityAuditScopes([".github/workflows/ci.yml"]).sast).toBe(
+      true,
+    );
+    expect(planSecurityAuditScopes(["services/discord-bot/bot.py"]).sast).toBe(
+      true,
+    );
+  });
+
+  it("does not select SAST for documentation-only changes", () => {
+    expect(planSecurityAuditScopes(["docs/CI_QUALITY_GATES.md"]).sast).toBe(
+      false,
+    );
   });
 });

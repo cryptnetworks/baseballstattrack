@@ -5,4 +5,5 @@ export function planSecurityAuditScopes(
   containers: boolean;
   nodeDependencies: boolean;
   pythonDependencies: boolean;
+  sast: boolean;
 };

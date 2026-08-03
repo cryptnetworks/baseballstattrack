@@ -39,17 +39,23 @@ if (!("workflow_dispatch" in monthly.value.on))
 if (!("workflow_call" in reusable.value.on))
   fail("SAST workflow is not reusable.");
 
-for (const trigger of [main.value.on?.pull_request, main.value.on?.push]) {
-  if (!Array.isArray(trigger?.paths) || !trigger.paths.includes("**/*.ts"))
-    fail("SAST triggers are not scoped to analyzable paths.");
-  if (
-    trigger.paths.includes("docs/**") ||
-    trigger.paths.includes("package-lock.json")
-  )
-    fail("SAST triggers include non-source-only changes.");
-}
+if ("paths" in main.value.on.pull_request)
+  fail(
+    "pull-request SAST uses path filters and may leave its required gate pending.",
+  );
+const pushPaths = main.value.on?.push?.paths;
+if (!Array.isArray(pushPaths) || !pushPaths.includes("**/*.ts"))
+  fail("main-push SAST is not scoped to analyzable paths.");
+if (pushPaths.includes("docs/**") || pushPaths.includes("package-lock.json"))
+  fail("main-push SAST includes non-source-only changes.");
 if (!main.value.on?.merge_group?.types?.includes("checks_requested"))
   fail("merge-queue SAST is not scoped to checks_requested.");
+if (main.value.jobs?.required?.name !== "SAST required gate")
+  fail("stable SAST required gate is missing.");
+if (main.value.jobs?.required?.if !== "${{ always() && !cancelled() }}")
+  fail("SAST required gate does not always evaluate completed plans.");
+if (main.value.jobs?.sast?.if !== "needs.scope.outputs.sast == 'true'")
+  fail("SAST execution is not controlled by the fail-safe path plan.");
 
 for (const [name, entry] of Object.entries({ main, monthly, reusable })) {
   if (entry.value.permissions?.contents !== "read")

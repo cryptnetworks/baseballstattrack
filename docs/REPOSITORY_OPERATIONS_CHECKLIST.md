@@ -24,13 +24,12 @@ Check the current control, not an old screenshot, before relying on it:
 - [milestones](https://github.com/cryptnetworks/baseballstattrack/milestones)
 
 Actions are limited to GitHub-owned actions, workflow references require full
-commit SHAs, and the default token is read-only. Staging and production
-environments exist. The current private plan does not expose native branch
-protection, required environment reviewers, deployment-branch policies, secret
-scanning, or push protection. The production workflow's exact
-`deploy-<version>` confirmation is the current explicit approval control; it is
-not represented as an independent reviewer. The applied and plan-limited state
-is maintained in `.github/branch-protection.md`.
+commit SHAs, and the default token is read-only. The active rulesets protect
+`main` and `v*` release tags. Staging and production environments exist; the
+production workflow's exact `deploy-<version>` confirmation remains the
+explicit deployment approval control and is not represented as an independent
+reviewer. The applied controls and emergency bypass procedure are maintained in
+`.github/branch-protection.md`.
 
 ### Documentation wiki publication
 
@@ -105,7 +104,8 @@ database.
 6. Review the exact PR head, including generated SQL, workflow permissions,
    dependency/action identities, denied paths, and adjacent invariants. Resolve
    every actionable review thread. Make the PR ready only when the exact head's
-   `verify` check is green and required approval is present where supported.
+   `verify` and `SAST required gate` checks are green and required approval is
+   present where supported.
 7. Merge with the repository's merge-commit strategy. Fetch and fast-forward
    local `main`; record the merge SHA and require exact-main CI to pass. A green
    superseded branch run is not post-merge evidence.
@@ -188,8 +188,11 @@ public CI logs.
    issue or private incident reference, focused diff, explicit operator
    approval, exact-head verification, rollback/roll-forward plan, and
    exact-main or exact-deployment verification. Never mask or waive a failed
-   safety gate. If a required native control is unavailable, record the
-   limitation and the human approval evidence.
+   safety gate. Administrator ruleset bypass is limited to active incident
+   containment, required-workflow or ruleset recovery, or a GitHub outage that
+   blocks the ordinary pull-request path. Record the operator, reason, refs,
+   commits, and validation, then complete a follow-up pull request and
+   independent review when available within one business day.
 6. Verify recovery through readiness and safe user/invariant checks, monitor
    for recurrence, and record containment end time. Follow with root cause,
    timeline, impact, detection gap, regression proof, owner, and dated systemic
