@@ -1,12 +1,12 @@
 # League delegation and organization authorization model
 
-Issue [#107](https://github.com/cryptnetworks/baseballstattrack/issues/107)
-defines the M8 authorization boundary for organization and league operations.
-It builds on the [ruleset contract](RULESET_CONTRACT.md) and
-[import portability contract](IMPORT_PORTABILITY.md). This document defines
-principals, scope, capability, approval, privacy, audit, and lifecycle rules. It
-does not implement fantasy, delegation UI, offline operation, or new baseball
-features.
+This contract defines the authorization boundary for organization and league
+operations: principals, scope, capabilities, approvals, privacy, audit, and
+lifecycle. It builds on the [ruleset contract](RULESET_CONTRACT.md) and
+[import portability contract](IMPORT_PORTABILITY.md) without implementing
+fantasy, delegation UI, offline operation, or new baseball features. The work
+was tracked in
+[#107](https://github.com/cryptnetworks/baseballstattrack/issues/107).
 
 ## Non-negotiable invariants
 

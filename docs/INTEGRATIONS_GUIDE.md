@@ -1,7 +1,7 @@
 # Integrations guide
 
-This section collects every supported external boundary. Each integration must
-preserve account authorization, data provenance, rate limits, failure handling,
+Use these guides to configure or extend an external boundary. Every integration
+must preserve Account authorization, provenance, rate limits, failure handling,
 and the repository's privacy rules.
 
 ## Baseball data and public APIs

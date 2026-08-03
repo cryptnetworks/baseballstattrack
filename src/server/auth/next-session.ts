@@ -15,7 +15,7 @@ export async function nextCookieStore(): Promise<SessionCookieStore> {
           store.set(name, value, options ?? {});
         }
       } catch {
-        // Server Components cannot write cookies. The proxy refreshes them.
+        // The proxy owns rotation because Server Components cannot mutate cookies.
       }
     },
   };

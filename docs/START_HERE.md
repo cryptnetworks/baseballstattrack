@@ -24,5 +24,5 @@ team, game, and season results from those events.
 - [Product roadmap](ROADMAP.md) shows completed milestones and planned product
   direction.
 
-The repository `docs/` directory is authoritative. This wiki is a generated,
-public reading view and direct wiki edits are not authoritative.
+Documentation is maintained in the repository's `docs/` directory. The public
+wiki is generated from those files; direct wiki edits are overwritten.

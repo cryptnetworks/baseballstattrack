@@ -1,51 +1,46 @@
 # Baseball Stat Track
 
-A production-quality baseball scorekeeping and statistics platform for coaches and scorekeepers.
+Baseball Stat Track is an event-oriented scorekeeping and statistics application
+for coaches and scorekeepers. Recorded game events are the source of truth;
+scores, box scores, and statistics are derived from replayable history.
 
 ## Project status
 
-The repository includes the event-oriented scoring, season reporting,
-production-readiness, integrations, analytics-governance, and online-first PWA
-milestones. The application uses Next.js App Router, React, strict TypeScript,
-Tailwind CSS, Prisma, provider-neutral OAuth/OIDC, Zod, Vitest, and GitHub Actions.
+The repository includes live scoring, corrections, season reporting, fantasy
+leagues, integrations, production operations, analytics governance, and an
+online-first PWA shell. The application uses Next.js App Router, React, strict
+TypeScript, Tailwind CSS, Prisma, provider-neutral OAuth/OIDC, Zod, Vitest, and
+GitHub Actions.
 
-## Product direction
+## How the system is organized
 
-The app will let a scorekeeper record a game pitch-by-pitch or play-by-play on phone, tablet, and desktop, then derive reliable batting, pitching, fielding, team, and season statistics from the recorded events.
+Domain code under `src/domain` has no dependency on React, Next.js, Prisma, or
+an identity provider. Server-side services validate Account ownership and
+capabilities before calling that domain code or its persistence adapters.
+Corrections append history, and replay binds to the rules and derivation
+versions that were active for the original game.
 
-The design should preserve the source events so a scoring correction can be audited and statistics can be recalculated without losing history.
+Start with [Start here](docs/START_HERE.md) for a role-based documentation
+index or [Installation and development](docs/INSTALLATION_AND_DEVELOPMENT.md)
+to run the repository locally.
 
-The implemented season read-model, verified-game inclusion rules, leaderboard
-minimums, and dashboard privacy/freshness behavior are documented in
-[docs/SEASON_DASHBOARD_AND_LEADERBOARDS.md](docs/SEASON_DASHBOARD_AND_LEADERBOARDS.md).
-Authorized game, player, team, and season print presentations are documented
-in [docs/PRINTABLE_REPORTS.md](docs/PRINTABLE_REPORTS.md).
-The versioned JSON export, separately authorized import dry run, allowlists,
-limits, replay validation, and round-trip contract are documented in
-[docs/DATA_EXPORT_AND_IMPORT.md](docs/DATA_EXPORT_AND_IMPORT.md).
-The supported integration tiers, partner admission, credential lifecycle,
-quotas, compatibility, deprecation, and support ownership are documented in
-[docs/INTEGRATIONS_AND_PARTNER_API_PROGRAM.md](docs/INTEGRATIONS_AND_PARTNER_API_PROGRAM.md).
-The pull-only ICS schedule feed and its privacy and rotation contract are
-documented in
-[docs/CALENDAR_SYNCHRONIZATION.md](docs/CALENDAR_SYNCHRONIZATION.md).
-The installable, mobile-first, online-only application shell, safe public-asset
-cache, connectivity states, and explicit offline deferral are documented in
-[docs/PWA_APPLICATION_EXPERIENCE.md](docs/PWA_APPLICATION_EXPERIENCE.md).
+## Documentation map
 
-The first usable release boundary, personas, MVP workflow, non-goals, success metrics, privacy assumptions, and unresolved product decisions are documented in [docs/PRODUCT_SCOPE.md](docs/PRODUCT_SCOPE.md). Canonical scoring semantics and event vocabulary are documented in [docs/SCORING_SEMANTICS.md](docs/SCORING_SEMANTICS.md), with the implemented replay and acceptance boundary in [docs/IMMUTABLE_GAME_EVENT_MODEL.md](docs/IMMUTABLE_GAME_EVENT_MODEL.md), exact calculation contract in [docs/STATISTIC_DERIVATION.md](docs/STATISTIC_DERIVATION.md), executable representative-game coverage in [docs/SCORING_FIXTURES.md](docs/SCORING_FIXTURES.md), managed identity/roster behavior in [docs/TEAM_SEASON_ROSTER_MANAGEMENT.md](docs/TEAM_SEASON_ROSTER_MANAGEMENT.md), the immutable pre-scoring contract in [docs/GAME_SETUP_AND_LINEUPS.md](docs/GAME_SETUP_AND_LINEUPS.md), and the responsive setup experience in [docs/GAME_SETUP_WORKFLOW.md](docs/GAME_SETUP_WORKFLOW.md). Persistence, tenancy, migration, and projection rules are documented in [docs/PERSISTENCE_AND_TENANCY.md](docs/PERSISTENCE_AND_TENANCY.md), with the implemented relational mapping in [docs/RELATIONAL_DOMAIN_SCHEMA.md](docs/RELATIONAL_DOMAIN_SCHEMA.md). Authentication and authorization boundaries are documented in [docs/AUTHENTICATION_AND_AUTHORIZATION.md](docs/AUTHENTICATION_AND_AUTHORIZATION.md), with provider setup and migration in [docs/AUTHENTICATION_PROVIDERS.md](docs/AUTHENTICATION_PROVIDERS.md), the production database-authority implementation in [docs/PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md](docs/PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md), and the decision recorded in [ADR 0007](docs/decisions/0007-authentication-and-authorization-boundaries.md). The privacy/threat-model baseline is [docs/PRIVACY_AND_THREAT_MODEL.md](docs/PRIVACY_AND_THREAT_MODEL.md), with [ADR 0008](docs/decisions/0008-privacy-and-threat-model.md).
+| Area                      | Primary references                                                                                                                                                                                  |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Product scope and roadmap | [Product scope](docs/PRODUCT_SCOPE.md), [roadmap](docs/ROADMAP.md)                                                                                                                                  |
+| Scoring and statistics    | [Scoring semantics](docs/SCORING_SEMANTICS.md), [immutable events](docs/IMMUTABLE_GAME_EVENT_MODEL.md), [statistic derivation](docs/STATISTIC_DERIVATION.md), [fixtures](docs/SCORING_FIXTURES.md)  |
+| Teams and game setup      | [Roster management](docs/TEAM_SEASON_ROSTER_MANAGEMENT.md), [game setup and lineups](docs/GAME_SETUP_AND_LINEUPS.md), [setup workflow](docs/GAME_SETUP_WORKFLOW.md)                                 |
+| Results and portability   | [Season dashboards](docs/SEASON_DASHBOARD_AND_LEADERBOARDS.md), [printable reports](docs/PRINTABLE_REPORTS.md), [export and import](docs/DATA_EXPORT_AND_IMPORT.md)                                 |
+| Persistence               | [Persistence and tenancy](docs/PERSISTENCE_AND_TENANCY.md), [relational schema](docs/RELATIONAL_DOMAIN_SCHEMA.md)                                                                                   |
+| Identity and security     | [Authentication and authorization](docs/AUTHENTICATION_AND_AUTHORIZATION.md), [provider operations](docs/AUTHENTICATION_PROVIDERS.md), [privacy and threat model](docs/PRIVACY_AND_THREAT_MODEL.md) |
+| Integrations              | [Integrations guide](docs/INTEGRATIONS_GUIDE.md), [partner API program](docs/INTEGRATIONS_AND_PARTNER_API_PROGRAM.md), [calendar synchronization](docs/CALENDAR_SYNCHRONIZATION.md)                 |
+| Application experience    | [Product guides](docs/PRODUCT_GUIDES.md), [PWA experience](docs/PWA_APPLICATION_EXPERIENCE.md)                                                                                                      |
+| Operations                | [Operations and security](docs/OPERATIONS_AND_SECURITY.md), [container operations](docs/CONTAINER_OPERATIONS.md), [backup and restore](docs/BACKUP_AND_RESTORE.md)                                  |
 
-## Planned delivery targets
-
-1. Foundation — product decisions, architecture, repository governance, and local development.
-2. Domain and data — teams, players, seasons, games, lineups, scoring events, and stat derivation.
-3. Scorekeeping MVP — fast game entry, substitutions, corrections, save/replay, and box score.
-4. Season experience — dashboards, player/team summaries, exports, and printable reports.
-5. Operational readiness — authentication, authorization, observability, backups, performance, and release hardening.
-6. Advanced analytics governance — explainable, reproducible insight boundaries and observation feasibility.
-7. Progressive web application experience — an installable, mobile-first, online-only shell with safe static caching.
-
-See docs/ROADMAP.md, CONTRIBUTING.md, and SECURITY.md.
+The detailed delivery history and remaining work live in
+[the roadmap](docs/ROADMAP.md). Contribution and vulnerability-reporting rules
+are in [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 ## System Requirements
 
