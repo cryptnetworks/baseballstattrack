@@ -186,7 +186,11 @@ Repository documentation is authoritative in `docs/`. The generated GitHub Wiki
 publication pipeline, manifest, visibility policy, dry-run commands, credential
 boundary, and recovery procedure are documented in
 [Documentation Wiki Publishing](docs/DOCUMENTATION_WIKI_PUBLISHING.md). Direct
-wiki edits are not authoritative.
+wiki edits are not authoritative. The public wiki's focused entry points begin
+at [Start here](docs/START_HERE.md); detailed rules and formulas are indexed in
+[Rules and calculations](docs/RULES_AND_CALCULATIONS.md), while setup and
+contributor material is collected in
+[Installation and development](docs/INSTALLATION_AND_DEVELOPMENT.md).
 
 Defect reporting, severity and priority, regression evidence, verification, and closure follow [docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md](docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md). Suspected vulnerabilities must use the private route in [SECURITY.md](SECURITY.md), never an issue.
 
