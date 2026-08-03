@@ -5,8 +5,10 @@ defines the M8 fantasy league, team, player-reference, eligibility, and roster
 snapshot domain. It consumes the [fantasy rules contract](FANTASY_RULES_CONTRACT.md)
 from #125 and the [delegation model](LEAGUE_DELEGATION_MODEL.md) from #107.
 
-This is a framework-independent aggregate contract. It does not add persistence,
-transactions (#124), matchup scoring, standings, or playoffs (#126), UI (#127),
+This is a framework-independent aggregate contract. The downstream
+[fantasy transaction contract](FANTASY_TRANSACTIONS.md) now consumes these
+entities without changing them in place. This document itself does not add
+persistence, matchup scoring, standings, or playoffs (#126), UI (#127),
 notifications, or offline behavior.
 
 ## Non-negotiable invariants
@@ -173,9 +175,9 @@ medical state, subjective notes, names, or hidden analytics.
 
 Ownership state is `AVAILABLE`, `ROSTERED`, `INACTIVE`, or `RELEASED`, with an
 exact fantasy team where the state is rostered/inactive, a monotonic revision,
-and effective instant. #123 defines and validates this shape only. #124 owns
-the atomic commands and audit history that produce future ownership snapshots;
-no trade, waiver, add, drop, or release operation is implemented here.
+and effective instant. #123 defines and validates this shape; #124 implements
+the atomic commands and audit history that produce future ownership snapshots
+in the [fantasy transaction contract](FANTASY_TRANSACTIONS.md).
 
 ## Roster slots and append-only history
 
@@ -248,9 +250,9 @@ revision chains, non-overlapping current ownership projections, atomic audit,
 and deny-by-default RLS. Existing migrations must not be edited.
 
 The in-memory contract intentionally establishes representability and failure
-semantics before persistence. Transactions (#124) will determine ownership
-event storage. Matchup scoring (#126) will determine period/result references.
-Those dependencies must be resolved before one schema safely represents the
+semantics before persistence. #124 now defines ownership transaction and audit
+semantics, while matchup scoring (#126) still owns period/result references.
+That final dependency must be resolved before one schema safely represents the
 whole fantasy lifecycle.
 
 ## Adversarial review findings
@@ -289,8 +291,9 @@ identity prevention, immutable ordered snapshots, and completed-history denial.
 
 ## Deferred downstream work
 
-- #124: draft/acquire/release, waivers, trades, schedules, atomic ownership
-  transitions, and transaction audit.
+- #124 implements draft/assignment effects, add/drop, waivers, trades, lineup
+  changes, atomic ownership transitions, and audit in
+  [Fantasy transactions](FANTASY_TRANSACTIONS.md).
 - #126: scoring periods, lineup locking, matchups, scoring execution, standings,
   playoffs, corrections, and result persistence.
 - #127: league/team/roster UI and public presentation.

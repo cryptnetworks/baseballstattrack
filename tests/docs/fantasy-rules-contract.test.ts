@@ -132,7 +132,7 @@ describe("fantasy rules contract", () => {
       expect(contract).toContain(edge);
     }
     expect(contract).toContain("BEFORE_FINALIZATION_ONLY");
-    expect(contract).toMatch(/#124 owns waiver, trade/iu);
+    expect(contract).toMatch(/#124 implements waiver, trade/iu);
     expect(contract).toMatch(/#126 implements matchup scoring/iu);
     expect(contract).toMatch(/every acquisition uses a daily waiver batch/iu);
     expect(contract).toMatch(/initial priority is reverse draft order/iu);
@@ -149,9 +149,9 @@ describe("fantasy rules contract", () => {
     expect(contract).toMatch(/never from a browser boolean/iu);
   });
 
-  it("defers every prohibited implementation", () => {
+  it("records implemented dependencies and defers prohibited work", () => {
     expect(contract).toMatch(/#123 defines fantasy league/iu);
-    expect(contract).toMatch(/#124 owns transactions/iu);
+    expect(contract).toMatch(/#124 defines transactions/iu);
     expect(contract).toMatch(/#126 owns matchup execution/iu);
     expect(contract).toMatch(/#127 owns configuration/iu);
     expect(contract).toMatch(/Offline fantasy behavior.*out of scope/iu);
