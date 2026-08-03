@@ -14,7 +14,7 @@ on:
         description: Validate and show the wiki diff, or publish it
         required: true
         type: choice
-        default: dry-run
+        default: publish
         options:
           - dry-run
           - publish
