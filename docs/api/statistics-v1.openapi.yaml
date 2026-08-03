@@ -280,7 +280,7 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: Supabase access token
+      bearerFormat: Opaque application session token
       description: Dedicated integrations use a least-privilege active identity.
   parameters:
     AccountId:

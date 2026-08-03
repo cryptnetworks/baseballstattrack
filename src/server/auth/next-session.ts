@@ -1,11 +1,9 @@
 import { cookies } from "next/headers";
 
 import {
-  authenticateSupabaseCookies,
-  authenticateSupabaseRequest,
-  createSupabaseCookieClient,
+  getApplicationSessionService,
   type SessionCookieStore,
-} from "@/server/auth/supabase-session";
+} from "@/server/auth/application-session";
 
 export async function nextCookieStore(): Promise<SessionCookieStore> {
   const store = await cookies();
@@ -24,13 +22,16 @@ export async function nextCookieStore(): Promise<SessionCookieStore> {
 }
 
 export async function authenticatePageSession() {
-  return authenticateSupabaseCookies(await nextCookieStore());
+  return getApplicationSessionService().authenticateCookies(
+    await nextCookieStore(),
+    false,
+  );
 }
 
 export async function authenticateRouteRequest(request: Request) {
-  return authenticateSupabaseRequest(request, await nextCookieStore());
-}
-
-export async function createSupabaseNextClient() {
-  return createSupabaseCookieClient(await nextCookieStore());
+  return getApplicationSessionService().authenticateRequest(
+    request,
+    await nextCookieStore(),
+    false,
+  );
 }

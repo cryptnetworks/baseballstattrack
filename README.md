@@ -7,7 +7,7 @@ A production-quality baseball scorekeeping and statistics platform for coaches a
 The repository includes the event-oriented scoring, season reporting,
 production-readiness, integrations, analytics-governance, and online-first PWA
 milestones. The application uses Next.js App Router, React, strict TypeScript,
-Tailwind CSS, Prisma, Supabase boundaries, Zod, Vitest, and GitHub Actions.
+Tailwind CSS, Prisma, provider-neutral OAuth/OIDC, Zod, Vitest, and GitHub Actions.
 
 ## Product direction
 
@@ -33,7 +33,7 @@ The installable, mobile-first, online-only application shell, safe public-asset
 cache, connectivity states, and explicit offline deferral are documented in
 [docs/PWA_APPLICATION_EXPERIENCE.md](docs/PWA_APPLICATION_EXPERIENCE.md).
 
-The first usable release boundary, personas, MVP workflow, non-goals, success metrics, privacy assumptions, and unresolved product decisions are documented in [docs/PRODUCT_SCOPE.md](docs/PRODUCT_SCOPE.md). Canonical scoring semantics and event vocabulary are documented in [docs/SCORING_SEMANTICS.md](docs/SCORING_SEMANTICS.md), with the implemented replay and acceptance boundary in [docs/IMMUTABLE_GAME_EVENT_MODEL.md](docs/IMMUTABLE_GAME_EVENT_MODEL.md), exact calculation contract in [docs/STATISTIC_DERIVATION.md](docs/STATISTIC_DERIVATION.md), executable representative-game coverage in [docs/SCORING_FIXTURES.md](docs/SCORING_FIXTURES.md), managed identity/roster behavior in [docs/TEAM_SEASON_ROSTER_MANAGEMENT.md](docs/TEAM_SEASON_ROSTER_MANAGEMENT.md), the immutable pre-scoring contract in [docs/GAME_SETUP_AND_LINEUPS.md](docs/GAME_SETUP_AND_LINEUPS.md), and the responsive setup experience in [docs/GAME_SETUP_WORKFLOW.md](docs/GAME_SETUP_WORKFLOW.md). Persistence, tenancy, migration, and projection rules are documented in [docs/PERSISTENCE_AND_TENANCY.md](docs/PERSISTENCE_AND_TENANCY.md), with the implemented relational mapping in [docs/RELATIONAL_DOMAIN_SCHEMA.md](docs/RELATIONAL_DOMAIN_SCHEMA.md). Authentication and authorization boundaries are documented in [docs/AUTHENTICATION_AND_AUTHORIZATION.md](docs/AUTHENTICATION_AND_AUTHORIZATION.md), with the production Supabase and database-authority implementation in [docs/PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md](docs/PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md) and the decision recorded in [ADR 0007](docs/decisions/0007-authentication-and-authorization-boundaries.md). The privacy/threat-model baseline is [docs/PRIVACY_AND_THREAT_MODEL.md](docs/PRIVACY_AND_THREAT_MODEL.md), with [ADR 0008](docs/decisions/0008-privacy-and-threat-model.md).
+The first usable release boundary, personas, MVP workflow, non-goals, success metrics, privacy assumptions, and unresolved product decisions are documented in [docs/PRODUCT_SCOPE.md](docs/PRODUCT_SCOPE.md). Canonical scoring semantics and event vocabulary are documented in [docs/SCORING_SEMANTICS.md](docs/SCORING_SEMANTICS.md), with the implemented replay and acceptance boundary in [docs/IMMUTABLE_GAME_EVENT_MODEL.md](docs/IMMUTABLE_GAME_EVENT_MODEL.md), exact calculation contract in [docs/STATISTIC_DERIVATION.md](docs/STATISTIC_DERIVATION.md), executable representative-game coverage in [docs/SCORING_FIXTURES.md](docs/SCORING_FIXTURES.md), managed identity/roster behavior in [docs/TEAM_SEASON_ROSTER_MANAGEMENT.md](docs/TEAM_SEASON_ROSTER_MANAGEMENT.md), the immutable pre-scoring contract in [docs/GAME_SETUP_AND_LINEUPS.md](docs/GAME_SETUP_AND_LINEUPS.md), and the responsive setup experience in [docs/GAME_SETUP_WORKFLOW.md](docs/GAME_SETUP_WORKFLOW.md). Persistence, tenancy, migration, and projection rules are documented in [docs/PERSISTENCE_AND_TENANCY.md](docs/PERSISTENCE_AND_TENANCY.md), with the implemented relational mapping in [docs/RELATIONAL_DOMAIN_SCHEMA.md](docs/RELATIONAL_DOMAIN_SCHEMA.md). Authentication and authorization boundaries are documented in [docs/AUTHENTICATION_AND_AUTHORIZATION.md](docs/AUTHENTICATION_AND_AUTHORIZATION.md), with provider setup and migration in [docs/AUTHENTICATION_PROVIDERS.md](docs/AUTHENTICATION_PROVIDERS.md), the production database-authority implementation in [docs/PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md](docs/PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md), and the decision recorded in [ADR 0007](docs/decisions/0007-authentication-and-authorization-boundaries.md). The privacy/threat-model baseline is [docs/PRIVACY_AND_THREAT_MODEL.md](docs/PRIVACY_AND_THREAT_MODEL.md), with [ADR 0008](docs/decisions/0008-privacy-and-threat-model.md).
 
 ## Planned delivery targets
 
@@ -83,7 +83,7 @@ Software and client requirements:
 - clients need a maintained version of Chrome, Edge, Firefox, or Safari with
   JavaScript, cookies, and TLS enabled on phone, tablet, or desktop; and
 - production needs reliable HTTPS ingress through a TLS-terminating reverse
-  proxy plus outbound HTTPS/DNS access to configured Supabase identity,
+  proxy plus outbound HTTPS/DNS access to configured OAuth/OIDC identity,
   notification, calendar, webhook, and integration providers.
 
 ### Recommended Production Requirements
@@ -133,13 +133,16 @@ npm run dev
 
 Open `http://localhost:3000` for the application shell or `http://localhost:3000/status` for the smoke page. The JSON health endpoint is available at `http://localhost:3000/api/health`.
 
-Copy `.env.example` to `.env.local` before connecting Supabase or running migrations. The example contains local placeholders only and no secrets.
+Copy `.env.example` to `.env.local` before configuring authentication or
+running migrations. The example contains local placeholders only and no real
+secrets.
 
-For authentication, configure the matching Supabase project URL and
-publishable anonymous key, set the canonical site URL, enable the selected
-OAuth provider in Supabase, and allow `<site-url>/auth/callback` as a redirect
-URL. Provider access proves identity only; an active database membership is
-still required for every Account operation.
+For authentication, set the canonical site URL, application encryption key,
+enabled provider adapters, and each provider's server-side client credentials.
+Register `<site-url>/auth/callback` directly with each provider. Provider access
+proves identity only; an active database membership is still required for every
+Account operation. See
+[Authentication providers](docs/AUTHENTICATION_PROVIDERS.md).
 
 For the image-only production stack, copy the example environment file, pull
 the public GHCR images, and start the dependency-ordered services:

@@ -25,9 +25,11 @@ export POSTGRES_PASSWORD=synthetic-container-smoke-only
 export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public"
 export DIRECT_URL="${DATABASE_URL}"
 export NEXT_PUBLIC_SITE_URL=https://app.example.test
-export NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co
-export NEXT_PUBLIC_SUPABASE_ANON_KEY=synthetic-public-anonymous-key
-export SUPABASE_OAUTH_PROVIDER=google
+export AUTHENTICATION_ENCRYPTION_KEY=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE
+export AUTHENTICATION_ENABLED_PROVIDERS=google
+export OAUTH_CALLBACK_URL=https://app.example.test/auth/callback
+export GOOGLE_OAUTH_CLIENT_ID=synthetic-google-client-id
+export GOOGLE_OAUTH_CLIENT_SECRET=synthetic-google-client-secret
 export WEBHOOK_SIGNING_MASTER_KEY=synthetic_webhook_signing_master_key_1234567890
 export WEBHOOK_WORKER_TOKEN=synthetic-webhook-worker-token-1234567890
 export EXTERNAL_INGESTION_WORKER_TOKEN=synthetic-ingestion-worker-token-1234567890

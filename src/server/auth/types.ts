@@ -1,8 +1,7 @@
 import type { AuthorizationScope, MembershipRole } from "@prisma/client";
 
 import { AuthorizationError } from "@/server/auth/errors";
-
-export const AUTH_PROVIDER = "supabase";
+import type { AuthenticationProviderKey } from "@/server/auth/oauth-provider";
 
 export const capabilities = [
   "account.view",
@@ -65,7 +64,7 @@ export const capabilities = [
 export type Capability = (typeof capabilities)[number];
 
 export type AuthenticatedIdentity = Readonly<{
-  provider: typeof AUTH_PROVIDER;
+  provider: AuthenticationProviderKey;
   providerSubject: string;
 }>;
 

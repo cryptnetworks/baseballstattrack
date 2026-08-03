@@ -41,7 +41,7 @@ The complete authorization contract, including the protected-resource matrix and
 
 Authentication identity and authorization membership are separate:
 
-- Authentication identity: the Supabase-authenticated user or future identity provider subject.
+- Authentication identity: an immutable provider-plus-subject linked to the application-owned user.
 - Authorization membership: database records that grant a user capabilities within an account and optional team/season/game scope.
 
 M1 should use a small role model plus scoped grants. Permission resolution is monotonic inside one active account membership:

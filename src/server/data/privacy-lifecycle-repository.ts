@@ -775,6 +775,42 @@ export class PrismaPrivacyLifecycleRepository {
               deliveryContact: null,
             },
           });
+          const authenticationSessions =
+            await tx.authenticationSession.findMany({
+              where: { appUserId: request.targetId, revokedAt: null },
+              select: { id: true, tokenVersion: true },
+            });
+          if (authenticationSessions.length) {
+            await tx.authenticationSession.updateMany({
+              where: {
+                id: {
+                  in: authenticationSessions.map(({ id }) => id),
+                },
+                revokedAt: null,
+              },
+              data: {
+                revokedAt: input.now,
+                revocationReason: "PRIVACY_DELETION",
+              },
+            });
+            await tx.authenticationSessionEvent.createMany({
+              data: authenticationSessions.map((session) => ({
+                sessionId: session.id,
+                eventType: "REVOKED",
+                tokenVersion: session.tokenVersion,
+                reasonCode: "PRIVACY_DELETION",
+                occurredAt: input.now,
+              })),
+            });
+          }
+          await tx.oAuthLoginAttempt.updateMany({
+            where: { appUserId: request.targetId, consumedAt: null },
+            data: { consumedAt: input.now },
+          });
+          await tx.authenticationIdentity.updateMany({
+            where: { appUserId: request.targetId },
+            data: { email: null, emailVerified: null },
+          });
           await tx.appUser.update({
             where: { id: request.targetId },
             data: { status: "DELETED", detachedAt: input.now },

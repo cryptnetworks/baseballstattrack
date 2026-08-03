@@ -19,7 +19,7 @@ requested tag and `sha-<full source SHA>`.
 - A current Docker Engine and Docker Compose v2
 - A DNS name with either a Cloudflare Tunnel or another TLS-terminating reverse
   proxy for the application
-- A production Supabase project and OAuth configuration
+- Configured OAuth/OIDC clients for each enabled authentication adapter
 - A dedicated Discord application and least-privilege API identity
 - A protected host directory for the deployment environment file
 - A tested PostgreSQL backup and restore destination
@@ -43,7 +43,7 @@ install -m 600 app.production.env.example /etc/baseballstattrack/app.env
 
 Set `APP_ENV_FILE=/etc/baseballstattrack/app.env` in `production.env`. Compose
 injects that file only into the application container; the bot and tunnel do
-not receive SMTP, Supabase, webhook, or application worker credentials.
+not receive SMTP, authentication-provider, webhook, or application worker credentials.
 
 `POSTGRES_PASSWORD` contains the raw database password. If it contains URL
 reserved characters, percent-encode them in `DATABASE_URL` and `DIRECT_URL`.

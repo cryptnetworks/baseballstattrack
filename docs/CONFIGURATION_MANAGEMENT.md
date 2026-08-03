@@ -66,9 +66,10 @@ are never accepted by the configuration schema.
 
 - Database and infrastructure credentials: `DATABASE_URL`, `DIRECT_URL`,
   `POSTGRES_PASSWORD`, `CLOUDFLARE_TUNNEL_TOKEN`.
-- Supabase/service credentials: `NEXT_PUBLIC_SUPABASE_ANON_KEY` (public client
-  credential, but deployment-owned), `SUPABASE_SERVICE_ROLE_KEY` where used by
-  operations.
+- Authentication secrets: `AUTHENTICATION_ENCRYPTION_KEY`,
+  `AUTHENTIK_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_CLIENT_SECRET`,
+  `DISCORD_LOGIN_CLIENT_SECRET`, `FACEBOOK_OAUTH_CLIENT_SECRET`, and
+  `APPLE_OAUTH_PRIVATE_KEY`.
 - Signing and worker secrets: `WEBHOOK_SIGNING_MASTER_KEY`,
   `WEBHOOK_WORKER_TOKEN`, `EXTERNAL_INGESTION_WORKER_TOKEN`,
   `ICS_FEED_SIGNING_KEY`, `NOTIFICATION_WORKER_TOKEN`,
@@ -112,8 +113,9 @@ topology and remain deployment-owned.
 - Application/runtime identity: `NODE_ENV`, `NEXT_PUBLIC_APP_ENV`,
   `npm_package_version`, `REQUIRED_DATABASE_MIGRATION`.
 - Public/authentication topology: `NEXT_PUBLIC_SITE_URL`,
-  `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_OAUTH_PROVIDER`,
-  `DISCORD_OAUTH_CLIENT_ID`, `DISCORD_OAUTH_REDIRECT_URI`.
+  `AUTHENTICATION_ENABLED_PROVIDERS`, `OAUTH_CALLBACK_URL`, provider issuer and
+  client identifiers, Apple team/key identifiers, `DISCORD_OAUTH_CLIENT_ID`,
+  and `DISCORD_OAUTH_REDIRECT_URI`.
 - Container/process networking: `HOSTNAME`, `PORT`, `APP_BIND_ADDRESS`,
   `APP_PORT`, `HEALTH_HOST`, `HEALTH_PORT`,
   `DISCORD_UPDATE_WORKER_HEALTH_HOST`, `DISCORD_UPDATE_WORKER_HEALTH_PORT`.
