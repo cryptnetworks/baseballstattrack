@@ -5,9 +5,6 @@ on:
     branches:
       - main
     paths:
-      - ".github/dependabot.yml"
-      - ".github/workflows/monthly-security-audit.yml"
-      - ".github/workflows/security-sast.yml"
       - "Dockerfile"
       - "package-lock.json"
       - "package.json"
@@ -21,19 +18,58 @@ permissions:
   contents: read
 
 concurrency:
-  group: monthly-security-audit
-  cancel-in-progress: false
+  group: security-audit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  scope:
+    name: Plan security audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      containers: ${{ steps.plan.outputs.containers }}
+      node_dependencies: ${{ steps.plan.outputs['node-dependencies'] }}
+      python_dependencies: ${{ steps.plan.outputs['python-dependencies'] }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Classify changed paths
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PULL_REQUEST_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -Eeuo pipefail
+
+          if [[ "${EVENT_NAME}" != "pull_request" ]]; then
+            node scripts/plan-security-ci.mjs --full >> "${GITHUB_OUTPUT}"
+          elif ! git cat-file -e "${PULL_REQUEST_BASE}^{commit}" 2>/dev/null; then
+            node scripts/plan-security-ci.mjs --full >> "${GITHUB_OUTPUT}"
+          else
+            git diff --name-only -z "${PULL_REQUEST_BASE}" "${GITHUB_SHA}" |
+              node scripts/plan-security-ci.mjs >> "${GITHUB_OUTPUT}"
+          fi
+
   sast:
     name: SAST
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/security-sast.yml
     permissions:
       contents: read
       security-events: write
 
-  dependencies:
-    name: Dependency audit
+  node-dependencies:
+    name: Node dependency audit
+    needs: scope
+    if: needs.scope.outputs.node_dependencies == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -46,15 +82,25 @@ jobs:
           node-version: "24"
           cache: npm
 
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
+
+  python-dependencies:
+    name: Python dependency audit
+    needs: scope
+    if: needs.scope.outputs.python_dependencies == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Setup Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: services/discord-bot/requirements.lock
-
-      - name: Audit npm dependencies
-        run: npm audit --audit-level=high
 
       - name: Audit Python dependencies
         run: |
@@ -64,6 +110,7 @@ jobs:
 
   repository-scan:
     name: Repository and secret scan
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -104,6 +151,8 @@ jobs:
 
   containers:
     name: Container audit
+    needs: scope
+    if: needs.scope.outputs.containers == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

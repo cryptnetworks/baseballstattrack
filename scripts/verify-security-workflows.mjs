@@ -39,6 +39,18 @@ if (!("workflow_dispatch" in monthly.value.on))
 if (!("workflow_call" in reusable.value.on))
   fail("SAST workflow is not reusable.");
 
+for (const trigger of [main.value.on?.pull_request, main.value.on?.push]) {
+  if (!Array.isArray(trigger?.paths) || !trigger.paths.includes("**/*.ts"))
+    fail("SAST triggers are not scoped to analyzable paths.");
+  if (
+    trigger.paths.includes("docs/**") ||
+    trigger.paths.includes("package-lock.json")
+  )
+    fail("SAST triggers include non-source-only changes.");
+}
+if (!main.value.on?.merge_group?.types?.includes("checks_requested"))
+  fail("merge-queue SAST is not scoped to checks_requested.");
+
 for (const [name, entry] of Object.entries({ main, monthly, reusable })) {
   if (entry.value.permissions?.contents !== "read")
     fail(`${name} workflow does not default to read-only contents.`);
@@ -57,6 +69,25 @@ for (const language of ["actions", "javascript-typescript", "python"]) {
 }
 if (!reusable.text.includes("queries: security-extended"))
   fail("CodeQL security-extended queries are not enabled.");
+if (
+  main.text.includes("npm run security:test") ||
+  main.text.includes("npm audit")
+)
+  fail(
+    "main SAST duplicates checks already enforced by CI or dependency audit.",
+  );
+if (monthly.value.jobs?.sast?.if !== "github.event_name != 'pull_request'")
+  fail("pull requests duplicate the scheduled SAST suite.");
+if (
+  monthly.value.jobs?.["repository-scan"]?.if !==
+  "github.event_name != 'pull_request'"
+)
+  fail("pull requests duplicate the scheduled repository history scan.");
+if (
+  !monthly.value.jobs?.["node-dependencies"] ||
+  !monthly.value.jobs?.["python-dependencies"]
+)
+  fail("Node and Python dependency audits are not independently scoped.");
 if (!monthly.text.includes("npm audit --audit-level=high"))
   fail("npm high-severity gate is missing.");
 if (!monthly.text.includes("python -m pip_audit --strict"))
