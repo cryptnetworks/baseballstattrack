@@ -138,6 +138,10 @@ The Account-owned fantasy league, team, canonical player-reference, roster
 snapshot, lifecycle, privacy, and exact authorization foundation is defined in
 the [Fantasy domain model](FANTASY_DOMAIN_MODEL.md) and
 [ADR 0014](decisions/0014-account-scoped-immutable-fantasy-aggregates.md).
+The authorized add/drop/trade/lineup state machine, deterministic daily waiver
+processing, concurrency/idempotency, rollback, locks, and audit contract is
+defined in [Fantasy transactions](FANTASY_TRANSACTIONS.md) and
+[ADR 0015](decisions/0015-deterministic-fantasy-roster-transactions.md).
 
 The low-maintenance fantasy baseball option is defined by [#122](https://github.com/cryptnetworks/baseballstattrack/issues/122): weekly lineup decisions, automatic scoring, scheduled transactions, and low-noise notifications.
 

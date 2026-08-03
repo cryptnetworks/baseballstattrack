@@ -31,8 +31,8 @@ capabilities. Delegated authority is accepted only from an allowed exact-
 Account #107 decision; Organization or League membership is never sufficient.
 League activation requires separate approval.
 
-No database schema is added. #124 must define ownership-event and transaction
-atomicity before persistence, and #126 must define scoring-period/result
+No database schema is added. ADR 0015 now defines #124 ownership-event and
+transaction atomicity, while #126 must still define scoring-period/result
 references. Both consume these identities and snapshots without mutating them.
 
 ## Consequences
@@ -44,8 +44,8 @@ references. Both consume these identities and snapshots without mutating them.
   historical rosters reproducible after later changes.
 - Account isolation and commissioner actions fail closed under explicit
   capabilities and exact scopes.
-- Transactions, scoring, standings, playoffs, UI, persistence, and offline
-  behavior remain deferred to their named issues.
+- Transaction behavior is implemented by ADR 0015. Scoring, standings,
+  playoffs, UI, persistence, and offline behavior remain deferred.
 
 ## Alternatives rejected
 
@@ -66,14 +66,14 @@ Account consent and least-privilege capability grants.
 
 ### Add partial fantasy tables now
 
-Rejected because transaction events and scoring-period references are not yet
-defined. A partial schema would invite mutable ownership columns and later
-lineage-breaking migrations.
+Rejected because transaction events were not yet defined and scoring-period
+references remain undefined. A partial schema would invite mutable ownership
+columns and later lineage-breaking migrations.
 
 ## Revisit triggers
 
-Revisit only if reviewed #124/#126 designs cannot reference these stable ids and
-snapshots, a cross-Account competition contract establishes explicit sharing,
-or persistence exposes an unrepresentable constraint. Any superseding decision
-must preserve canonical player references, exact Account authorization,
+Revisit only if ADR 0015 or reviewed #126 design cannot reference these stable
+ids and snapshots, a cross-Account competition contract establishes explicit
+sharing, or persistence exposes an unrepresentable constraint. Any superseding
+decision must preserve canonical player references, exact Account authorization,
 immutable history, and the one-way baseball-to-fantasy boundary.

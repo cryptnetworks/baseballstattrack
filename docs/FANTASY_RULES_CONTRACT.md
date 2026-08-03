@@ -227,8 +227,9 @@ time zone plus an unambiguous UTC instant.
 
 ## Transaction boundary
 
-Issue #124 owns waiver, trade, acquisition, release, and scheduling mechanics.
-It must implement these sealed initial-format rules:
+Issue #124 implements waiver, trade, acquisition, release, and deterministic
+processing mechanics in [Fantasy transactions](FANTASY_TRANSACTIONS.md) under
+these sealed initial-format rules:
 
 - every acquisition uses a daily waiver batch rather than first-to-click free
   agency;
@@ -254,9 +255,9 @@ The transaction effect boundary is:
 - no transaction changes a locked lineup or prior score; and
 - retries preserve one accepted effective timestamp and cannot apply twice.
 
-Claim cancellation, concurrent batches, trade retries, recovery, and audit must
-be implemented and tested by #124. No transaction entity, queue, or scheduler
-is introduced here.
+Claim cancellation, concurrency, trade retries, rollback, and audit are covered
+by #124's pure state machine and focused tests. No production queue or scheduler
+is introduced by either contract.
 
 ## Game lifecycle, corrections, and stat changes
 
@@ -452,7 +453,8 @@ remove wall-clock, floating-point, and silent-recalculation ambiguity.
 
 - #123 defines fantasy league, manager, roster-snapshot, and player-reference
   entities in the [fantasy domain model](FANTASY_DOMAIN_MODEL.md).
-- #124 owns transactions, waivers, trades, and their schedulers.
+- #124 defines transactions, waivers, trades, lineup changes, and deterministic
+  processing; production scheduling remains deferred.
 - #126 owns matchup execution, score persistence, standings, and playoffs.
 - #127 owns configuration, lineup, results, and notification experiences.
 
