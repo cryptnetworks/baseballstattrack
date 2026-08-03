@@ -53,7 +53,13 @@ LABEL org.opencontainers.image.title="Baseball Stat Track migration runner" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.licenses="MIT"
 
-RUN rm -rf /usr/local/lib/node_modules/npm \
+RUN npm prune --omit=dev \
+    && rm -rf node_modules/typescript \
+        node_modules/@typescript/old \
+        node_modules/@typescript/typescript6 \
+        node_modules/@typescript/typescript-* \
+    && ./node_modules/.bin/prisma --version \
+    && rm -rf /usr/local/lib/node_modules/npm \
     && rm -f /usr/local/bin/npm /usr/local/bin/npx
 
 USER node
