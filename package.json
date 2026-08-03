@@ -31,6 +31,10 @@
     "db:restore:verify": "bash scripts/verify-backup-restore.sh",
     "db:storage:check": "bash scripts/check-database-storage.sh",
     "policy:validate": "node scripts/verify-defect-policy.mjs",
+    "docs:wiki:validate": "node scripts/publish-docs-wiki.mjs --mode validate",
+    "docs:wiki:dry-run": "node scripts/publish-docs-wiki.mjs --mode dry-run",
+    "docs:wiki:publish": "node scripts/publish-docs-wiki.mjs --mode publish",
+    "docs:wiki:workflow:validate": "node scripts/verify-docs-wiki-workflow.mjs",
     "container:config": "docker compose --env-file compose.production.env.example config --quiet",
     "container:production:build": "bash scripts/build-production-images.sh",
     "container:build": "docker build --target runtime --tag baseballstattrack:local .",
@@ -45,7 +49,7 @@
     "experience:verify": "node scripts/verify-experience-budgets.mjs",
     "pwa:verify": "node scripts/verify-pwa.mjs",
     "performance:measure": "EXPERIENCE_MEASURE=1 PERFORMANCE_MEASURE=1 vitest run tests/quality/experience-measurement.test.ts tests/quality/production-workload-budgets.integration.test.ts --reporter=verbose",
-    "verify": "npm run format && npm run lint && npm run typecheck && npm run test && npm run policy:validate && npm run api:contract && npm run db:validate && npm run build && npm run experience:verify && npm run pwa:verify && npm run audit:prod"
+    "verify": "npm run format && npm run lint && npm run typecheck && npm run test && npm run policy:validate && npm run docs:wiki:validate && npm run api:contract && npm run db:validate && npm run build && npm run experience:verify && npm run pwa:verify && npm run audit:prod"
   },
   "overrides": {
     "minimatch@3.1.5": {

@@ -182,6 +182,12 @@ public GHCR images and keeps migrations explicit and dependency ordered.
 
 The canonical local/CI quality contract, required `verify` branch-protection check, and failure triage guidance are in [docs/CI_QUALITY_GATES.md](docs/CI_QUALITY_GATES.md).
 
+Repository documentation is authoritative in `docs/`. The generated GitHub Wiki
+publication pipeline, manifest, visibility policy, dry-run commands, credential
+boundary, and recovery procedure are documented in
+[Documentation Wiki Publishing](docs/DOCUMENTATION_WIKI_PUBLISHING.md). Direct
+wiki edits are not authoritative.
+
 Defect reporting, severity and priority, regression evidence, verification, and closure follow [docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md](docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md). Suspected vulnerabilities must use the private route in [SECURITY.md](SECURITY.md), never an issue.
 
 ## Working agreement

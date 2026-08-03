@@ -12,6 +12,7 @@ Check the current control, not an old screenshot, before relying on it:
 - [Actions policy and token permissions](https://github.com/cryptnetworks/baseballstattrack/settings/actions)
 - [Actions runs](https://github.com/cryptnetworks/baseballstattrack/actions)
 - [`verify` workflow](https://github.com/cryptnetworks/baseballstattrack/actions/workflows/ci.yml)
+- [documentation wiki workflow](https://github.com/cryptnetworks/baseballstattrack/actions/workflows/publish-docs-wiki.yml)
 - [release-candidate workflow](https://github.com/cryptnetworks/baseballstattrack/actions/workflows/release.yml)
 - [deployment environments](https://github.com/cryptnetworks/baseballstattrack/settings/environments)
 - [staging deployment activity](https://github.com/cryptnetworks/baseballstattrack/deployments/activity_log?environments_filter=staging)
@@ -30,6 +31,16 @@ scanning, or push protection. The production workflow's exact
 `deploy-<version>` confirmation is the current explicit approval control; it is
 not represented as an independent reviewer. The applied and plan-limited state
 is maintained in `.github/branch-protection.md`.
+
+### Documentation wiki publication
+
+Treat `docs/` as the only authoritative documentation source. The generated
+wiki, manifest, visibility classifications, reserved namespace, credential
+rotation, dry-run, publication, and recovery rules are maintained in
+[Documentation Wiki Publishing](DOCUMENTATION_WIKI_PUBLISHING.md). Never edit a
+generated wiki page as a source change. Before a controlled publication, run
+`npm run docs:wiki:dry-run` against a temporary wiki checkout and preserve the
+source SHA and prospective diff in the operation record.
 
 ## Clean-checkout preflight
 

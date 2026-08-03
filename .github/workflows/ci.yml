@@ -114,7 +114,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Verify formatting and repository policy
-        run: npm run format && npm run policy:validate
+        run: npm run format && npm run policy:validate && npm run docs:wiki:validate && npm run docs:wiki:workflow:validate
 
   application:
     name: Application and database
