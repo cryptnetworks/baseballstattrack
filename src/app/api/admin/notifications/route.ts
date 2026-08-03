@@ -74,7 +74,7 @@ export async function GET(request: Request) {
     const history = search.get("history") === "true";
     const preferenceId = z.uuid().nullable().parse(search.get("preferenceId"));
     const actor = await administrator(request, accountId);
-    const service = getNotificationAdministrationService();
+    const service = await getNotificationAdministrationService(accountId);
     if (history) {
       const deliveries = await service.history(
         accountId,
@@ -143,10 +143,9 @@ export async function POST(request: Request) {
     const actor = await administrator(request, input.accountId);
     const command: Record<string, unknown> = { ...input };
     delete command.action;
-    const result = await getNotificationAdministrationService().configure(
-      command,
-      actor,
-    );
+    const result = await (
+      await getNotificationAdministrationService(input.accountId)
+    ).configure(command, actor);
     return Response.json(result, {
       status: 201,
       headers: { "Cache-Control": "no-store" },
@@ -168,7 +167,9 @@ export async function DELETE(request: Request) {
       .strict()
       .parse(await request.json());
     const actor = await administrator(request, input.accountId);
-    await getNotificationAdministrationService().disable(input, actor);
+    await (
+      await getNotificationAdministrationService(input.accountId)
+    ).disable(input, actor);
     return new Response(null, {
       status: 204,
       headers: { "Cache-Control": "no-store" },

@@ -5,6 +5,11 @@ import {
   normalizeExternalRecord,
   type ExternalProviderAdapter,
 } from "@/domain/external-data";
+import { getApplicationConfigurationService } from "@/server/app/application-configuration-service";
+import {
+  deploymentConfiguration,
+  runtimeSecretConfiguration,
+} from "@/server/config/runtime-environment";
 import { getPrismaClient } from "@/server/data/prisma";
 import { PrismaExternalIngestionRepository } from "@/server/data/external-ingestion-repository";
 import { LicensedJsonFeedProvider } from "@/server/providers/licensed-json-feed";
@@ -119,7 +124,7 @@ export class ExternalIngestionService {
     }
     if (
       adapter.contract.authentication === "FIXTURE_ONLY" &&
-      process.env.NODE_ENV === "production"
+      deploymentConfiguration().nodeEnvironment === "production"
     ) {
       throw new ExternalIngestionError(
         "SOURCE_NOT_APPROVED",
@@ -247,10 +252,12 @@ export class ExternalIngestionService {
   }
 }
 
-export function getExternalIngestionService() {
+export async function getExternalIngestionService(accountId: string) {
   const adapters = new Map<string, ExternalProviderAdapter>();
-  const baseUrl = process.env.EXTERNAL_DATA_PROVIDER_BASE_URL;
-  const apiKey = process.env.EXTERNAL_DATA_PROVIDER_API_KEY;
+  const configuration =
+    await getApplicationConfigurationService().runtime(accountId);
+  const baseUrl = configuration.values.integrations.externalDataProviderBaseUrl;
+  const apiKey = runtimeSecretConfiguration().externalDataProviderApiKey;
   if (baseUrl && apiKey) {
     const provider = new LicensedJsonFeedProvider(baseUrl, apiKey);
     adapters.set(provider.contract.key, provider);

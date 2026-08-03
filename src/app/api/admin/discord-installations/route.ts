@@ -103,10 +103,9 @@ export async function GET(request: Request) {
       new URL(request.url).searchParams.get("accountId"),
     );
     const actor = await authorize(request, accountId, "discord.settings.view");
-    const installations = await getDiscordInstallationService().list(
-      accountId,
-      actor,
-    );
+    const installations = await (
+      await getDiscordInstallationService(accountId)
+    ).list(accountId, actor);
     return Response.json(
       { installations },
       { headers: { "Cache-Control": "no-store" } },
@@ -128,7 +127,7 @@ export async function POST(request: Request) {
         : "discord.settings.operate";
     const actor = await authorize(request, command.accountId, capability);
     const correlation = requestCorrelation(request);
-    const service = getDiscordInstallationService();
+    const service = await getDiscordInstallationService(command.accountId);
     if (command.action === "disconnect") {
       const installation = await service.disconnect(
         command,

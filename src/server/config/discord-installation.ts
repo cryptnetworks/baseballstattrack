@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 import { discordSnowflakeSchema } from "@/domain/discord-installation";
+import type { ApplicationConfigurationValues } from "@/domain/application-configuration";
+import {
+  deploymentConfiguration,
+  runtimeSecretConfiguration,
+} from "@/server/config/runtime-environment";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
@@ -48,11 +53,14 @@ export type DiscordInstallationConfiguration = Readonly<{
 }>;
 
 export function loadDiscordInstallationConfiguration(
-  environment: Environment = process.env,
+  values: ApplicationConfigurationValues,
+  environment?: Environment,
 ): DiscordInstallationConfiguration {
-  const siteUrl = environment.NEXT_PUBLIC_SITE_URL;
+  const deployment = deploymentConfiguration(environment);
+  const secrets = runtimeSecretConfiguration(environment);
+  const siteUrl = deployment.siteUrl;
   const redirectUri =
-    environment.DISCORD_OAUTH_REDIRECT_URI ??
+    deployment.discordOauthRedirectUri ??
     (siteUrl
       ? new URL(
           "/api/admin/discord-installations/callback",
@@ -60,16 +68,15 @@ export function loadDiscordInstallationConfiguration(
         ).toString()
       : undefined);
   const parsed = configurationSchema.parse({
-    clientId: environment.DISCORD_OAUTH_CLIENT_ID,
-    clientSecret: environment.DISCORD_OAUTH_CLIENT_SECRET,
-    botToken: environment.DISCORD_INSTALLATION_BOT_TOKEN,
-    credentialReference: environment.DISCORD_INSTALLATION_CREDENTIAL_REFERENCE,
-    stateSecret: environment.DISCORD_OAUTH_STATE_SECRET,
+    clientId: secrets.discordOauthClientId,
+    clientSecret: secrets.discordOauthClientSecret,
+    botToken: secrets.discordInstallationBotToken,
+    credentialReference:
+      values.integrations.discordInstallationCredentialReference,
+    stateSecret: secrets.discordOauthStateSecret,
     redirectUri,
-    apiBaseUrl:
-      environment.DISCORD_INSTALLATION_API_BASE_URL ??
-      "https://discord.com/api/v10/",
-    timeoutMs: Number(environment.DISCORD_INSTALLATION_TIMEOUT_MS ?? "8000"),
+    apiBaseUrl: values.integrations.discordInstallationApiBaseUrl,
+    timeoutMs: values.integrations.discordInstallationTimeoutMs,
   });
   const redirect = secureUrl(parsed.redirectUri, "DISCORD_OAUTH_REDIRECT_URI");
   const apiBase = secureUrl(

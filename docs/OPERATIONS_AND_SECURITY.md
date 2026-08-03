@@ -1,5 +1,7 @@
 # Operations and security
 
+- [Application configuration management](CONFIGURATION_MANAGEMENT.md)
+
 Use this section to deploy, protect, observe, recover, and maintain Baseball
 Stat Track. Installation commands are collected in
 [Installation and development](INSTALLATION_AND_DEVELOPMENT.md).

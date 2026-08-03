@@ -12,14 +12,17 @@ import {
 } from "@/server/auth/discord-oauth-state";
 import { authenticateRouteRequest } from "@/server/auth/next-session";
 import { authorizeProtectedRequest } from "@/server/auth/protected-boundary";
-import { loadDiscordInstallationConfiguration } from "@/server/config/discord-installation";
+import {
+  deploymentConfiguration,
+  runtimeSecretConfiguration,
+} from "@/server/config/runtime-environment";
 import { requestCorrelation } from "@/server/observability/operational-events";
 
 export const dynamic = "force-dynamic";
 
 function destination(request: Request, status: string) {
   const requestUrl = new URL(request.url);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const siteUrl = deploymentConfiguration().siteUrl;
   const redirectOrigin = siteUrl ? new URL(siteUrl).origin : requestUrl.origin;
   return new URL(
     `/accounts?discord=${encodeURIComponent(status)}`,
@@ -56,10 +59,13 @@ export async function GET(request: Request) {
       guildId: url.searchParams.get("guild_id"),
       permissions: url.searchParams.get("permissions"),
     });
+    const stateSecret = runtimeSecretConfiguration().discordOauthStateSecret;
+    if (!stateSecret)
+      throw new DiscordInstallationError("CONFIGURATION_INVALID", 503);
     const state = verifyDiscordOAuthState({
       cookieValue: stateCookie,
       returnedState: callback.state,
-      secret: loadDiscordInstallationConfiguration().stateSecret,
+      secret: stateSecret,
     });
     const actor = await authorizeProtectedRequest(
       () => authenticateRouteRequest(request),
@@ -67,7 +73,9 @@ export async function GET(request: Request) {
       { kind: "ACCOUNT", accountId: state.accountId },
       "discord.settings.configure",
     );
-    await getDiscordInstallationService().complete(
+    await (
+      await getDiscordInstallationService(state.accountId)
+    ).complete(
       callback,
       stateCookie,
       actor,

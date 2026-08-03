@@ -44,6 +44,8 @@ export const capabilities = [
   "report.export",
   "report.publish",
   "audit.view",
+  "configuration.view",
+  "configuration.manage",
   "discord.settings.view",
   "discord.settings.configure",
   "discord.settings.preview",

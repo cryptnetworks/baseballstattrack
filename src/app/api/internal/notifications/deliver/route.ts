@@ -4,12 +4,12 @@ import {
   NotificationError,
   getNotificationDeliveryService,
 } from "@/server/app/notification-service";
-import { featureEnabled } from "@/server/config/feature-flags";
+import { runtimeSecretConfiguration } from "@/server/config/runtime-environment";
 
 export const dynamic = "force-dynamic";
 
 function authorized(request: Request): boolean {
-  const configured = process.env.NOTIFICATION_WORKER_TOKEN;
+  const configured = runtimeSecretConfiguration().notificationWorkerToken;
   const presented = request.headers
     .get("authorization")
     ?.replace(/^Bearer /u, "");
@@ -27,22 +27,6 @@ export async function POST(request: Request) {
     );
   }
   try {
-    if (
-      !featureEnabled("FEATURE_EMAIL_NOTIFICATIONS_ENABLED") &&
-      !featureEnabled("FEATURE_DISCORD_NOTIFICATIONS_ENABLED")
-    ) {
-      return Response.json(
-        {
-          disabled: true,
-          claimed: 0,
-          succeeded: 0,
-          retried: 0,
-          deadLettered: 0,
-          cancelled: 0,
-        },
-        { headers: { "Cache-Control": "no-store" } },
-      );
-    }
     const workerId = request.headers.get("x-notification-worker-id") ?? "";
     const results =
       await getNotificationDeliveryService().deliverBatch(workerId);

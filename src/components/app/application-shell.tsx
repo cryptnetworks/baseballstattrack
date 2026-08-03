@@ -82,6 +82,11 @@ export function ApplicationShell({ children }: ApplicationShellProps) {
               label="Discord"
               pathname={pathname}
             />
+            <NavigationLink
+              href="/settings/configuration"
+              label="Settings"
+              pathname={pathname}
+            />
             <NavigationLink href="/status" label="Status" pathname={pathname} />
           </div>
         </nav>

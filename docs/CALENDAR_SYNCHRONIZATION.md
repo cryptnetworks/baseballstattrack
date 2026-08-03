@@ -11,13 +11,15 @@ editing or reversing an applied migration.
 
 ## Enable and obtain a feed
 
-Set:
+Keep the signing secret external:
 
 ```dotenv
-FEATURE_ICS_CALENDAR_ENABLED=true
 ICS_FEED_SIGNING_KEY=replace-with-at-least-32-random-characters
-ICS_FEED_DETAIL_LEVEL=private
 ```
+
+Then enable calendar feeds and choose the detail level in **Settings →
+Application configuration**. Legacy `FEATURE_ICS_CALENDAR_ENABLED` and
+`ICS_FEED_DETAIL_LEVEL` values are read only by the reviewed initial seed.
 
 An Account administrator requests a team's subscription URL with:
 
@@ -33,7 +35,7 @@ calendar writes or changes baseball data.
 
 ## Privacy and rotation
 
-`ICS_FEED_DETAIL_LEVEL` supports:
+The database-owned detail level supports:
 
 - `private` — time and a generic “Baseball game” title;
 - `opponent` — also names the opponent when setup data is available;
@@ -42,8 +44,8 @@ calendar writes or changes baseball data.
 Use `private` for youth schedules unless the Account owner has approved wider
 disclosure. Treat a subscription URL like a password: anyone holding it can
 read the feed without signing in. Rotate `ICS_FEED_SIGNING_KEY` to revoke every
-issued URL, then request replacement URLs. Disable the feed immediately with
-`FEATURE_ICS_CALENDAR_ENABLED=false`.
+issued URL, then request replacement URLs. Disable the feed immediately in the
+application configuration portal.
 
 Cancelled, abandoned, archived, and unscheduled games are omitted. Each event
 has a stable UID derived from the game's public UUID, so reschedules update the

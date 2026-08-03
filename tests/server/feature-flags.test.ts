@@ -1,33 +1,43 @@
 import { describe, expect, it } from "vitest";
 
-import { featureEnabled } from "@/server/config/feature-flags";
+import { DEFAULT_APPLICATION_CONFIGURATION } from "@/domain/application-configuration";
+import { featureEnabledInConfiguration } from "@/server/config/feature-flags";
+import { configurationSeedFromEnvironment } from "@/server/config/configuration-seed";
 
-describe("feature flags", () => {
+describe("database-backed feature flags", () => {
+  it("reads feature ownership from validated Account configuration", () => {
+    const values = {
+      ...DEFAULT_APPLICATION_CONFIGURATION,
+      features: {
+        ...DEFAULT_APPLICATION_CONFIGURATION.features,
+        calendarFeeds: true,
+      },
+    };
+    expect(
+      featureEnabledInConfiguration("FEATURE_ICS_CALENDAR_ENABLED", values),
+    ).toBe(true);
+    expect(
+      featureEnabledInConfiguration(
+        "FEATURE_EMAIL_NOTIFICATIONS_ENABLED",
+        values,
+      ),
+    ).toBe(false);
+  });
+
   it.each(["true", "TRUE", "1", "yes", "on"])(
-    "accepts the enabled value %s",
+    "imports the enabled legacy value %s only through the seed path",
     (value) => {
       expect(
-        featureEnabled("FEATURE_ICS_CALENDAR_ENABLED", {
+        configurationSeedFromEnvironment({
           FEATURE_ICS_CALENDAR_ENABLED: value,
-        }),
+        }).features.calendarFeeds,
       ).toBe(true);
     },
   );
 
-  it.each([undefined, "false", "0", "no", "off"])(
-    "defaults or parses %s as disabled",
-    (value) => {
-      expect(
-        featureEnabled("FEATURE_EMAIL_NOTIFICATIONS_ENABLED", {
-          FEATURE_EMAIL_NOTIFICATIONS_ENABLED: value,
-        }),
-      ).toBe(false);
-    },
-  );
-
-  it("rejects ambiguous values", () => {
+  it("rejects ambiguous legacy values", () => {
     expect(() =>
-      featureEnabled("FEATURE_DISCORD_NOTIFICATIONS_ENABLED", {
+      configurationSeedFromEnvironment({
         FEATURE_DISCORD_NOTIFICATIONS_ENABLED: "enabled",
       }),
     ).toThrow("must be true or false");

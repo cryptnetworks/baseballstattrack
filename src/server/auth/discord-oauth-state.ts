@@ -2,6 +2,8 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { z } from "zod";
 
+import { deploymentConfiguration } from "@/server/config/runtime-environment";
+
 export const DISCORD_OAUTH_STATE_TTL_SECONDS = 10 * 60;
 
 const statePayloadSchema = z
@@ -101,7 +103,7 @@ export const discordOAuthStateCookie = Object.freeze({
   options: {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: deploymentConfiguration().nodeEnvironment === "production",
     path: "/api/admin/discord-installations/callback",
     maxAge: DISCORD_OAUTH_STATE_TTL_SECONDS,
   },
