@@ -382,14 +382,15 @@ digest match, reviewed mapping to a semantically identical local version, or
 quarantine. Imports cannot choose an Account owner, activate a model, or rewrite
 historical fantasy results.
 
-Fantasy score/result packages remain deferred until #123 and #126 define their
-identities. Baseball import never manufactures fantasy points automatically.
+Fantasy score/result packages remain deferred until #126 defines their
+identities. #123 fantasy aggregates use stable references and sealed rule
+bindings but do not manufacture fantasy points during baseball import.
 
 ## Database and implementation deferral
 
 No schema or migration is included in #125. Persisting model families, versions,
 activations, period bindings, eligibility snapshots, or fantasy results depends
-on #123/#126 identity decisions. A future implementation uses forward-only
+on #124/#126 transaction and result decisions. A future implementation uses forward-only
 migrations, preserved ids/digests, owner-scoped composite constraints, immutable
 semantic columns after review, non-overlapping activation intervals, and
 rollback by disabling selection rather than deleting history.
@@ -449,7 +450,8 @@ remove wall-clock, floating-point, and silent-recalculation ambiguity.
 
 ## Deferred downstream work
 
-- #123 owns fantasy league, manager, roster, and player-eligibility entities.
+- #123 defines fantasy league, manager, roster-snapshot, and player-reference
+  entities in the [fantasy domain model](FANTASY_DOMAIN_MODEL.md).
 - #124 owns transactions, waivers, trades, and their schedulers.
 - #126 owns matchup execution, score persistence, standings, and playoffs.
 - #127 owns configuration, lineup, results, and notification experiences.

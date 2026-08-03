@@ -9,8 +9,9 @@ Accepted
 M8 needs a fantasy rules foundation that is understandable and low-maintenance
 without allowing fantasy concerns to alter baseball truth. The system already
 has immutable baseball ruleset bindings, replayable events, versioned statistics,
-portable provenance, and explicit Organization/League delegation. It does not
-yet have fantasy league, roster, transaction, matchup, or UI entities.
+portable provenance, and explicit Organization/League delegation. At the time
+of this decision, it did not yet have fantasy league, roster, transaction,
+matchup, or UI entities.
 
 The decision must select an initial scoring format, preserve reproducibility,
 support future formats, define period/correction behavior, and avoid private
@@ -43,7 +44,8 @@ exact approval. No generic administrator or ruleset capability implies fantasy
 authority.
 
 Issue #125 implements the pure rule/digest/scoring/eligibility boundary and
-documentation only. Persistence and fantasy entities remain deferred.
+documentation. ADR 0014 subsequently adds pure fantasy aggregates; persistence,
+transactions, matchup/result entities, and UI remain deferred.
 
 ## Consequences
 
@@ -55,7 +57,8 @@ documentation only. Persistence and fantasy entities remain deferred.
   reproducible statistic sources exist.
 - Period finalization needs a bounded grace window; late canonical corrections
   require an explicit append-only fantasy adjustment rather than silent change.
-- #123, #124, #126, and #127 can depend on this contract but are not implemented.
+- #123 depends on this contract; #124, #126, and #127 depend on both contracts
+  and remain unimplemented.
 
 ## Alternatives rejected
 

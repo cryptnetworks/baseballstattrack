@@ -59,6 +59,10 @@ describe("league delegation model", () => {
       "report.export",
       "game.correct",
       "game.verify",
+      "fantasy.league.manage",
+      "fantasy.league.activate",
+      "fantasy.team.manage",
+      "fantasy.roster.manage",
     ]) {
       expect(contract).toContain(`\`${capability}\``);
     }
@@ -97,10 +101,10 @@ describe("league delegation model", () => {
     expect(contract).toMatch(/No route may read these future tables/iu);
   });
 
-  it("does not begin downstream feature work", () => {
-    expect(contract).toMatch(/Fantasy domain \(#123\)/u);
-    expect(contract).toMatch(/fantasy data \(#124\)/u);
-    expect(contract).toMatch(/fantasy scoring \(#125\/#126\)/u);
+  it("records the fantasy contract consumers and keeps later work deferred", () => {
+    expect(contract).toMatch(/#123[\s\S]*fantasy domain model/iu);
+    expect(contract).toMatch(/transactions \(#124\)/u);
+    expect(contract).toMatch(/scoring\/standings\/playoffs \(#126\)/u);
     expect(contract).toMatch(/UI\s+\(#127\)/u);
     expect(contract).toContain("offline mode");
     expect(contract).toContain("M9");
