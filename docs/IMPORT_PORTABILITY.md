@@ -636,7 +636,9 @@ delete accepted history silently.
 Issues #123, #125, and #126 may rely on imported canonical games/statistics only
 after the import is `AVAILABLE`, with exact ruleset, source, correction,
 verification, and derivation lineage. They cannot treat imported reports as
-scoring truth or add fantasy identity/weights to this package contract.
+scoring truth or add fantasy identity/weights to this package contract. The
+[Fantasy rules contract](FANTASY_RULES_CONTRACT.md) defines that downstream
+statistics-to-points boundary without changing this package format.
 
 #107 and #124–#127 remain separate. Delegated league import authority, fantasy
 transactions/scoring, UI, notifications, and offline transfer are not started

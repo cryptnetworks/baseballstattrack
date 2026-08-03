@@ -130,6 +130,10 @@ capability, approval, audit, revocation, and minimum-field sharing boundary is
 defined in the
 [League delegation model](LEAGUE_DELEGATION_MODEL.md) and
 [ADR 0012](decisions/0012-organization-and-league-delegation.md).
+The independent fantasy scoring identity, weekly points format, category
+extension, eligibility, lifecycle, correction, and privacy boundary is defined
+in the [Fantasy rules contract](FANTASY_RULES_CONTRACT.md) and
+[ADR 0013](decisions/0013-versioned-weekly-fantasy-points.md).
 
 The low-maintenance fantasy baseball option is defined by [#122](https://github.com/cryptnetworks/baseballstattrack/issues/122): weekly lineup decisions, automatic scoring, scheduled transactions, and low-noise notifications.
 

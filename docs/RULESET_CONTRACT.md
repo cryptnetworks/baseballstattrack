@@ -368,7 +368,9 @@ the game's ruleset binding. Historical fantasy results retain both references
 and a source revision so later rule changes do not rewrite standings silently.
 
 Issues #122–#127 own fantasy product and implementation decisions. This
-contract supplies only their version boundary.
+contract supplies only their version boundary. The independent scoring,
+eligibility, cadence, and lifecycle decisions accepted by #125 are in the
+[Fantasy rules contract](FANTASY_RULES_CONTRACT.md).
 
 ### Delegation and league administration
 
