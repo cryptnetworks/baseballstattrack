@@ -1,0 +1,105 @@
+name: Publish documentation wiki
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Validate and show the wiki diff, or publish it
+        required: true
+        type: choice
+        default: dry-run
+        options:
+          - dry-run
+          - publish
+      source_sha:
+        description: Optional source commit SHA for a manual controlled republish
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-wiki-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate and publish documentation wiki
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      WIKI_PUBLISH_TOKEN: ${{ secrets.WIKI_PUBLISH_TOKEN }}
+      WIKI_BRANCH: master
+      WIKI_REPOSITORY: cryptnetworks/baseballstattrack.wiki.git
+    steps:
+      - name: Select trusted source and mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_run" ]]; then
+            echo "MODE=publish" >> "${GITHUB_ENV}"
+            echo "SOURCE_SHA=${{ github.event.workflow_run.head_sha }}" >> "${GITHUB_ENV}"
+          else
+            echo "MODE=${{ inputs.mode }}" >> "${GITHUB_ENV}"
+            echo "SOURCE_SHA=${{ inputs.source_sha || github.sha }}" >> "${GITHUB_ENV}"
+          fi
+
+      - name: Checkout exact source revision
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate manifest, generated navigation, and workflow boundary
+        run: npm run docs:wiki:validate && npm run docs:wiki:workflow:validate
+
+      - name: Clone wiki publication target
+        shell: bash
+        env:
+          WIKI_DIR: ${{ runner.temp }}/baseballstattrack-wiki
+        run: |
+          set -euo pipefail
+          test -n "${WIKI_PUBLISH_TOKEN}" || { echo "WIKI_PUBLISH_TOKEN is required; refusing to access the wiki." >&2; exit 1; }
+          git -c "http.extraheader=Authorization: Bearer ${WIKI_PUBLISH_TOKEN}" clone --depth 1 --branch "${WIKI_BRANCH}" "https://github.com/${WIKI_REPOSITORY}" "${WIKI_DIR}"
+          git -C "${WIKI_DIR}" config user.name "baseballstattrack-docs-publisher"
+          git -C "${WIKI_DIR}" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "${WIKI_DIR}" config --local http.extraheader "Authorization: Bearer ${WIKI_PUBLISH_TOKEN}"
+
+      - name: Dry run or publish
+        shell: bash
+        env:
+          WIKI_DIR: ${{ runner.temp }}/baseballstattrack-wiki
+        run: |
+          set -euo pipefail
+          if [[ "${MODE}" == "dry-run" ]]; then
+            npm run docs:wiki:dry-run -- --wiki-dir "${WIKI_DIR}" --source-sha "${SOURCE_SHA}" --target-branch "${WIKI_BRANCH}"
+          elif [[ "${MODE}" == "publish" ]]; then
+            npm run docs:wiki:publish -- --wiki-dir "${WIKI_DIR}" --source-sha "${SOURCE_SHA}" --target-branch "${WIKI_BRANCH}"
+          else
+            echo "Unsupported publication mode: ${MODE}" >&2
+            exit 1
+          fi

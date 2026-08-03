@@ -1,0 +1,130 @@
+version: 1
+
+source:
+  root: docs
+  repository: https://github.com/cryptnetworks/baseballstattrack
+  branch: main
+
+publication:
+  generatedDirectory: _generated
+  reservedDirectory: _wiki-owned
+  landingPage: Home.md
+  sidebarPage: _Sidebar.md
+  generatedManifest: _generated/.publication-manifest.json
+  publicOnly: true
+  navigationUnlisted: append
+  excludedLinkPolicy: repository
+  repositoryPagesBase: https://github.com/cryptnetworks/baseballstattrack/blob/main/docs
+  bootstrap:
+    - path: Home.md
+      sha256: c6a18cf49d1d4ae70f48f744bd3352f3b2337b4b6ed4c9050663851bb2da4a3e
+
+# Every top-level Markdown file is public unless an exclusion below classifies it
+# as internal or restricted. The template is the stable filename-to-wiki mapping.
+pages:
+  - source: "*.md"
+    wiki: "{stem}"
+    visibility: public
+    orderBy: source
+
+exclusions:
+  - source: publication-manifest.yaml
+    visibility: internal
+    reason: Publication control metadata is repository-only source material.
+  - source: FANTASY_RULES_CONTRACT.md
+    visibility: internal
+    reason: Future league product planning is not part of the public wiki release.
+  - source: LEAGUE_DELEGATION_MODEL.md
+    visibility: internal
+    reason: Future organization and league authority is not part of this publication.
+  - source: IMPORT_PORTABILITY.md
+    visibility: internal
+    reason: Import commit and quarantine design remains implementation-planning material.
+  - source: RULESET_CONTRACT.md
+    visibility: internal
+    reason: Future ruleset activation design remains implementation-planning material.
+  - source: M5_DISCORD_CONTROL_PLANE_RECONCILIATION.md
+    visibility: internal
+    reason: Internal milestone reconciliation is not a user-facing wiki page.
+  - source: OFFLINE_SCORING_AND_SYNC_DECISION.md
+    visibility: restricted
+    reason: Offline scoring remains a deferred product boundary.
+  - source: decisions/**
+    visibility: internal
+    reason: Architecture decision records remain repository source material.
+  - source: api/**
+    visibility: internal
+    reason: Machine-readable API artifacts remain versioned repository assets.
+
+navigation:
+  - title: Start Here
+    pages:
+      - PRODUCT-SCOPE
+      - ROADMAP
+      - REPOSITORY-OPERATIONS-CHECKLIST
+  - title: Scorekeeping
+    pages:
+      - SCORING-SEMANTICS
+      - IMMUTABLE-GAME-EVENT-MODEL
+      - STATISTIC-DERIVATION
+      - SCORING-FIXTURES
+      - GAME-SETUP-AND-LINEUPS
+      - GAME-SETUP-WORKFLOW
+      - LIVE-PLATE-APPEARANCE-SCORING
+      - RUNNER-AND-BASE-OUT-INTERACTIONS
+      - LIVE-SUBSTITUTIONS-AND-PITCHING
+      - SCORING-CORRECTION-UX
+      - SCORING-AUTOSAVE-AND-RECOVERY
+  - title: Reports and Analytics
+    pages:
+      - GAME-BOX-SCORE
+      - SEASON-DASHBOARD-AND-LEADERBOARDS
+      - PRINTABLE-REPORTS
+      - ANALYTICS-CHARTER
+      - ANALYTICS-OBSERVATION-STREAM
+      - PRODUCT-ANALYTICS-AND-PRIVACY
+      - SPRAY-AND-PITCH-CHART-DISCOVERY
+  - title: Integrations
+    pages:
+      - EXTERNAL-DATA-INGESTION
+      - INTEGRATIONS-AND-PARTNER-API-PROGRAM
+      - CALENDAR-SYNCHRONIZATION
+      - OUTBOUND-NOTIFICATIONS
+      - WEBHOOKS
+      - STATISTICS-API-V1
+      - API-VERSIONING-AND-COMPATIBILITY
+  - title: Discord
+    pages:
+      - DISCORD-INSTALLATION-AND-ONBOARDING
+      - DISCORD-SETTINGS-CONTRACT
+      - DISCORD-SETTINGS-WEB-UI
+      - DISCORD-PERMISSIONS-AND-AUDIT
+      - DISCORD-CHANNEL-ROUTING
+      - DISCORD-TRACKED-SCOPES
+      - DISCORD-UPDATE-CADENCE
+      - DISCORD-UPDATE-CONTENT
+      - DISCORD-UPDATE-WORKER
+      - DISCORD-CONFIGURATION-PREVIEW
+      - DISCORD-ACTIVITY-AND-HEALTH
+      - DISCORD-END-TO-END-FIXTURES
+      - DISCORD-CONTROL-PLANE-DEPLOYMENT
+  - title: Operations and Security
+    pages:
+      - AUTHENTICATION-AND-AUTHORIZATION
+      - PRODUCTION-AUTHENTICATION-AND-TEAM-ISOLATION
+      - PRIVACY-AND-THREAT-MODEL
+      - PRIVACY-LIFECYCLE
+      - DATA-EXPORT-AND-IMPORT
+      - CONTAINER-OPERATIONS
+      - PRODUCTION-COMPOSE
+      - BACKUP-AND-RESTORE
+      - DATABASE-STORAGE-CAPACITY
+      - PRODUCTION-RELIABILITY
+      - OBSERVABILITY-AUDIT-AND-ALERTING
+      - RELEASE-AND-WORKFLOW-SECURITY
+      - CI-QUALITY-GATES
+      - DEFECT-TRIAGE-AND-REGRESSION-POLICY
+      - RATE-LIMITS-AND-ABUSE-PREVENTION
+      - RESPONSIVE-PERFORMANCE-AND-ACCESSIBILITY
+      - PERFORMANCE-AND-LOAD-BUDGETS
+      - PWA-APPLICATION-EXPERIENCE

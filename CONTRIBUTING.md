@@ -47,6 +47,12 @@ Maintainers use
 for issue intake, pull requests, migrations, releases, incidents, emergency
 changes, and deprecations from clean checkout through post-merge evidence.
 
+The `docs/` directory is the authoritative documentation source. Changes to
+published documentation should be reviewed in this repository; the generated
+wiki is not a second source of truth. Run `npm run docs:wiki:validate` for
+manifest, Markdown, link, anchor, visibility, and navigation checks. Use the
+documented dry-run workflow before any controlled wiki publication.
+
 Changes to the Dockerfile, Compose configuration, runtime startup, readiness, or migration workflow must also pass `npm run container:verify`. Use [docs/CONTAINER_OPERATIONS.md](docs/CONTAINER_OPERATIONS.md) as the canonical container and operations contract.
 
 ## Decisions
