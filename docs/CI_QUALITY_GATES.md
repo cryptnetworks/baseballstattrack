@@ -1,6 +1,6 @@
 # CI quality gates
 
-This document defines the required local and GitHub Actions quality gates for Baseball Stat Track. It does not configure branch protection itself; repository owners must apply the documented required check once the repository plan permits protected rules for `main`.
+This document defines the required local and GitHub Actions quality gates for Baseball Stat Track. The active repository ruleset requires the stable `verify` and `SAST required gate` results on pull requests into `main`.
 
 ## Canonical verification
 
@@ -46,6 +46,12 @@ result job named **`verify`**. The exact branch-protection required check name i
 
 ```text
 verify
+```
+
+The main SAST workflow supplies the second stable required check:
+
+```text
+SAST required gate
 ```
 
 The workflow runs for pull requests targeting `main`, merge-queue groups targeting
@@ -94,16 +100,21 @@ detection/recovery drill. Production-container checks run for container/runtime,
 migration, Node dependency, release-workflow, and CI-policy changes. These checks use only disposable
 synthetic PostgreSQL and Docker state.
 
-For pushes and pull requests, the main SAST workflow starts only when the diff
-contains an Actions, JavaScript/TypeScript, or Python source path. GitHub Advanced
-Security treats each language/category pair as a required CodeQL configuration,
-so Actions, JavaScript/TypeScript, and Python run together whenever SAST starts;
-omitting an unchanged language would fail the aggregate CodeQL check as an
-incomplete analysis. Dependency-only changes instead use the monthly security
-workflow's independently scoped npm or Python audit and the container audit.
-Pull requests do not duplicate the scheduled full-history secret scan or the
-monthly SAST run. Merge-queue checks use the event's supported
-`checks_requested` activity; GitHub does not support path filters on that event.
+For pull requests and merge groups, the main SAST workflow always creates its
+required gate and uses a fail-safe diff planner to decide whether CodeQL is
+needed. An Actions, JavaScript/TypeScript, Python, or workflow change runs all
+three CodeQL language/category configurations. A documentation-only or
+dependency-only change skips the matrix and the gate verifies that the skip was
+planned. If a reliable base commit is unavailable, the planner requires the
+full matrix. Pushes to `main` retain source-path trigger filtering because no
+pull-request merge decision can be left pending there.
+
+GitHub Advanced Security treats each language/category pair as a complete
+CodeQL configuration, so the workflow runs Actions, JavaScript/TypeScript, and
+Python together whenever SAST is selected. Dependency-only changes use the
+monthly security workflow's independently scoped npm or Python audit and the
+container audit. Pull requests do not duplicate the scheduled full-history
+secret scan or monthly SAST run.
 
 Documentation wiki publication still waits for a successful `main` CI run. A
 small follow-up scope job checks the exact successful commit and starts the
@@ -152,9 +163,12 @@ Run the named failing command locally after `npm ci`. Common cases:
 
 If a run is superseded by a newer commit, GitHub cancels it by design. Re-run a failed network-dependent check only after the underlying service is available; do not hide failures with automatic success fallbacks.
 
-## Branch-protection recommendation and deferrals
+## Protected-branch policy
 
-When GitHub plan/settings permit it, protect `main` with required pull requests, an approving review, resolved conversations, up-to-date branches, and the exact `verify` check. Current plan limitations are recorded in `.github/branch-protection.md`; this repository does not claim that protection is already configured.
+The active ruleset requires pull requests, resolved conversations, a branch
+current with `main`, and the exact `verify` and `SAST required gate` checks.
+Force pushes and deletion are blocked. The administrator bypass and sole-
+maintainer review decision are documented in `.github/branch-protection.md`.
 
 Actions are restricted to approved GitHub-owned actions and repository policy
 requires full commit-SHA pins. Staging and production release gates, artifact

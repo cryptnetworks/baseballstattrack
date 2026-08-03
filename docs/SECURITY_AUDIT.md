@@ -30,7 +30,7 @@ audit workstation has no Docker daemon.
 | SEC-004 | High                        | Fixed                        | An Account-managed feed URL could redirect a server-held provider API key to another HTTPS origin. A deployment-owned `EXTERNAL_DATA_PROVIDER_ALLOWED_ORIGIN` now binds that key to one exact origin. Redirects remain disabled.                                                                                                              |
 | SEC-005 | Critical/High               | Fixed                        | Debian application and Discord images inherited numerous operating-system CVEs. Both images now use digest-pinned Alpine 3.23 bases. The Node build tool upgrades npm, clears its cache, and removes npm from shipped images. CI builds and scans the final runtime, migration, and bot images, blocking fixable High or Critical findings.   |
 | SEC-006 | Medium                      | Fixed                        | Dependabot omitted the Discord service's Python dependencies. Weekly pip monitoring now covers its locked requirements.                                                                                                                                                                                                                       |
-| SEC-007 | Medium                      | Tracked                      | The public repository has no branch protection or ruleset on `main`. Add protection only after confirming the exact new SAST check names, so the rule does not lock out legitimate merges.                                                                                                                                                    |
+| SEC-007 | Medium                      | Fixed                        | Active repository rulesets protect `main` and `v*` release tags. `main` requires pull requests, resolved conversations, current branches, `verify`, and the stable `SAST required gate`; force pushes and deletion are blocked. The SAST gate plans CodeQL by changed path so non-source pull requests do not deadlock.                       |
 | SEC-008 | Low                         | Fixed                        | Security guidance still described a private repository without secret scanning or private vulnerability reporting. The documents now match live settings.                                                                                                                                                                                     |
 | SEC-009 | Medium                      | Tracked                      | Current digest-pinned PostgreSQL and optional Cloudflare images contain upstream Go binaries that scanners associate with High/Critical advisories. PostgreSQL invokes `gosu` only with local fixed startup arguments; Cloudflare is disabled unless its profile is selected. Dependabot and the monthly audit track both.                    |
 
@@ -131,12 +131,13 @@ should use protected devices and browser profiles.
 
 ### Main and pull-request SAST
 
-`.github/workflows/main-push-sast.yml` runs on pull requests, merge queues, and
-pushes to `main`, with manual dispatch available. It calls the reusable CodeQL
-workflow for Actions, JavaScript/TypeScript, and Python using the
-`security-extended` suite. It also runs the focused authentication,
-authorization, integration, privacy, and Account-isolation regressions plus a
-high-severity npm audit.
+`.github/workflows/main-push-sast.yml` provides a stable required gate for pull
+requests and merge queues, with source-scoped pushes to `main` and manual
+dispatch available. Its fail-safe planner calls the reusable CodeQL workflow
+for Actions, JavaScript/TypeScript, and Python using the `security-extended`
+suite when analyzable source or workflows change. Documentation-only changes
+receive the gate without running an unnecessary CodeQL matrix. Focused security
+regressions and the high-severity production npm audit remain in `verify`.
 
 ### Monthly audit
 
@@ -189,18 +190,15 @@ and TruffleHog fill the configuration, image, and history-secret gaps.
 
 ## Residual risk and follow-up
 
-1. Track SEC-007 and add a repository ruleset after the SAST check names are
-   stable. Require pull requests, resolved conversations, no force-push/delete,
-   `verify`, and security checks.
-2. This review did not include dynamic production testing, provider-side
+1. This review did not include dynamic production testing, provider-side
    configuration inspection, cloud IAM review, or an external penetration
    test. Complete those before accepting production youth data.
-3. Trivy blocks fixable High/Critical image findings. Unfixed upstream findings
+2. Trivy blocks fixable High/Critical image findings. Unfixed upstream findings
    remain visible in reports and require monthly review rather than an
    impossible build gate.
-4. Rotate scanner versions deliberately and verify their checksums; Dependabot
+3. Rotate scanner versions deliberately and verify their checksums; Dependabot
    updates action SHAs and image digests but cannot update inline scanner
    binaries.
-5. Track SEC-009. Upgrade PostgreSQL and Cloudflare image digests as soon as
+4. Track SEC-009. Upgrade PostgreSQL and Cloudflare image digests as soon as
    vendor rebuilds use patched Go toolchains; reassess immediately if either
    container's startup or network exposure changes.

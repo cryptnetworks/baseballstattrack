@@ -11,6 +11,13 @@
 
 Use short-lived branches with prefixes feat/, fix/, chore/, and docs/. Include the issue number in the branch name. Open a pull request into main and link the issue with Closes #N when the merge itself fully resolves it.
 
+`main` is protected. Pull requests must be current with `main`, resolve every
+review conversation, and pass the required `verify` and `SAST required gate`
+checks. Force pushes to and deletion of `main` are blocked. Administrator
+bypass is reserved for the emergency procedure in
+[`.github/branch-protection.md`](.github/branch-protection.md), not routine
+maintenance.
+
 Every pull request should explain:
 
 - what changed and why;
@@ -24,7 +31,7 @@ A regression fix must include a durable automated test that fails before the fix
 
 ## Definition of done
 
-A change is complete when acceptance criteria are met, tests cover important behavior, documentation is updated, security and accessibility implications are considered, and the pull request has passed the required `verify` CI check and review.
+A change is complete when acceptance criteria are met, tests cover important behavior, documentation is updated, security and accessibility implications are considered, review conversations are resolved, and the pull request has passed the required `verify` and `SAST required gate` checks.
 
 ## Required commands
 
