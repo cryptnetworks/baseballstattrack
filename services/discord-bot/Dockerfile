@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM python:3.12-slim-bookworm@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b
+FROM python:3.12-alpine3.23@sha256:601d3d3797e90e2534782e69c85fafb7971b43f24c7b1b079b7e48dd435e458d
 
 ARG VCS_REF=unknown
 
@@ -18,8 +18,8 @@ LABEL org.opencontainers.image.title="Baseball Stat Track Discord bot" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.licenses="MIT"
 
-RUN groupadd --system --gid 10001 bot \
-    && useradd --system --uid 10001 --gid bot --home-dir /nonexistent --shell /usr/sbin/nologin bot
+RUN addgroup -S -g 10001 bot \
+    && adduser -S -D -H -u 10001 -G bot bot
 
 COPY requirements.lock ./requirements.lock
 RUN --mount=type=cache,target=/root/.cache/pip \

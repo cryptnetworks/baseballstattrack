@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-ARG NODE_IMAGE=node:24.18.0-bookworm-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d
+ARG NODE_IMAGE=node:24.18.0-alpine3.23@sha256:595398b0081eacda8e1c4c5b97b76cd1020e4d58a8ebcb4843b9bca1e79e7436
 
 FROM ${NODE_IMAGE} AS base
 
@@ -8,9 +8,9 @@ WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends ca-certificates openssl \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache ca-certificates openssl \
+    && npm install --global npm@12.0.2 \
+    && npm cache clean --force
 
 FROM base AS dependencies
 
@@ -53,9 +53,12 @@ LABEL org.opencontainers.image.title="Baseball Stat Track migration runner" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.licenses="MIT"
 
+RUN rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
+
 USER node
 
-ENTRYPOINT ["npm", "run", "db:migrate:deploy"]
+ENTRYPOINT ["./node_modules/.bin/prisma", "migrate", "deploy"]
 
 FROM base AS runtime
 
@@ -77,6 +80,9 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/container/start.mjs ./container/start.mjs
 COPY --from=builder /app/container/discord-update-scheduler.mjs ./container/discord-update-scheduler.mjs
+
+RUN rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
 
 USER node
 

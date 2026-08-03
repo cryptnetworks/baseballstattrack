@@ -107,8 +107,14 @@ async function readText(filePath, label) {
 }
 
 function slugifyHeading(heading) {
-  return heading
-    .replace(/<[^>]*>/gu, "")
+  let text = heading;
+  let prior;
+  do {
+    prior = text;
+    text = text.replace(/<[^>]*>/gu, "");
+  } while (text !== prior);
+
+  return text
     .trim()
     .toLocaleLowerCase("en-US")
     .normalize("NFKD")

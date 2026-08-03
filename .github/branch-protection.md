@@ -2,61 +2,54 @@
 
 ## Applied settings
 
-As of 2026-07-31:
+As of 2026-08-03:
 
-- Repository remains private.
-- Dependabot vulnerability alerts are enabled.
-- Automated Dependabot security fixes are enabled.
-- Dependabot updates are grouped and bounded for npm, GitHub Actions, and
-  Docker.
-- CODEOWNERS, issue templates, pull-request checklist, and SECURITY.md are present.
-- Actions default workflow token permissions are restricted to read-only where supported.
-- Every referenced action is a GitHub-owned action pinned to an exact commit.
-- Staging and production GitHub environments exist. The current private plan
-  does not expose environment required-reviewer rules; production dispatches
-  therefore require an exact version-bound confirmation until that native gate
-  becomes available.
+- The repository is public.
+- Dependabot vulnerability alerts and automated security fixes are enabled.
+- Dependabot updates are grouped and bounded for npm, Python, GitHub Actions,
+  and Docker.
+- Secret scanning, push protection, private vulnerability reporting, and
+  CodeQL are enabled.
+- Actions default workflow-token permissions are read-only, and workflows
+  cannot approve pull requests.
+- Actions are restricted to GitHub-owned actions; every reference is pinned to
+  an exact commit.
+- CODEOWNERS, issue templates, the pull-request checklist, and SECURITY.md are
+  present.
 
-## Plan-limited settings
+## Open repository setting
 
-The following settings could not be enabled because GitHub reports that this private repository requires GitHub Pro or a public repository:
-
-- Protected branch rules/rulesets for main
-- Secret scanning and push protection
-- Native environment required reviewers and deployment-branch protection
-
-Private vulnerability reporting is also not exposed by the current repository API response. Revisit it after changing plan or visibility.
+`main` does not yet have a branch protection rule or repository ruleset. Track
+that as a medium-severity repository-control issue: require pull requests,
+conversation resolution, and the `verify` and SAST checks without creating an
+administrator lockout.
 
 ## Main branch target state
 
-Apply these protections as soon as the repository plan allows:
+Apply these protections after validating the exact security check names:
 
 - Require pull requests before merging.
-- Require at least one approving review.
+- Require at least one approving review when another maintainer is available.
 - Dismiss stale approvals when new commits are pushed.
 - Require conversation resolution.
-- Require the required CI checks once the stack exists.
-- Require branches to be up to date before merging.
+- Require branches to be up to date.
+- Require `verify` and the security checks.
 - Restrict force pushes and branch deletion.
 - Allow administrator bypass only for documented emergencies.
 
-Required check names after the application skeleton:
-
-- `verify`
-
-The workflow contract and exact check-name rationale are documented in [docs/CI_QUALITY_GATES.md](../docs/CI_QUALITY_GATES.md).
+The workflow contract and check-name rationale are documented in
+[docs/CI_QUALITY_GATES.md](../docs/CI_QUALITY_GATES.md).
 
 ## Repository security target state
 
-- Keep the repository private until the product and data-handling model are reviewed.
-- Enable Dependabot alerts, security updates, and grouped updates.
-- Enable secret scanning and push protection when available.
-- Enable private vulnerability reporting when available.
+- Keep secret scanning, push protection, and private vulnerability reporting
+  enabled.
+- Keep Dependabot alerts, security updates, and grouped updates enabled.
 - Keep Actions restricted to approved GitHub-owned actions and exact commit
   SHAs; review Dependabot SHA changes as executable code.
-- Replace the production dispatch confirmation with a native required-reviewer
-  rule as soon as the repository plan exposes it.
 - Review collaborators and outside access quarterly.
+- Replace production dispatch confirmation with a native required-reviewer
+  rule when the repository plan exposes it.
 
 ## Release baseline
 
