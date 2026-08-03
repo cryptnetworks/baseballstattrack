@@ -16,7 +16,7 @@
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "lint": "eslint .",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "next typegen && node node_modules/typescript/lib/tsc.js --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "prisma generate",
@@ -75,6 +75,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
+    "@typescript/typescript6": "6.0.2",
     "@types/node": "26.1.2",
     "@types/nodemailer": "8.0.1",
     "@types/pg": "8.20.1",
