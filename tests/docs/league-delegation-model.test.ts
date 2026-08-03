@@ -63,6 +63,7 @@ describe("league delegation model", () => {
       "fantasy.league.activate",
       "fantasy.team.manage",
       "fantasy.roster.manage",
+      "fantasy.scoring.calculate",
     ]) {
       expect(contract).toContain(`\`${capability}\``);
     }

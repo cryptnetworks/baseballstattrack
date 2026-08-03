@@ -90,7 +90,7 @@ describe("fantasy domain model contract", () => {
 
   it("records the transaction consumer and defers prohibited downstream behavior", () => {
     expect(contract).toMatch(/#124 implements draft\/assignment/iu);
-    expect(contract).toMatch(/#126: scoring periods/iu);
+    expect(contract).toMatch(/#126 implements scoring periods/iu);
     expect(contract).toMatch(/#127: league\/team\/roster UI/iu);
     expect(contract).toMatch(/No Prisma model or migration is included/iu);
     expect(contract).toMatch(/Offline fantasy behavior.*out of scope/iu);

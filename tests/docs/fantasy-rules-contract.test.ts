@@ -133,7 +133,7 @@ describe("fantasy rules contract", () => {
     }
     expect(contract).toContain("BEFORE_FINALIZATION_ONLY");
     expect(contract).toMatch(/#124 implements waiver, trade/iu);
-    expect(contract).toMatch(/#126 implements matchup scoring/iu);
+    expect(contract).toMatch(/#126 implements these matchup/iu);
     expect(contract).toMatch(/every acquisition uses a daily waiver batch/iu);
     expect(contract).toMatch(/initial priority is reverse draft order/iu);
     expect(contract).toMatch(/trade needs explicit acceptance/iu);
@@ -152,7 +152,7 @@ describe("fantasy rules contract", () => {
   it("records implemented dependencies and defers prohibited work", () => {
     expect(contract).toMatch(/#123 defines fantasy league/iu);
     expect(contract).toMatch(/#124 defines transactions/iu);
-    expect(contract).toMatch(/#126 owns matchup execution/iu);
+    expect(contract).toMatch(/#126 implements deterministic matchup/iu);
     expect(contract).toMatch(/#127 owns configuration/iu);
     expect(contract).toMatch(/Offline fantasy behavior.*out of scope/iu);
     expect(contract).toMatch(/all M9 work remain[s]? out of scope/iu);

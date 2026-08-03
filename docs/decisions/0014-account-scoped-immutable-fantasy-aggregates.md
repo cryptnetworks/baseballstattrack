@@ -31,8 +31,8 @@ capabilities. Delegated authority is accepted only from an allowed exact-
 Account #107 decision; Organization or League membership is never sufficient.
 League activation requires separate approval.
 
-No database schema is added. ADR 0015 now defines #124 ownership-event and
-transaction atomicity, while #126 must still define scoring-period/result
+No database schema is added. ADR 0015 defines #124 ownership-event and
+transaction atomicity, while ADR 0016 now defines #126 scoring-period/result
 references. Both consume these identities and snapshots without mutating them.
 
 ## Consequences
@@ -44,8 +44,9 @@ references. Both consume these identities and snapshots without mutating them.
   historical rosters reproducible after later changes.
 - Account isolation and commissioner actions fail closed under explicit
   capabilities and exact scopes.
-- Transaction behavior is implemented by ADR 0015. Scoring, standings,
-  playoffs, UI, persistence, and offline behavior remain deferred.
+- Transaction behavior is implemented by ADR 0015 and scoring, standings, and
+  playoff/championship results by ADR 0016. UI, persistence, and offline
+  behavior remain deferred.
 
 ## Alternatives rejected
 

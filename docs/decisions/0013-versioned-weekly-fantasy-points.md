@@ -44,8 +44,9 @@ exact approval. No generic administrator or ruleset capability implies fantasy
 authority.
 
 Issue #125 implements the pure rule/digest/scoring/eligibility boundary and
-documentation. ADR 0014 subsequently adds pure fantasy aggregates; persistence,
-transactions, matchup/result entities, and UI remain deferred.
+documentation. ADR 0014 subsequently adds pure fantasy aggregates, ADR 0015
+transactions, and ADR 0016 matchup/result entities. Persistence remains
+deferred. UI remains deferred. Both remain deferred from this decision.
 
 ## Consequences
 
@@ -57,8 +58,8 @@ transactions, matchup/result entities, and UI remain deferred.
   reproducible statistic sources exist.
 - Period finalization needs a bounded grace window; late canonical corrections
   require an explicit append-only fantasy adjustment rather than silent change.
-- #123 depends on this contract; #124, #126, and #127 depend on both contracts
-  and remain unimplemented.
+- #123 and #124 consume this contract; #126 now implements its deterministic
+  result boundary in ADR 0016. #127 remains deferred.
 
 ## Alternatives rejected
 

@@ -143,6 +143,7 @@ Every capability is an allowlisted identifier. A missing row means denied.
 | `fantasy.league.activate`         | Account                        | Yes                | Yes, Account                      | Activate one exact fantasy league and model binding.   |
 | `fantasy.team.manage`             | Account                        | Yes                | No                                | Manage exact Account-owned fantasy team lifecycle.     |
 | `fantasy.roster.manage`           | Account                        | Yes                | No                                | Create exact fantasy player and roster snapshots.      |
+| `fantasy.scoring.calculate`       | Account                        | Yes                | No                                | Calculate exact-league fantasy results and revisions.  |
 | `team.view`                       | Team                           | Yes                | No                                | View an exact participating Team's shared fields.      |
 | `competition.settings.manage`     | Team or Season                 | Yes                | No                                | Manage competition metadata only.                      |
 | `shared_resources.manage`         | Team or Season                 | Yes                | No                                | Manage explicitly shared non-private resources.        |
@@ -158,7 +159,8 @@ Capabilities do not bundle. `team.view` does not imply roster, player, contact,
 event, report, export, correction, or verification access. Import review does
 not imply commit. Organization settings authority does not imply Account
 settings, ruleset activation, or fantasy rule authority. Fantasy draft
-management does not imply activation.
+management does not imply activation. Roster authority does not imply scoring,
+and scoring authority cannot mutate a roster or fantasy model.
 
 ## Restricted actions and approval
 
@@ -390,7 +392,8 @@ provenance, and verification lineage keep operations explainable.
 Issue #107 originally defined authorization architecture only. The #125
 [fantasy rules contract](FANTASY_RULES_CONTRACT.md) later added two explicit rule
 capabilities. The #123 [fantasy domain model](FANTASY_DOMAIN_MODEL.md) now adds
-four Account-delegated aggregate capabilities. Neither change grants private
-player access or makes Organization membership Account authority. Fantasy
-transactions (#124), matchup scoring/standings/playoffs (#126), UI (#127),
-offline mode, and M9 remain untouched.
+four Account-delegated aggregate capabilities; #126 adds the separate
+`fantasy.scoring.calculate` capability. None grants private player access or
+makes Organization membership Account authority. Fantasy transactions (#124)
+and matchup scoring/standings/playoffs (#126) are separate implemented
+consumers. UI (#127), offline mode, and M9 remain untouched.
