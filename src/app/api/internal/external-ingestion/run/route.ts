@@ -6,11 +6,12 @@ import {
   ExternalIngestionError,
   getExternalIngestionService,
 } from "@/server/app/external-ingestion-service";
+import { runtimeSecretConfiguration } from "@/server/config/runtime-environment";
 
 export const dynamic = "force-dynamic";
 
 function authorized(request: Request) {
-  const configured = process.env.EXTERNAL_INGESTION_WORKER_TOKEN;
+  const configured = runtimeSecretConfiguration().externalIngestionWorkerToken;
   const presented = request.headers
     .get("authorization")
     ?.replace(/^Bearer /u, "");
@@ -39,7 +40,9 @@ export async function POST(request: Request) {
       })
       .strict()
       .parse(await request.json());
-    const result = await getExternalIngestionService().run({
+    const result = await (
+      await getExternalIngestionService(input.accountId)
+    ).run({
       accountId: input.accountId,
       sourceExternalId: input.sourceId,
       runKey: input.runKey,

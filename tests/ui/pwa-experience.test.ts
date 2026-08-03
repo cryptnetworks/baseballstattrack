@@ -112,8 +112,9 @@ describe("M7 progressive web app experience", () => {
     const proxy = source("src/proxy.ts");
 
     expect(proxy.match(/"Cache-Control", "private, no-store"/g)).toHaveLength(
-      2,
+      1,
     );
+    expect(proxy).toContain("authenticateCookies(store, true)");
     expect(proxy).toContain("manifest.webmanifest");
     expect(proxy).toContain("service-worker.js");
   });

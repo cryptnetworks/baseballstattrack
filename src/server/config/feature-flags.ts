@@ -1,3 +1,6 @@
+import type { ApplicationConfigurationValues } from "@/domain/application-configuration";
+import { getApplicationConfigurationService } from "@/server/app/application-configuration-service";
+
 export const featureFlagNames = [
   "FEATURE_ICS_CALENDAR_ENABLED",
   "FEATURE_EMAIL_NOTIFICATIONS_ENABLED",
@@ -7,16 +10,27 @@ export const featureFlagNames = [
 
 export type FeatureFlagName = (typeof featureFlagNames)[number];
 
-const enabledValues = new Set(["1", "true", "yes", "on"]);
-const disabledValues = new Set(["0", "false", "no", "off"]);
+const keys: Readonly<
+  Record<FeatureFlagName, keyof ApplicationConfigurationValues["features"]>
+> = {
+  FEATURE_ICS_CALENDAR_ENABLED: "calendarFeeds",
+  FEATURE_EMAIL_NOTIFICATIONS_ENABLED: "emailNotifications",
+  FEATURE_DISCORD_NOTIFICATIONS_ENABLED: "discordNotifications",
+  FEATURE_DISCORD_UPDATES_ENABLED: "discordUpdates",
+};
 
-export function featureEnabled(
+export function featureEnabledInConfiguration(
   name: FeatureFlagName,
-  environment: Readonly<Record<string, string | undefined>> = process.env,
+  values: ApplicationConfigurationValues,
 ): boolean {
-  const value = environment[name]?.trim().toLowerCase();
-  if (!value) return false;
-  if (enabledValues.has(value)) return true;
-  if (disabledValues.has(value)) return false;
-  throw new Error(`${name} must be true or false.`);
+  return values.features[keys[name]];
+}
+
+export async function featureEnabled(
+  name: FeatureFlagName,
+  accountId: string,
+): Promise<boolean> {
+  const configuration =
+    await getApplicationConfigurationService().runtime(accountId);
+  return featureEnabledInConfiguration(name, configuration.values);
 }

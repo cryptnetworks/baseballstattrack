@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getApplicationReadiness } from "@/server/app/readiness-service";
+import { getApplicationConfigurationService } from "@/server/app/application-configuration-service";
 import {
   emitOperationalEvent,
   getOperationalEventSink,
@@ -11,7 +12,27 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const correlation = requestCorrelation(request);
-  const readiness = await getApplicationReadiness();
+  const databaseReadiness = await getApplicationReadiness();
+  let configurationLoaded = false;
+  if (databaseReadiness.status === "ready") {
+    try {
+      await getApplicationConfigurationService().preload();
+      configurationLoaded = true;
+    } catch {
+      configurationLoaded = false;
+    }
+  }
+  const readiness = {
+    ...databaseReadiness,
+    status:
+      databaseReadiness.status === "ready" && configurationLoaded
+        ? ("ready" as const)
+        : ("not_ready" as const),
+    checks: {
+      ...databaseReadiness.checks,
+      configuration: configurationLoaded,
+    },
+  };
   emitOperationalEvent(getOperationalEventSink(), {
     severity: readiness.status === "ready" ? "info" : "critical",
     category: "health",

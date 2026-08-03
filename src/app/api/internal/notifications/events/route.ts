@@ -3,11 +3,12 @@ import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
 import { getNotificationEventPublicationService } from "@/server/app/notification-service";
+import { runtimeSecretConfiguration } from "@/server/config/runtime-environment";
 
 export const dynamic = "force-dynamic";
 
 function authorized(request: Request): boolean {
-  const configured = process.env.NOTIFICATION_EVENT_TOKEN;
+  const configured = runtimeSecretConfiguration().notificationEventToken;
   const presented = request.headers
     .get("authorization")
     ?.replace(/^Bearer /u, "");

@@ -1,8 +1,10 @@
+import { deploymentConfiguration } from "@/server/config/runtime-environment";
+
 export function authCookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: deploymentConfiguration().nodeEnvironment === "production",
     path: "/",
   };
 }

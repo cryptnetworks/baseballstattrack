@@ -10,6 +10,8 @@ import {
   type DiscordStatisticsProvider,
   type DiscordUpdateTransport,
 } from "@/domain/discord-update-worker";
+import { getApplicationConfigurationService } from "@/server/app/application-configuration-service";
+import { runtimeSecretConfiguration } from "@/server/config/runtime-environment";
 import {
   PrismaDiscordUpdateRepository,
   type ClaimedDiscordDelivery,
@@ -99,6 +101,11 @@ export class DiscordUpdateWorkerService {
     private readonly transport: DiscordUpdateTransport,
     private readonly events: OperationalEventSink = getOperationalEventSink(),
     private readonly clock: Clock = systemClock,
+    private readonly providerFactory?: (accountId: string) => Promise<{
+      enabled: boolean;
+      statistics: DiscordStatisticsProvider;
+      transport: DiscordUpdateTransport;
+    }>,
   ) {}
 
   async evaluateBatch(
@@ -135,8 +142,18 @@ export class DiscordUpdateWorkerService {
       let retryAfterSeconds: number | null = null;
       let status: string | undefined;
       try {
+        const providers = this.providerFactory
+          ? await this.providerFactory(evaluation.accountId)
+          : {
+              enabled: true,
+              statistics: this.statistics,
+              transport: this.transport,
+            };
+        if (!providers.enabled) {
+          throw new DiscordUpdateProviderError("STATISTICS_UNAVAILABLE", false);
+        }
         const snapshot = discordStatisticsSnapshotSchema.parse(
-          await this.statistics.loadGame({
+          await providers.statistics.loadGame({
             accountId: evaluation.account.externalId,
             gameId: evaluation.game.externalId,
             settingsRevision: evaluation.settingsRevision,
@@ -256,7 +273,29 @@ export class DiscordUpdateWorkerService {
       let terminal = false;
       let retryAfterSeconds: number | null = null;
       try {
-        const response = await this.transport.send({
+        const providers = this.providerFactory
+          ? await this.providerFactory(delivery.accountId)
+          : {
+              enabled: true,
+              statistics: this.statistics,
+              transport: this.transport,
+            };
+        if (!providers.enabled) {
+          const cancelled = await this.repository.cancelDelivery({
+            deliveryId: delivery.id,
+            workerId,
+            completedAt: this.clock(),
+            failureCode: "CONFIGURATION_DISABLED",
+          });
+          const cancelledOutcome = outcome(cancelled?.status, false);
+          results.push({
+            deliveryId: delivery.id,
+            outcome: cancelledOutcome,
+          });
+          this.emitDelivery(delivery, cancelledOutcome, 0, null);
+          continue;
+        }
+        const response = await providers.transport.send({
           operation: delivery.operation,
           channelId: delivery.destination.channelId,
           targetMessageId: delivery.targetProviderMessageId,
@@ -329,8 +368,12 @@ export class DiscordUpdateWorkerService {
   }
 }
 
-function requiredEnvironment(name: string, minimumLength: number) {
-  const value = process.env[name]?.trim();
+function requiredSecret(
+  value: string | undefined,
+  name: string,
+  minimumLength: number,
+) {
+  value = value?.trim();
   if (!value || value.length < minimumLength) {
     throw new DiscordUpdateWorkerError(
       "CONFIGURATION_ERROR",
@@ -341,17 +384,65 @@ function requiredEnvironment(name: string, minimumLength: number) {
   return value;
 }
 
+const unusedStatisticsProvider: DiscordStatisticsProvider = {
+  loadGame: async () => {
+    throw new DiscordUpdateProviderError("STATISTICS_UNAVAILABLE", false);
+  },
+};
+
+const unusedUpdateTransport: DiscordUpdateTransport = {
+  send: async () => {
+    throw new DiscordUpdateProviderError("PROVIDER_UNAVAILABLE", false);
+  },
+};
+
 export function getDiscordUpdateWorkerService() {
+  const secrets = runtimeSecretConfiguration();
   return new DiscordUpdateWorkerService(
     new PrismaDiscordUpdateRepository(getPrismaClient()),
-    new ConfiguredDiscordStatisticsProvider(
-      requiredEnvironment("DISCORD_STATISTICS_API_BASE_URL", 12),
-      requiredEnvironment("DISCORD_STATISTICS_API_TOKEN", 32),
-    ),
-    new ConfiguredDiscordUpdateTransport(
-      process.env.DISCORD_UPDATE_API_BASE_URL ?? "https://discord.com/api/v10/",
-      requiredEnvironment("DISCORD_UPDATE_BOT_TOKEN", 16),
-    ),
+    unusedStatisticsProvider,
+    unusedUpdateTransport,
+    getOperationalEventSink(),
+    systemClock,
+    async (accountId) => {
+      const configuration =
+        await getApplicationConfigurationService().runtime(accountId);
+      if (!configuration.values.features.discordUpdates) {
+        return {
+          enabled: false,
+          statistics: unusedStatisticsProvider,
+          transport: unusedUpdateTransport,
+        };
+      }
+      const statisticsApiBaseUrl =
+        configuration.values.integrations.discordStatisticsApiBaseUrl;
+      if (!statisticsApiBaseUrl) {
+        throw new DiscordUpdateWorkerError(
+          "CONFIGURATION_ERROR",
+          500,
+          "Discord statistics API configuration is unavailable.",
+        );
+      }
+      return {
+        enabled: true,
+        statistics: new ConfiguredDiscordStatisticsProvider(
+          statisticsApiBaseUrl,
+          requiredSecret(
+            secrets.discordStatisticsApiToken,
+            "DISCORD_STATISTICS_API_TOKEN",
+            32,
+          ),
+        ),
+        transport: new ConfiguredDiscordUpdateTransport(
+          configuration.values.integrations.discordUpdateApiBaseUrl,
+          requiredSecret(
+            secrets.discordUpdateBotToken,
+            "DISCORD_UPDATE_BOT_TOKEN",
+            16,
+          ),
+        ),
+      };
+    },
   );
 }
 

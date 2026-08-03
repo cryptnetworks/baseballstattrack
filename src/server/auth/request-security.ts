@@ -1,4 +1,5 @@
 import { AuthorizationError } from "@/server/auth/errors";
+import { deploymentConfiguration } from "@/server/config/runtime-environment";
 
 const safeMethods = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -33,7 +34,7 @@ export const selectedAccountCookie = {
   options: {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: deploymentConfiguration().nodeEnvironment === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   },

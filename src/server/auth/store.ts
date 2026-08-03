@@ -1,4 +1,4 @@
-import { Prisma, type PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 
 import { AuthorizationError } from "@/server/auth/errors";
 import type {
@@ -17,7 +17,7 @@ export type AvailableAccount = Readonly<{
 }>;
 
 export interface AuthorizationStore {
-  resolveOrProvisionUser(
+  resolveUser(
     identity: AuthenticatedIdentity,
   ): Promise<{ id: string; active: boolean }>;
   listAvailableAccounts(appUserId: string): Promise<AvailableAccount[]>;
@@ -29,61 +29,7 @@ export interface AuthorizationStore {
 }
 
 type DatabaseClient = PrismaClient | Prisma.TransactionClient;
-type ProviderIdentityErrorMetadata = {
-  modelName?: unknown;
-  target?: unknown;
-  driverAdapterError?: {
-    cause?: {
-      constraint?: {
-        fields?: unknown;
-      };
-    };
-  };
-};
-
-const conflictRecoveryAttempts = 3;
-const visibilityRetryDelayMs = 2;
 const userSelection = { id: true, status: true } as const;
-
-function normalizedConstraintFields(error: unknown): string[] | null {
-  if (
-    !(error instanceof Prisma.PrismaClientKnownRequestError) ||
-    error.code !== "P2002"
-  ) {
-    return null;
-  }
-  const metadata = error.meta as ProviderIdentityErrorMetadata | undefined;
-  if (metadata?.modelName !== "AppUser") return null;
-  const fields = Array.isArray(metadata.target)
-    ? metadata.target
-    : metadata.driverAdapterError?.cause?.constraint?.fields;
-  if (!Array.isArray(fields)) return null;
-  const normalized = fields.flatMap((field) =>
-    typeof field === "string"
-      ? [
-          field.startsWith('"') && field.endsWith('"')
-            ? field.slice(1, -1)
-            : field,
-        ]
-      : [],
-  );
-  return normalized.length === fields.length ? normalized : null;
-}
-
-function isProviderIdentityConflict(error: unknown): boolean {
-  const fields = normalizedConstraintFields(error);
-  return (
-    fields?.length === 2 &&
-    fields.includes("provider") &&
-    fields.includes("providerSubject")
-  );
-}
-
-function waitForVisibility(attempt: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, visibilityRetryDelayMs * attempt);
-  });
-}
 
 function provisioningFailure(): AuthorizationError {
   return new AuthorizationError("USER_PROVISIONING_FAILURE");
@@ -92,49 +38,26 @@ function provisioningFailure(): AuthorizationError {
 export class PrismaAuthorizationStore implements AuthorizationStore {
   constructor(private readonly prisma: DatabaseClient) {}
 
-  private findUser(identity: AuthenticatedIdentity) {
-    return this.prisma.appUser.findUnique({
+  private findIdentity(identity: AuthenticatedIdentity) {
+    return this.prisma.authenticationIdentity.findUnique({
       where: {
         provider_providerSubject: {
           provider: identity.provider,
           providerSubject: identity.providerSubject,
         },
       },
-      select: userSelection,
+      select: { appUser: { select: userSelection } },
     });
   }
 
-  private async recoverConcurrentUser(identity: AuthenticatedIdentity) {
-    for (let attempt = 1; attempt <= conflictRecoveryAttempts; attempt += 1) {
-      const user = await this.findUser(identity);
-      if (user) return user;
-      if (attempt < conflictRecoveryAttempts) {
-        await waitForVisibility(attempt);
-      }
-    }
-    throw provisioningFailure();
-  }
-
-  async resolveOrProvisionUser(identity: AuthenticatedIdentity) {
+  async resolveUser(identity: AuthenticatedIdentity) {
     try {
-      const existing = await this.findUser(identity);
-      if (existing) {
-        return { id: existing.id, active: existing.status === "ACTIVE" };
-      }
-      try {
-        const user = await this.prisma.appUser.create({
-          data: {
-            provider: identity.provider,
-            providerSubject: identity.providerSubject,
-          },
-          select: userSelection,
-        });
-        return { id: user.id, active: user.status === "ACTIVE" };
-      } catch (error) {
-        if (!isProviderIdentityConflict(error)) throw error;
-        const user = await this.recoverConcurrentUser(identity);
-        return { id: user.id, active: user.status === "ACTIVE" };
-      }
+      const existing = await this.findIdentity(identity);
+      if (!existing) throw provisioningFailure();
+      return {
+        id: existing.appUser.id,
+        active: existing.appUser.status === "ACTIVE",
+      };
     } catch (error) {
       if (
         error instanceof AuthorizationError &&

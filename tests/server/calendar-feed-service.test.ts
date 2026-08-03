@@ -32,12 +32,13 @@ describe("calendar feed subscriptions", () => {
     );
   });
 
-  it("revokes every feed when the feature is disabled", () => {
-    vi.stubEnv("FEATURE_ICS_CALENDAR_ENABLED", "false");
+  it("revokes every feed when Account configuration disables the feature", () => {
     vi.stubEnv(
       "ICS_FEED_SIGNING_KEY",
       "test-signing-key-with-at-least-32-characters",
     );
-    expect(calendarFeedTokenIsValid(accountId, teamId, "unused")).toBe(false);
+    expect(calendarFeedTokenIsValid(accountId, teamId, "unused", false)).toBe(
+      false,
+    );
   });
 });

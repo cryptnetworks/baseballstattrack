@@ -29,9 +29,10 @@ pending; correction notices never imply that a corrected report is verified.
 Administrators configure Account- or team-scoped rules through
 `/api/admin/notifications`. Each rule names one active Account membership, one
 channel, an explicit event set, and a managed destination reference. Raw email
-addresses and Discord channel IDs live only in deployment-managed
-`NOTIFICATION_DESTINATIONS_JSON`; database records and audit history retain the
-reference, never the resolved destination or provider credential.
+addresses and Discord channel IDs live in the Account-private, versioned
+application configuration. Preference records and security-audit metadata
+retain only the reference, never the resolved destination or provider
+credential. Cross-Account reads are prohibited.
 
 Notification text contains identifiers, revisions, lifecycle state, and a link
 instruction only. It never contains player names, statistics, report bodies,
@@ -67,18 +68,17 @@ boundary is not an arbitrary messaging API.
 
 ## Configuration and operations
 
-Enable each channel independently with
-`FEATURE_EMAIL_NOTIFICATIONS_ENABLED` and
-`FEATURE_DISCORD_NOTIFICATIONS_ENABLED`. Disabled channels reject new
-destinations and do not require their credentials. Shared worker configuration:
+Enable each channel independently in **Settings → Application configuration**.
+That portal also owns destination references, SMTP host/port/TLS/from identity,
+and the Discord API base URL. Disabled channels reject new destinations and do
+not require their credentials. External worker and provider secrets are:
 
 - `NOTIFICATION_WORKER_TOKEN` and the separate `NOTIFICATION_EVENT_TOKEN`;
-- `NOTIFICATION_DESTINATIONS_JSON` mapping opaque references to channel and
-  destination;
-- standard SMTP credentials: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`,
-  `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`;
-- `NOTIFICATION_DISCORD_BOT_TOKEN` and optional
-  `NOTIFICATION_DISCORD_API_BASE_URL`.
+- `SMTP_USERNAME` and `SMTP_PASSWORD`;
+- `NOTIFICATION_DISCORD_BOT_TOKEN`.
+
+Legacy notification feature, destination, SMTP non-secret, and Discord API URL
+variables are accepted only by the reviewed initial seed action.
 
 Apply migration `20260731223000_outbound_notifications`, deploy the application,
 and start a scheduler that invokes the delivery endpoint. To contain an

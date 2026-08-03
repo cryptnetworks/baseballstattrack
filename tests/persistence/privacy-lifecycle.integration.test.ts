@@ -55,6 +55,38 @@ integration("privacy lifecycle persistence boundary", () => {
         },
       ],
     });
+    await prisma.authenticationIdentity.create({
+      data: {
+        id: `${prefix}-detached-identity`,
+        appUserId: detachedUserId,
+        provider: "supabase",
+        providerSubject: `${prefix}-detached-subject`,
+        email: "erase-on-deletion@example.test",
+        emailVerified: true,
+        source: "LEGACY_BACKFILL",
+      },
+    });
+    const authenticationSession = await prisma.authenticationSession.create({
+      data: {
+        id: `${prefix}-detached-session`,
+        appUserId: detachedUserId,
+        identityId: `${prefix}-detached-identity`,
+        tokenHash: `hmac-sha256:v1:${"a".repeat(64)}`,
+        createdAt: current,
+        lastSeenAt: current,
+        rotatedAt: current,
+        idleExpiresAt: new Date("2026-08-10T00:00:00.000Z"),
+        absoluteExpiresAt: new Date("2026-08-31T00:00:00.000Z"),
+      },
+    });
+    await prisma.authenticationSessionEvent.create({
+      data: {
+        sessionId: authenticationSession.id,
+        eventType: "CREATED",
+        tokenVersion: 1,
+        occurredAt: current,
+      },
+    });
     await prisma.accountMembership.createMany({
       data: [
         {
@@ -394,6 +426,28 @@ integration("privacy lifecycle persistence boundary", () => {
         where: { appUserId: detachedUserId },
       }),
     ).toBe(0);
+    expect(
+      await prisma.authenticationIdentity.findUniqueOrThrow({
+        where: { id: `${prefix}-detached-identity` },
+      }),
+    ).toMatchObject({ email: null, emailVerified: null });
+    expect(
+      await prisma.authenticationSession.findUniqueOrThrow({
+        where: { id: `${prefix}-detached-session` },
+      }),
+    ).toMatchObject({
+      revokedAt: current,
+      revocationReason: "PRIVACY_DELETION",
+    });
+    expect(
+      await prisma.authenticationSessionEvent.count({
+        where: {
+          sessionId: `${prefix}-detached-session`,
+          eventType: "REVOKED",
+          reasonCode: "PRIVACY_DELETION",
+        },
+      }),
+    ).toBe(1);
     expect(
       await prisma.appUser.findUniqueOrThrow({ where: { id: userId } }),
     ).toMatchObject({ status: "ACTIVE", detachedAt: null });

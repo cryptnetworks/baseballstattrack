@@ -60,21 +60,19 @@ render the files immediately before Compose starts.
 
 ### Identity, OAuth, and callback configuration
 
-| Variable/system setting                     | Owner                             | Requirement                                                                                                          |
-| ------------------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SITE_URL`                      | app                               | Canonical HTTPS origin; no path, query, or fragment                                                                  |
-| `NEXT_PUBLIC_SUPABASE_URL`                  | app/public                        | Exact Supabase project URL                                                                                           |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`             | app/public                        | Supabase publishable/anonymous key; RLS remains mandatory                                                            |
-| `SUPABASE_OAUTH_PROVIDER`                   | app                               | `google`, `github`, or `azure`                                                                                       |
-| OAuth provider secret                       | Supabase dashboard/secret manager | Configure at Supabase, never in browser variables                                                                    |
-| Supabase redirect allowlist                 | Supabase Auth                     | Exact `https://<site>/auth/callback`; add preview origins individually                                               |
-| Upstream identity-provider callback         | Provider console                  | Exact Supabase callback shown by the Supabase project, normally `https://<project-ref>.supabase.co/auth/v1/callback` |
-| `DISCORD_OAUTH_CLIENT_ID`                   | app                               | Discord application ID                                                                                               |
-| `DISCORD_OAUTH_CLIENT_SECRET`               | app secret                        | OAuth code exchange only                                                                                             |
-| `DISCORD_OAUTH_STATE_SECRET`                | app secret                        | Independent random value of at least 32 characters                                                                   |
-| `DISCORD_OAUTH_REDIRECT_URI`                | app                               | Exact `https://<site>/api/admin/discord-installations/callback`; register the identical URL in Discord               |
-| `DISCORD_INSTALLATION_BOT_TOKEN`            | app secret                        | Server-side installation verification and lifecycle operations                                                       |
-| `DISCORD_INSTALLATION_CREDENTIAL_REFERENCE` | app                               | Stable non-secret reference stored with installation metadata                                                        |
+| Variable/system setting                   | Owner                            | Requirement                                                                                               |
+| ----------------------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`                    | app                              | Canonical HTTPS origin; no path, query, or fragment                                                       |
+| `AUTHENTICATION_ENABLED_PROVIDERS`        | app                              | Comma-separated provider-neutral adapter allowlist                                                        |
+| `OAUTH_CALLBACK_URL`                      | app                              | Exact `https://<site>/auth/callback`; register directly with every enabled provider                       |
+| `AUTHENTICATION_ENCRYPTION_KEY`           | app secret                       | Exact 32-byte base64url application-session root key                                                      |
+| Login provider client identifiers/secrets | app + secret manager             | Use the provider-specific variables in `AUTHENTICATION_PROVIDERS.md`; never expose secrets to the browser |
+| `DISCORD_OAUTH_CLIENT_ID`                 | app                              | Discord application ID                                                                                    |
+| `DISCORD_OAUTH_CLIENT_SECRET`             | app secret                       | OAuth code exchange only                                                                                  |
+| `DISCORD_OAUTH_STATE_SECRET`              | app secret                       | Independent random value of at least 32 characters                                                        |
+| `DISCORD_OAUTH_REDIRECT_URI`              | app                              | Exact `https://<site>/api/admin/discord-installations/callback`; register the identical URL in Discord    |
+| `DISCORD_INSTALLATION_BOT_TOKEN`          | app secret                       | Server-side installation verification and lifecycle operations                                            |
+| Discord installation credential reference | application configuration portal | Stable non-secret reference stored with installation metadata                                             |
 
 Provider identity establishes a user session but does not grant Account
 membership. Database authorization and row-level security remain the source of
@@ -99,8 +97,8 @@ initiating Account operation, and held in an HTTP-only callback cookie.
 
 These tokens are separate authorities even when one Discord application backs
 more than one bot operation. Never reuse the OAuth state secret, event token,
-worker token, API token, or a user session. Set
-`FEATURE_DISCORD_UPDATES_ENABLED=false` until migrations, installation state,
+worker token, API token, or a user session. Keep Discord updates disabled in
+**Settings → Application configuration** until migrations, installation state,
 permissions, statistics access, and provider credentials have been verified.
 
 The scheduler interval is 15 seconds by default and is bounded to 5–300
@@ -165,10 +163,10 @@ post-rotation evidence. Never record secret values.
 4. **OAuth state secret:** rotate during a short onboarding pause. Existing
    in-flight states become invalid by design; restart the app and begin a new
    flow after rotation.
-5. **Supabase/upstream OAuth secret:** rotate in the upstream provider and
-   Supabase dashboard, verify the exact provider callback and application
-   redirect allowlist, then complete a fresh login. Do not treat the public
-   anonymous key as database authorization.
+5. **Login-provider OAuth secret:** disable the affected adapter, rotate in the
+   upstream provider and application secret manager, verify the exact direct
+   callback, restart the app, and complete a fresh login. Revoke affected
+   application sessions when compromise is possible.
 6. **Database credential:** create or select a replacement role/password,
    update both `DATABASE_URL` and `DIRECT_URL`, run readiness and migration
    status checks, restart app/migration consumers, then revoke the previous
@@ -214,7 +212,7 @@ contain invented external IDs and an in-memory Discord transport.
 Before enabling Discord delivery:
 
 - validate the resolved Compose configuration and immutable image revisions;
-- verify callback URLs in Supabase, the upstream OAuth provider, and Discord;
+- verify direct callback URLs for every login provider and Discord installation;
 - confirm bot/API/database identities have only their documented authority;
 - deploy migrations before the app and preserve migration output;
 - prove application, scheduler, and gateway readiness;
@@ -224,8 +222,9 @@ Before enabling Discord delivery:
 - record the feature-disable, credential-revoke, image-rollback, and
   roll-forward migration owners.
 
-Rollback begins by disabling `FEATURE_DISCORD_UPDATES_ENABLED` and stopping the
-scheduler/bot profile if provider traffic must cease. An older app image may be
+Rollback begins by disabling Discord updates in the application configuration
+portal and stopping the scheduler/bot profile if provider traffic must cease.
+An older app image may be
 restored only if it is compatible with the already-expanded schema. Applied
 migrations and durable attempt evidence are never edited or reversed; ship a
 forward repair. An ordinary `docker compose down` retains database data. Never

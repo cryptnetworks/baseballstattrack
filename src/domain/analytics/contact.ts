@@ -113,8 +113,8 @@ export function buildContactAnalytics(
     "IN_PLAY",
     "UNKNOWN",
   ]);
-  // The persistence repository supplies only observations without a newer
-  // superseding observation. Domain callers may pass an already-filtered view.
+  // Repositories normally omit superseded observations; domain callers may
+  // also pass an already-filtered view.
   for (const observation of observations) {
     if (isBattedBallPayload(observation)) {
       bySector[observation.payload.sector] =

@@ -77,10 +77,9 @@ async function loadDiscordWorkspace(requestedServer: string | undefined) {
     authorizedAccounts.find(({ account }) => account.id === selectedCookie) ??
     authorizedAccounts[0]!;
   const selectedAccount = selected.account;
-  const installations = await getDiscordInstallationService().list(
-    selectedAccount.id,
-    selected.actor,
-  );
+  const installations = await (
+    await getDiscordInstallationService(selectedAccount.id)
+  ).list(selectedAccount.id, selected.actor);
   const requested = requestedServer
     ? installations.find(({ id }) => id === requestedServer)
     : undefined;
@@ -117,7 +116,9 @@ export default async function DiscordSettingsPage({
     workspace.selectedAccountId &&
     workspace.selectedInstallationId &&
     workspace.actor
-      ? await getDiscordChannelRoutingService().get(
+      ? await (
+          await getDiscordChannelRoutingService(workspace.selectedAccountId)
+        ).get(
           workspace.selectedAccountId,
           workspace.selectedInstallationId,
           workspace.actor,
@@ -150,7 +151,9 @@ export default async function DiscordSettingsPage({
     workspace.selectedAccountId &&
     workspace.selectedInstallationId &&
     workspace.identity
-      ? await getDiscordChannelRoutingService().preview(
+      ? await (
+          await getDiscordChannelRoutingService(workspace.selectedAccountId)
+        ).preview(
           workspace.selectedAccountId,
           workspace.selectedInstallationId,
           await getAuthorizationService().authorize(

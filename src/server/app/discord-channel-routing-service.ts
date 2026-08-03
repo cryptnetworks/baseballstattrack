@@ -18,6 +18,7 @@ import {
   noRateLimit,
   type RateLimitEnforcer,
 } from "@/server/app/rate-limit-service";
+import { getApplicationConfigurationService } from "@/server/app/application-configuration-service";
 import { DiscordSettingsService } from "@/server/app/discord-settings-service";
 import { AuthorizationError } from "@/server/auth/errors";
 import {
@@ -361,12 +362,14 @@ export class DiscordChannelRoutingService {
   }
 }
 
-export function getDiscordChannelRoutingService() {
+export async function getDiscordChannelRoutingService(accountId: string) {
   const prisma = getPrismaClient();
+  const runtime = await getApplicationConfigurationService().runtime(accountId);
+  const configuration = loadDiscordInstallationConfiguration(runtime.values);
   return new DiscordChannelRoutingService(
     new PrismaDiscordChannelRoutingRepository(prisma),
     new PrismaDiscordSettingsRepository(prisma),
-    loadDiscordInstallationConfiguration,
+    () => configuration,
     (configuration) => new ConfiguredDiscordChannelProvider(configuration),
     getRateLimitService(),
   );

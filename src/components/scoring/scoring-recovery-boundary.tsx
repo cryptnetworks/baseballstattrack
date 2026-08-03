@@ -161,7 +161,7 @@ export function ScoringRecoveryBoundary({
       try {
         localStorage.removeItem(storageKey);
       } catch {
-        // The accepted submission identity still prevents a duplicate retry.
+        // Submission identity keeps this retry idempotent after cleanup fails.
       }
       window.dispatchEvent(new Event(SCORING_DRAFT_CHANGED_EVENT));
       setEntries((current) =>

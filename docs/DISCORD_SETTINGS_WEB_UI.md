@@ -14,7 +14,7 @@ parameter. Unknown paths return the application not-found state. A missing or
 cross-Account installation is never enumerated; the page selects an available
 server and shows a focus-managed validation summary.
 
-Every request authenticates the current Supabase session, lists only active
+Every request authenticates the current application session, lists only active
 Account memberships, and independently checks Account-level
 `discord.settings.view` authority. Accounts without that capability are not
 offered in the selector. Account switching is a same-origin server action,

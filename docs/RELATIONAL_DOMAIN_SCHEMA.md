@@ -168,6 +168,11 @@ retry/dead-letter state, retention indexes, and service-only RLS.
 `20260801071000_discord_update_delivery_indexes` adds the composite
 foreign-key access paths identified by the Supabase performance advisor.
 
+`20260803163000_provider_neutral_authentication` adds application-owned
+provider identities, rotating and revocable sessions, append-only session
+evidence, one-time OAuth attempts, and a non-destructive legacy identity
+backfill. Applied production migrations are never edited.
+
 The issue #9 hardening migration is metadata/index/trigger-only and performs no lossy conversion. Existing duplicate lineup assignments cause index creation to fail visibly rather than silently choose a winner. The issue #10 setup backfill resolves a source event only when exactly one setup for its Account/game carries the recorded ruleset; a transaction inherits one consistent component setup, or the sole game setup when it has no events. Missing or ambiguous attribution aborts. The issue #13 roster backfill derives period starts from creation time and terminal ends from archival/update time without modifying accepted setup or event history. The issue #14 backfill points each operational game at its highest setup revision and aborts if no setup is attributable. Deployment preflight must therefore query duplicate lineup assignments, games with repeated setup/ruleset combinations, unmatched events, transactions with inconsistent component setup, invalid roster status/end combinations, overlapping player/team-season periods, and operational games without an intended highest ready setup. Rollback after data exists is roll-forward repair. Dropping the new constraints would re-admit invalid writes and is not a safe operational rollback.
 
 CI applies the complete migration chain to empty disposable PostgreSQL, verifies migration status/catalog objects, then runs a transaction-scoped synthetic representability proof. The proof rolls back all fixture rows and demonstrates:

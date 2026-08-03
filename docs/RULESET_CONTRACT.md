@@ -1,10 +1,10 @@
 # Ruleset contract
 
-Issue [#106](https://github.com/cryptnetworks/baseballstattrack/issues/106)
-defines the design gate for configurable league rulesets. This document is the
-canonical identity, ownership, versioning, activation, compatibility, and
-historical-binding contract. It defines extension points; it does not implement
-rule behavior, fantasy, imports, delegation, scoring changes, or UI.
+This is the canonical contract for ruleset identity, ownership, versioning,
+activation, compatibility, and historical binding. It establishes extension
+points without implementing rule behavior, fantasy, imports, delegation,
+scoring changes, or UI. The work was tracked in
+[#106](https://github.com/cryptnetworks/baseballstattrack/issues/106).
 
 ## Non-negotiable invariants
 
@@ -478,7 +478,7 @@ acceptance contract those implementations must consume.
 
 ## Adversarial review findings
 
-The design was reviewed from the required perspectives:
+Five perspectives shaped the constraints in this contract:
 
 - **Baseball rules expert:** made continuous batting, courtesy runners,
   DH/pitcher roles, substitutions, extra innings, mercy, and tournament context
@@ -495,12 +495,13 @@ The design was reviewed from the required perspectives:
   retirement, future-game inheritance, and sole-owner approval behavior without
   granting league authority before #107.
 
-Material ambiguities resolved by the review are: lifecycle metadata is separate
-from semantic content; activation is separate from a version; rescheduling
-never silently rebinds a game; composed rules must be sealed; imports cannot
-match by name; and fantasy weights cannot enter canonical baseball rules.
+The review also settled several ambiguous points: lifecycle metadata is
+separate from semantic content; activation is separate from a version;
+rescheduling never silently rebinds a game; composed rules must be sealed;
+imports cannot match by name; and fantasy weights cannot enter canonical
+baseball rules.
 
-## Downstream entry gate
+## Requirements for downstream consumers
 
 Issues #101, #107, #123, #124, #125, #126, and #127 may build on this contract
 only when they:

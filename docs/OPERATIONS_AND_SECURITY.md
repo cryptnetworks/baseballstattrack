@@ -7,7 +7,9 @@ Stat Track. Installation commands are collected in
 ## Identity, authorization, and privacy
 
 - [Authentication and authorization boundaries](AUTHENTICATION_AND_AUTHORIZATION.md)
+- [Authentication providers, sessions, and migration](AUTHENTICATION_PROVIDERS.md)
 - [Production authentication and team isolation](PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md)
+- [Application configuration management](CONFIGURATION_MANAGEMENT.md)
 - [Privacy and threat model](PRIVACY_AND_THREAT_MODEL.md)
 - [Privacy lifecycle, export, and deletion](PRIVACY_LIFECYCLE.md)
 - [Rate limits, abuse prevention, and quotas](RATE_LIMITS_AND_ABUSE_PREVENTION.md)

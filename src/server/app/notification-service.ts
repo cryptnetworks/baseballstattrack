@@ -14,6 +14,7 @@ import {
   noRateLimit,
   type RateLimitEnforcer,
 } from "@/server/app/rate-limit-service";
+import { getApplicationConfigurationService } from "@/server/app/application-configuration-service";
 import { AuthorizationError } from "@/server/auth/errors";
 import {
   requireTrustedActor,
@@ -24,7 +25,7 @@ import {
   type ClaimedNotificationDelivery,
 } from "@/server/data/notification-repository";
 import { getPrismaClient } from "@/server/data/prisma";
-import { featureEnabled } from "@/server/config/feature-flags";
+import { runtimeSecretConfiguration } from "@/server/config/runtime-environment";
 import {
   emitOperationalEvent,
   getOperationalEventSink,
@@ -221,9 +222,12 @@ export class NotificationPreferenceService {
 export class NotificationDeliveryService {
   constructor(
     private readonly repository: NotificationRepository,
-    private readonly destinations: NotificationDestinationResolver,
-    private readonly transport: NotificationTransport,
+    private readonly destinations: NotificationDestinationResolver | null,
+    private readonly transport: NotificationTransport | null,
     private readonly events: OperationalEventSink = getOperationalEventSink(),
+    private readonly providerFactory?: (
+      accountId: string,
+    ) => Promise<Awaited<ReturnType<typeof configuredProviders>>>,
   ) {}
 
   async deliverBatch(workerInput: string, now = new Date(), limit = 25) {
@@ -277,7 +281,27 @@ export class NotificationDeliveryService {
     let succeeded = false;
     let terminal = false;
     try {
-      const destination = this.destinations.resolve(
+      const providers = this.providerFactory
+        ? await this.providerFactory(delivery.accountId)
+        : {
+            destinations: this.destinations!,
+            transport: this.transport!,
+            enabledChannels: [delivery.channel],
+          };
+      if (!providers.enabledChannels.includes(delivery.channel)) {
+        await this.repository.cancelClaim({
+          accountId: delivery.accountId,
+          deliveryId: delivery.id,
+          workerId: currentWorkerId,
+          cancelledAt: new Date(),
+          failureCode: "CHANNEL_DISABLED",
+        });
+        return {
+          deliveryId: delivery.externalId,
+          outcome: "cancelled" as const,
+        };
+      }
+      const destination = providers.destinations.resolve(
         delivery.destinationReference,
         delivery.channel,
       );
@@ -285,7 +309,7 @@ export class NotificationDeliveryService {
         delivery.event.eventName,
         delivery.event.payload,
       );
-      const response = await this.transport.send({
+      const response = await providers.transport.send({
         channel: delivery.channel,
         destination: destination.destination,
         idempotencyKey: delivery.externalId,
@@ -385,17 +409,19 @@ export class NotificationEventPublicationService {
   }
 }
 
-function configuredProviders() {
+async function configuredProviders(accountId: string) {
   try {
-    const emailEnabled = featureEnabled("FEATURE_EMAIL_NOTIFICATIONS_ENABLED");
-    const discordEnabled = featureEnabled(
-      "FEATURE_DISCORD_NOTIFICATIONS_ENABLED",
-    );
+    const configuration =
+      await getApplicationConfigurationService().runtime(accountId);
+    const values = configuration.values;
+    const emailEnabled = values.features.emailNotifications;
+    const discordEnabled = values.features.discordNotifications;
     const enabledChannels = [
       ...(emailEnabled ? (["EMAIL"] as const) : []),
       ...(discordEnabled ? (["DISCORD"] as const) : []),
     ];
-    const destinations = process.env.NOTIFICATION_DESTINATIONS_JSON ?? "{}";
+    const destinations = JSON.stringify(values.notifications.destinations);
+    const secrets = runtimeSecretConfiguration();
     let smtp: SmtpConfiguration | null = null;
     if (emailEnabled) {
       smtp = z
@@ -412,15 +438,15 @@ function configuredProviders() {
           from: z.email(),
         })
         .parse({
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT ?? "587",
-          secure: process.env.SMTP_SECURE ?? "false",
-          username: process.env.SMTP_USERNAME,
-          password: process.env.SMTP_PASSWORD,
-          from: process.env.SMTP_FROM,
+          host: values.notifications.smtpHost,
+          port: values.notifications.smtpPort,
+          secure: String(values.notifications.smtpSecure),
+          username: secrets.smtpUsername,
+          password: secrets.smtpPassword,
+          from: values.notifications.smtpFrom,
         });
     }
-    const discordToken = process.env.NOTIFICATION_DISCORD_BOT_TOKEN;
+    const discordToken = secrets.notificationDiscordBotToken;
     if (discordEnabled && !discordToken)
       throw new Error("Discord is unconfigured.");
     return {
@@ -432,13 +458,12 @@ function configuredProviders() {
         smtp,
         discord: discordEnabled
           ? {
-              apiBase:
-                process.env.NOTIFICATION_DISCORD_API_BASE_URL ??
-                "https://discord.com/api/v10/",
+              apiBase: values.notifications.discordApiBaseUrl,
               token: discordToken!,
             }
           : null,
       }),
+      enabledChannels,
     };
   } catch {
     throw new NotificationError(
@@ -449,8 +474,8 @@ function configuredProviders() {
   }
 }
 
-export function getNotificationAdministrationService() {
-  const providers = configuredProviders();
+export async function getNotificationAdministrationService(accountId: string) {
+  const providers = await configuredProviders(accountId);
   return new NotificationAdministrationService(
     new PrismaNotificationRepository(getPrismaClient()),
     providers.destinations,
@@ -465,11 +490,12 @@ export function getNotificationPreferenceService() {
 }
 
 export function getNotificationDeliveryService() {
-  const providers = configuredProviders();
   return new NotificationDeliveryService(
     new PrismaNotificationRepository(getPrismaClient()),
-    providers.destinations,
-    providers.transport,
+    null,
+    null,
+    getOperationalEventSink(),
+    configuredProviders,
   );
 }
 

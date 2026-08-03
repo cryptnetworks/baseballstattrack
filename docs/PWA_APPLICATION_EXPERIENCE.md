@@ -62,7 +62,7 @@ existing M2 scoring recovery boundary may retain one strictly scoped,
 unaccepted draft per scoring surface; it is not accepted server state and is
 never submitted automatically.
 
-Signing out clears the local Supabase session cookies but intentionally does
+Signing out revokes the application-owned session and clears its cookie but intentionally does
 not clear the install preference or an unaccepted M2 recovery draft. On a
 shared or transferred device, sign out and then use the browser's site-data
 controls to clear cookies, local storage, the worker registration, and its
