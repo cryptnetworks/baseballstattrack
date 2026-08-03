@@ -168,7 +168,8 @@ ALTER TABLE "NotificationPreference" ADD CONSTRAINT "NotificationPreference_sche
 );
 ALTER TABLE "NotificationPreference" DROP CONSTRAINT "NotificationPreference_subscriptions_check";
 ALTER TABLE "NotificationPreference" ADD CONSTRAINT "NotificationPreference_subscriptions_check" CHECK (
-  cardinality("subscribedEvents") BETWEEN 1 AND 9
+  cardinality("subscribedEvents") BETWEEN 1 AND 9 OR
+  (NOT "recipientEnabled" AND cardinality("subscribedEvents") = 0)
 );
 CREATE INDEX "NotificationPreference_accountId_fantasyLeagueId_status_idx" ON "NotificationPreference"("accountId", "fantasyLeagueId", "status");
 ALTER TABLE "NotificationPreference" ADD CONSTRAINT "NotificationPreference_accountId_fantasyLeagueId_fkey" FOREIGN KEY ("accountId", "fantasyLeagueId") REFERENCES "FantasyLeagueWorkspace"("accountId", "id") ON DELETE RESTRICT ON UPDATE CASCADE;

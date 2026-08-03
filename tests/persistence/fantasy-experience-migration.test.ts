@@ -38,5 +38,8 @@ describe("fantasy experience migration", () => {
     expect(migration).toContain(
       'CREATE INDEX "FantasyLeagueWorkspace_accountId_status_updatedAt_idx"',
     );
+    expect(migration).toContain(
+      '(NOT "recipientEnabled" AND cardinality("subscribedEvents") = 0)',
+    );
   });
 });
