@@ -2,10 +2,15 @@ import { fileURLToPath } from "node:url";
 
 const fullValidationPaths = new Set([
   ".github/workflows/ci.yml",
-  "package.json",
-  "package-lock.json",
   "scripts/plan-ci.mjs",
   "tests/quality/ci-scope.test.ts",
+]);
+
+const nodeDependencyPaths = new Set(["package.json", "package-lock.json"]);
+
+const repositoryPolicyPaths = new Set([
+  "scripts/verify-docs-wiki-workflow.mjs",
+  "scripts/verify-security-workflows.mjs",
 ]);
 
 const applicationConfigurationPaths = new Set([
@@ -89,11 +94,30 @@ export function planCiScopes(files, { forceFull = false } = {}) {
   }
 
   for (const file of normalizedFiles) {
-    if (
-      fullValidationPaths.has(file) ||
-      file.startsWith(".github/workflows/")
-    ) {
+    if (fullValidationPaths.has(file)) {
       enableFullValidation(plan);
+      continue;
+    }
+
+    if (file.startsWith(".github/workflows/")) {
+      plan.documentation = true;
+      if (
+        file === ".github/workflows/publish-containers.yml" ||
+        file === ".github/workflows/release.yml"
+      ) {
+        plan.containers = true;
+      }
+      continue;
+    }
+
+    if (nodeDependencyPaths.has(file)) {
+      plan.application = true;
+      plan.containers = true;
+      continue;
+    }
+
+    if (repositoryPolicyPaths.has(file)) {
+      plan.documentation = true;
       continue;
     }
 

@@ -4,12 +4,36 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - "**/*.cjs"
+      - "**/*.cts"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "**/*.mjs"
+      - "**/*.mts"
+      - "**/*.py"
+      - "**/*.ts"
+      - "**/*.tsx"
   push:
     branches:
       - main
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - "**/*.cjs"
+      - "**/*.cts"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "**/*.mjs"
+      - "**/*.mts"
+      - "**/*.py"
+      - "**/*.ts"
+      - "**/*.tsx"
   merge_group:
-    branches:
-      - main
+    types:
+      - checks_requested
   workflow_dispatch:
 
 permissions:
@@ -20,34 +44,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  sast:
-    name: SAST
-    uses: ./.github/workflows/security-sast.yml
-    permissions:
-      contents: read
-      security-events: write
-
-  changed-code:
-    name: Changed-code security checks
+  scope:
+    name: Plan SAST languages
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+    outputs:
+      languages: ${{ steps.plan.outputs.languages }}
     steps:
       - name: Checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
-          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Classify changed paths
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+          PULL_REQUEST_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+        run: |
+          set -Eeuo pipefail
 
-      - name: Run security regression tests
-        run: npm run security:test
+          case "${EVENT_NAME}" in
+            pull_request) base_sha="${PULL_REQUEST_BASE}" ;;
+            push) base_sha="${PUSH_BASE}" ;;
+            merge_group) base_sha="${MERGE_GROUP_BASE}" ;;
+            *) base_sha="" ;;
+          esac
 
-      - name: Block high-severity dependency findings
-        run: npm audit --audit-level=high
+          if [[ -z "${base_sha}" || "${base_sha}" =~ ^0+$ ]] ||
+             ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
+            node scripts/plan-security-ci.mjs --full >> "${GITHUB_OUTPUT}"
+          else
+            git diff --name-only -z "${base_sha}" "${GITHUB_SHA}" |
+              node scripts/plan-security-ci.mjs >> "${GITHUB_OUTPUT}"
+          fi
+
+  sast:
+    name: SAST
+    needs: scope
+    if: needs.scope.outputs.languages != '[]'
+    uses: ./.github/workflows/security-sast.yml
+    with:
+      languages: ${{ needs.scope.outputs.languages }}
+    permissions:
+      contents: read
+      security-events: write

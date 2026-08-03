@@ -31,13 +31,59 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  scope:
+    name: Check for publishable documentation changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - name: Checkout automatic publication source
+        if: github.event_name == 'workflow_run'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+
+      - name: Select publication scope
+        id: plan
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "publish=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if ! git cat-file -e "${SOURCE_SHA}^1" 2>/dev/null; then
+            echo "A reliable parent commit is unavailable; publishing fail-safe."
+            echo "publish=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          publish=false
+          while IFS= read -r -d '' file; do
+            case "${file}" in
+              docs/*|scripts/publish-docs-wiki.*|scripts/wiki-git-askpass.sh|.github/workflows/publish-docs-wiki.yml)
+                publish=true
+                break
+                ;;
+            esac
+          done < <(git diff --name-only -z "${SOURCE_SHA}^1" "${SOURCE_SHA}")
+          echo "publish=${publish}" >> "${GITHUB_OUTPUT}"
+
   publish:
     name: Validate and publish documentation wiki
+    needs: scope
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main')
+      github.event.workflow_run.head_branch == 'main' &&
+      needs.scope.outputs.publish == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

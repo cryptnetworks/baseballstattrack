@@ -84,6 +84,19 @@ assert(
   "Automatic wiki publication must require main.",
 );
 assert(
+  serialized.includes("needs.scope.outputs.publish == 'true'"),
+  "Automatic wiki publication must require a documentation change.",
+);
+assert(
+  source.includes('git diff --name-only -z "${SOURCE_SHA}^1"'),
+  "Wiki publication scope must inspect the exact main commit.",
+);
+assert(
+  serialized.includes("docs/*") &&
+    serialized.includes("scripts/publish-docs-wiki.*"),
+  "Wiki publication scope must include documentation and its publisher.",
+);
+assert(
   serialized.includes("WIKI_PUBLISH_TOKEN"),
   "Wiki workflow must use the documented publication credential.",
 );
