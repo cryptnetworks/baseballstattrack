@@ -15,6 +15,7 @@ import {
 import {
   NOTIFICATION_DELIVERY_RETENTION_DAYS,
   NOTIFICATION_MESSAGE_VERSION,
+  notificationDeliveryAt,
 } from "@/domain/notifications";
 import {
   WEBHOOK_DEAD_LETTER_RETENTION_DAYS,
@@ -88,6 +89,7 @@ export async function enqueueWebhookEvent(
   }
 
   let teamId: string | null = null;
+  let fantasyLeagueId: string | null = null;
   const teamExternalId =
     typeof payload.teamId === "string" ? payload.teamId : null;
   if (teamExternalId) {
@@ -121,19 +123,48 @@ export async function enqueueWebhookEvent(
         })
       )?.teamSeason.teamId ?? null;
   }
+  const fantasyLeagueExternalId =
+    typeof payload.fantasyLeagueId === "string"
+      ? payload.fantasyLeagueId
+      : null;
+  if (fantasyLeagueExternalId) {
+    fantasyLeagueId =
+      (
+        await tx.fantasyLeagueWorkspace.findUnique({
+          where: {
+            accountId_externalId: {
+              accountId: input.accountId,
+              externalId: fantasyLeagueExternalId,
+            },
+          },
+          select: { id: true },
+        })
+      )?.id ?? null;
+  }
   const preferences = await tx.notificationPreference.findMany({
     where: {
       accountId: input.accountId,
       status: NotificationPreferenceStatus.ACTIVE,
       sensitiveContent: false,
+      recipientEnabled: true,
       subscribedEvents: { has: input.eventName as StoredWebhookEventName },
       membership: { status: MembershipStatus.ACTIVE },
-      OR: [{ teamId: null }, ...(teamId ? [{ teamId }] : [])],
+      OR: [
+        { teamId: null, fantasyLeagueId: null },
+        ...(teamId ? [{ teamId, fantasyLeagueId: null }] : []),
+        ...(fantasyLeagueId ? [{ teamId: null, fantasyLeagueId }] : []),
+      ],
     },
     select: {
       id: true,
       channel: true,
       destinationReference: true,
+      digestMode: true,
+      digestMinute: true,
+      timeZone: true,
+      quietHoursEnabled: true,
+      quietStartMinute: true,
+      quietEndMinute: true,
     },
   });
   if (preferences.length) {
@@ -144,6 +175,7 @@ export async function enqueueWebhookEvent(
         eventId: event.id,
         channel: preference.channel,
         destinationReference: preference.destinationReference,
+        nextAttemptAt: notificationDeliveryAt(input.occurredAt, preference),
         messageVersion: NOTIFICATION_MESSAGE_VERSION,
         retentionUntil: addDays(
           input.occurredAt,

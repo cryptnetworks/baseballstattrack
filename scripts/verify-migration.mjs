@@ -51,6 +51,8 @@ const expectedConstraints = [
   "NotificationPreference_subscriptions_check",
   "NotificationPreference_privacy_check",
   "NotificationPreference_lifecycle_check",
+  "NotificationPreference_schedule_check",
+  "NotificationPreference_accountId_fantasyLeagueId_status_idx",
   "NotificationDelivery_values_check",
   "NotificationDelivery_lifecycle_check",
   "NotificationDeliveryAttempt_values_check",
@@ -104,6 +106,18 @@ const expectedConstraints = [
   "SourceEvent_accountId_gameId_setupSnapshotId_sequence_idx",
   "PlayTransaction_accountId_gameId_setupSnapshotId_fkey",
   "PlayTransaction_accountId_gameId_setupSnapshotId_id_key",
+  "FantasyLeagueWorkspace_accountId_id_key",
+  "FantasyLeagueWorkspace_accountId_externalId_key",
+  "FantasyLeagueWorkspace_accountId_status_updatedAt_idx",
+  "FantasyLeagueWorkspace_values_check",
+  "FantasyLeagueWorkspace_lifecycle_check",
+  "FantasyLeagueEvent_fantasyLeagueId_operationId_key",
+  "FantasyLeagueEvent_accountId_fantasyLeagueId_acceptedAt_id_idx",
+  "FantasyLeagueEvent_values_check",
+  "FantasyResultSnapshot_accountId_fantasyLeagueId_id_key",
+  "FantasyResultSnapshot_fantasyLeagueId_kind_logicalId_revision_k",
+  "FantasyResultSnapshot_accountId_fantasyLeagueId_kind_calculated",
+  "FantasyResultSnapshot_values_check",
 ];
 
 const expectedTriggers = [
@@ -143,6 +157,9 @@ const expectedTriggers = [
   "AnalyticsObservation_evidence_immutable",
   "AnalyticsObservation_ordinal_guard",
   "AnalyticsObservation_append_only",
+  "FantasyLeagueWorkspace_identity_immutable",
+  "FantasyLeagueEvent_append_only",
+  "FantasyResultSnapshot_append_only",
 ];
 
 const client = new pg.Client({ connectionString: databaseUrl });

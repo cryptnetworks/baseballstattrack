@@ -52,6 +52,12 @@ export const capabilities = [
   "privacy.manage",
   "ruleset.view",
   "ruleset.manage",
+  "fantasy.league.view",
+  "fantasy.league.manage",
+  "fantasy.league.activate",
+  "fantasy.roster.manage",
+  "fantasy.scoring.calculate",
+  "fantasy.scoring.view",
 ] as const;
 
 export type Capability = (typeof capabilities)[number];

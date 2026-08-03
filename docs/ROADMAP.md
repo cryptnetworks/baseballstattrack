@@ -147,6 +147,13 @@ team/matchup/standings results, correction propagation, streak, qualification,
 and playoff/championship tie behavior is defined in
 [Fantasy scoring and matchups](FANTASY_SCORING_AND_MATCHUPS.md) and
 [ADR 0016](decisions/0016-versioned-fantasy-results-and-standings.md).
+The Account-authorized fantasy league/team/roster/transaction/standings/scoring
+experience, recipient-consented notifications, durable append-only persistence,
+and accessibility/security boundary are implemented in
+[Fantasy user interface and notifications](FANTASY_USER_INTERFACE_AND_NOTIFICATIONS.md)
+and [ADR 0017](decisions/0017-account-scoped-fantasy-experience-persistence.md).
+The final [M8 exit audit](M8_EXIT_AUDIT.md) records the issue matrix,
+architecture, security, privacy, validation, remaining risks, and M9 deferrals.
 
 The low-maintenance fantasy baseball option is defined by [#122](https://github.com/cryptnetworks/baseballstattrack/issues/122): weekly lineup decisions, automatic scoring, scheduled transactions, and low-noise notifications.
 

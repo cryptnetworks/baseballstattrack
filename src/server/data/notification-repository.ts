@@ -39,12 +39,28 @@ export class PrismaNotificationRepository {
     accountId: string;
     membershipId: string;
     teamId: string | null;
+    fantasyLeagueId?: string | null;
     channel: NotificationChannel;
     destinationReference: string;
     subscribedEvents: readonly WebhookEventName[];
     sensitiveContent: false;
+    recipientEnabled?: boolean;
+    digestMode?: "IMMEDIATE" | "DAILY_DIGEST";
+    digestMinute?: number;
+    timeZone?: string;
+    quietHoursEnabled?: boolean;
+    quietStartMinute?: number;
+    quietEndMinute?: number;
     actor: TrustedActorContext;
   }) {
+    const fantasyLeagueId = input.fantasyLeagueId ?? null;
+    const recipientEnabled = input.recipientEnabled ?? true;
+    const digestMode = input.digestMode ?? "IMMEDIATE";
+    const digestMinute = input.digestMinute ?? 480;
+    const timeZone = input.timeZone ?? "UTC";
+    const quietHoursEnabled = input.quietHoursEnabled ?? false;
+    const quietStartMinute = input.quietStartMinute ?? 1_320;
+    const quietEndMinute = input.quietEndMinute ?? 420;
     return this.prisma.$transaction(async (tx) => {
       const membership = await tx.accountMembership.findFirst({
         where: {
@@ -63,6 +79,17 @@ export class PrismaNotificationRepository {
       ) {
         return null;
       }
+      if (
+        fantasyLeagueId &&
+        (await tx.fantasyLeagueWorkspace.count({
+          where: {
+            accountId: input.accountId,
+            id: fantasyLeagueId,
+          },
+        })) !== 1
+      ) {
+        return null;
+      }
       const recipientOptOut = await tx.notificationPreference.findFirst({
         where: {
           accountId: input.accountId,
@@ -73,7 +100,11 @@ export class PrismaNotificationRepository {
       if (recipientOptOut) {
         return { outcome: "opted_out" as const, preference: recipientOptOut };
       }
-      const scopeKey = input.teamId ? `TEAM:${input.teamId}` : "ACCOUNT";
+      const scopeKey = input.teamId
+        ? `TEAM:${input.teamId}`
+        : fantasyLeagueId
+          ? `FANTASY_LEAGUE:${fantasyLeagueId}`
+          : "ACCOUNT";
       const existing = await tx.notificationPreference.findUnique({
         where: {
           accountId_membershipId_scopeKey_channel: {
@@ -86,10 +117,18 @@ export class PrismaNotificationRepository {
       });
       const data = {
         teamId: input.teamId,
+        fantasyLeagueId,
         destinationReference: input.destinationReference,
         subscribedEvents:
           input.subscribedEvents as readonly StoredWebhookEventName[] as StoredWebhookEventName[],
         sensitiveContent: input.sensitiveContent,
+        recipientEnabled,
+        digestMode,
+        digestMinute,
+        timeZone,
+        quietHoursEnabled,
+        quietStartMinute,
+        quietEndMinute,
         status: NotificationPreferenceStatus.ACTIVE,
         disabledAt: null,
       };
@@ -126,8 +165,9 @@ export class PrismaNotificationRepository {
             scopeKey,
             channel: input.channel,
             eventCount: input.subscribedEvents.length,
-            destinationReference: input.destinationReference,
             sensitiveContent: false,
+            digestMode,
+            quietHoursEnabled,
           },
         },
       });
@@ -143,12 +183,20 @@ export class PrismaNotificationRepository {
         externalId: true,
         membershipId: true,
         teamId: true,
+        fantasyLeagueId: true,
         scopeKey: true,
         channel: true,
         destinationReference: true,
         subscribedEvents: true,
         status: true,
         sensitiveContent: true,
+        recipientEnabled: true,
+        digestMode: true,
+        digestMinute: true,
+        timeZone: true,
+        quietHoursEnabled: true,
+        quietStartMinute: true,
+        quietEndMinute: true,
         optedOutAt: true,
         disabledAt: true,
         createdAt: true,
@@ -164,11 +212,19 @@ export class PrismaNotificationRepository {
       select: {
         externalId: true,
         teamId: true,
+        fantasyLeagueId: true,
         scopeKey: true,
         channel: true,
         subscribedEvents: true,
         status: true,
         sensitiveContent: true,
+        recipientEnabled: true,
+        digestMode: true,
+        digestMinute: true,
+        timeZone: true,
+        quietHoursEnabled: true,
+        quietStartMinute: true,
+        quietEndMinute: true,
         optedOutAt: true,
         disabledAt: true,
         createdAt: true,
