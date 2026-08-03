@@ -31,21 +31,22 @@ repository unchanged.
 `docs/wiki-manifest.yaml` is a fail-closed inventory. Every Markdown source must
 match exactly one entry.
 
-| Classification | Published | Typical content                                                                     |
-| -------------- | --------- | ----------------------------------------------------------------------------------- |
-| `public`       | Yes       | User guides, supported contracts, architecture, development, and operations         |
-| `internal`     | No        | ADRs, milestone evidence, machine API artifacts, and future implementation planning |
-| `restricted`   | No        | Deferred sensitive designs and raw security findings                                |
+| Classification | Published | Typical content                                                                      |
+| -------------- | --------- | ------------------------------------------------------------------------------------ |
+| `public`       | Yes       | Production operations, product use, integrations, design choices, and calculations   |
+| `internal`     | No        | Development workflow, tests, releases, project planning, ADRs, and machine artifacts |
+| `restricted`   | No        | Deferred sensitive designs and raw security findings                                 |
 
 Public entries define an explicit source path, friendly Wiki page name, stable
 order, and visibility. Internal and restricted entries require a reason. A new
 Markdown file that is not inventoried makes validation fail instead of becoming
 public by default.
 
-The repository `README.md` remains the repository landing page. ADRs under
-`docs/decisions/`, machine-readable contracts under `docs/api/`, raw security
-audit evidence, and implementation-only milestone documents remain
-repository-only.
+The repository `README.md` remains the repository landing page. Local setup,
+test commands, contribution workflow, issue/branch/PR procedures, source
+release automation, project planning, ADRs under `docs/decisions/`,
+machine-readable contracts under `docs/api/`, raw security audit evidence, and
+implementation-only milestone documents remain repository-only.
 
 ## Wiki transformation rules
 

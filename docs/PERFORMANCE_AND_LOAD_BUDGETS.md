@@ -26,17 +26,11 @@ while still catching query explosions and accidentally unbounded work. The
 harness asserts the exact event and game cardinalities so a faster result caused
 by silently dropping data fails.
 
-Run the full controlled measurements with a migrated disposable PostgreSQL
-database:
-
-```sh
-DATABASE_URL=postgresql://... npm run performance:measure
-```
-
-The database suite also runs in ordinary integration CI whenever `DATABASE_URL`
-is present. Without it, the database suite is explicitly skipped and only the
-pure workload harness runs. Store trend output as CI evidence; do not commit
-machine-specific timing snapshots as universal baselines.
+Controlled release measurements use a migrated, isolated, production-shaped
+PostgreSQL database and synthetic data. Store release/version, database
+version, dataset cardinality, query count, and percentile output together.
+Machine-specific timing snapshots are evidence for that environment, not
+universal production baselines.
 
 ## Highest-cost paths
 
@@ -79,9 +73,10 @@ When a budget or production trend regresses:
    a non-production clone or equivalent safe environment;
 3. decide whether the cause is an unbounded/N+1 call shape, missing pagination,
    unnecessary replay/derivation, or an evidenced index need;
-4. add a focused regression test, and review any index as a normal migration
-   with write/space cost and rollback notes;
-5. rerun repository verification, this harness, and exact-head CI.
+4. review any index as a normal production migration with write/space cost and
+   rollback notes; and
+5. repeat the controlled measurement and compare it with hosted production
+   telemetry.
 
 Do not add speculative indexes, time only mocks, lower a threshold, reduce the
 dataset, skip evidence verification, or cache across Account/privacy/source

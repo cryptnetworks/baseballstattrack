@@ -2,10 +2,10 @@
 
 ## Status and claim boundary
 
-This is the M3 engineering baseline for scorekeeping, reporting, print, export,
-and import-validation workflows. It defines repeatable budgets, records
-controlled measurements, and fixes material findings discovered during the
-review.
+This is the product design baseline for scorekeeping, reporting, print, export,
+and import-validation workflows. It defines responsive behavior, accessibility
+expectations, representative budgets, and the boundaries of supported public
+claims.
 
 The accessibility target is WCAG 2.2 Level AA as an engineering baseline. This
 document is not a legal-compliance certification. Automated checks cannot prove
@@ -18,39 +18,17 @@ verification, and dry-run-only import policy.
 
 ## Measurement environment
 
-Measurements were collected on 2026-07-30 with:
+Controlled measurements use synthetic data, warmed operations, optimized
+production artifacts, and no production credentials, personal data, hosted
+database, or production traffic. Wall-clock observations are tied to the
+recorded environment and are not universal latency guarantees.
 
-- macOS 27.0 (`26A5388g`) on Apple silicon (`arm64`);
-- Node.js 24.18.0 and npm 11.16.0;
-- Next.js 16.2.11 optimized production output;
-- Vitest 4.1.10 in one local process;
-- synthetic data only;
-- warm-up operations before recorded samples;
-- no production data, hosted database, or production traffic.
-
-`npm run experience:measure` reproduces controlled domain measurements and
-prints sample count, median, and p95. Wall-clock values are evidence, not CI
-assertions, because shared-runner timing gates would be flaky.
-
-The required Vitest run executes the same harness once with smaller smoke
-profiles to prove every operation remains callable and correct without turning
-shared-runner speed into a pass/fail signal. Only the explicit
-`npm run experience:measure` command builds the full 75-event, 100-game, and
-9,000-record profiles and records repeated samples.
-
-`npm run experience:verify` reads the fresh `.next` production build, sums each
-route's unique referenced client chunks, measures raw and independently gzipped
-bytes, checks route isolation, and fails when an explicit budget is exceeded.
-It runs inside the existing required `npm run verify` check after
-`npm run build`.
-
-The connected interactive-browser backend was unavailable during this pass.
-Google Chrome 150.0.7871.187 is installed, but authenticated route, network
-throttling, physical device, print-preview, and assistive-technology sessions
-were not represented as completed measurements. Existing M2 Chrome evidence is
-retained in `docs/SCOREKEEPING_USABILITY_AND_ACCESSIBILITY.md`; this review adds
-server-rendered markup, source-contract, domain, build-artifact, and persistence
-evidence.
+Route budgets measure each production route's unique client chunks, raw and
+independently gzipped bytes, and route isolation. Representative workload
+profiles cover 75-event games, 100-game seasons, and 9,000-record import
+validation. Physical devices, authenticated hosted sessions, throttled
+networks, print previews, and assistive-technology sessions remain separate
+production acceptance evidence.
 
 ## Supported devices and responsive matrix
 
@@ -160,7 +138,7 @@ invented here.
 
 ## Controlled measurements
 
-The final `npm run experience:measure` run produced:
+The controlled synthetic workload produced:
 
 | Workflow                                      | Samples | Median (ms) | P95 (ms) |
 | --------------------------------------------- | ------: | ----------: | -------: |
@@ -178,12 +156,9 @@ verification. Dashboard derivation includes stable ranking and output bounds.
 Import validation includes UTF-8/JSON/schema/checksum/count/reference/duplicate
 checks for the synthetic artifact but has no target database conflicts.
 
-The optimized production build compiled in 1.868 seconds on the environment
-above. Build duration is diagnostic only and has no release budget.
-
 ## Bundle findings
 
-The final `npm run experience:verify` result:
+The optimized production artifact measured:
 
 | Route                   | Raw bytes | Gzip bytes | Gzip budget |
 | ----------------------- | --------: | ---------: | ----------: |
@@ -316,13 +291,13 @@ print dialog require physical assistive-technology validation.
 | Export presentation loading executed four query shapes per ready game               | High     | Added one bounded Account-scoped batch transaction and reused it for single-game presentation reads      | Service source contract plus persistence batch equivalence   |
 | Slow dynamic routes could remain blank without semantic progress                    | High     | Added route-level game/report/data status, `aria-busy`, polite atomic text, and reduced-motion fallback  | Server-rendered accessibility contract                       |
 | Export/import endpoints had no accessible user workflow                             | High     | Added separately authorized export and dry-run validation forms with focus, errors, cancellation, limits | SSR/source contract and existing route/security/domain tests |
-| Bundle growth had no repeatable required threshold                                  | High     | Added explicit route/CSS budgets and route-isolation checks to existing `verify`                         | `npm run experience:verify` after every production build     |
-| Performance observations were not reproducible across representative volumes        | Medium   | Added an opt-in reporting harness with fixed synthetic profiles and median/p95 output                    | `npm run experience:measure`                                 |
+| Bundle growth had no repeatable required threshold                                  | High     | Added explicit route/CSS budgets and route-isolation checks                                              | Production artifact budget evidence                          |
+| Performance observations were not reproducible across representative volumes        | Medium   | Added fixed synthetic profiles with median/p95 output                                                    | Controlled production-shaped measurement                     |
 
 No domain calculation, migration, public sharing, import promotion, deployment,
 or production monitoring behavior was added.
 
-## Remaining limits and release recommendation
+## Remaining limits
 
 Nonblocking limitations:
 
@@ -340,16 +315,10 @@ Nonblocking limitations:
 - public sharing, cross-Account transfer, background jobs, and offline-first
   synchronization remain unsupported.
 
-The #27 implementation is suitable for ready-for-review status after clean
-install, full repository and database-backed verification, production build,
-container smoke test, exact-head CI, and final diff review. M3 can close after
-#27 is reviewed and merged if exact post-merge `main` CI remains green and no
-regression is found. M3 is not complete while #27 remains open.
+## Production monitoring
 
-## M4 monitoring handoff
-
-M4 database release budgets, representative scoring/report/dashboard datasets,
-and highest-cost query paths are now defined in
+Database release budgets, representative scoring/report/dashboard datasets,
+and highest-cost query paths are defined in
 `PERFORMANCE_AND_LOAD_BUDGETS.md`. Production monitoring still must collect:
 
 - hosted real-user web-vital and interaction monitoring;

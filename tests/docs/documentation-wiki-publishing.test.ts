@@ -92,9 +92,34 @@ describe("documentation wiki publication", () => {
     expect(publication.files.get("Home.md")).toContain(
       "[Rules and calculations](https://github.com/cryptnetworks/baseballstattrack/wiki/Rules-and-Calculations)",
     );
-    expect(publication.files.get("_Sidebar.md")).toContain(
-      "[Installation and development](https://github.com/cryptnetworks/baseballstattrack/wiki/Installation-and-Development)",
+    expect(publication.files.get("Home.md")).toContain(
+      "[Design choices](https://github.com/cryptnetworks/baseballstattrack/wiki/Design-Choices)",
     );
+    expect(publication.files.get("Home.md")).toContain(
+      "deploy the production service",
+    );
+    expect(publication.files.get("Home.md")).not.toContain(
+      "developers, and operators",
+    );
+    expect(publication.files.get("_Sidebar.md")).toContain(
+      "[Production installation](https://github.com/cryptnetworks/baseballstattrack/wiki/Production-Installation)",
+    );
+    expect(publication.files.has("_generated/Production-Installation.md")).toBe(
+      true,
+    );
+    for (const developmentPage of [
+      "CI-Quality-Gates",
+      "Defect-Triage-and-Regression-Policy",
+      "Discord-End-to-End-Fixtures",
+      "Release-and-Workflow-Security",
+      "Repository-Operations-Checklist",
+      "Roadmap",
+      "Wiki-Publishing-Guide",
+    ]) {
+      expect(publication.files.has(`_generated/${developmentPage}.md`)).toBe(
+        false,
+      );
+    }
     expect(publication.files.get("_Sidebar.md")).not.toContain(
       "More Documentation",
     );

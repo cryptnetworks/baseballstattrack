@@ -14,30 +14,15 @@ The implementation continues to use server-authoritative setup and event
 revisions. Accessibility changes do not weaken Account authorization,
 idempotency, replay, correction, or verification boundaries.
 
-## Evidence and environment
+## Evidence boundary
 
-The review was performed on 2026-07-30 with:
+The task walkthrough is a structured expert review using synthetic data, not
+participant research or a legal-compliance certification. No participant
+quotes, success rates, or laboratory-grade performance claims are made.
+Physical-device, representative-network, and assistive-technology sessions
+remain required production acceptance evidence.
 
-- macOS 27.0 on Apple silicon;
-- Node.js 24.18.0 and npm 11.16.0;
-- Google Chrome 150.0.7871.187 in headless device-emulation mode;
-- Next.js development and production builds;
-- Vitest server-rendered component and source-contract tests;
-- ESLint, including the accessibility rules provided by the Next.js
-  configuration.
-
-No participant was available. The task walkthrough below is therefore a
-structured simulated expert review, not user research. No participant quotes,
-success rates, or laboratory-grade performance claims are made.
-
-The connected interactive browser backend was unavailable. A temporary,
-local-only page composed the real setup, scoring, recovery, substitution,
-correction, and verification components with synthetic fixture data. Chrome
-DevTools Protocol was used to inspect layout, focus, keyboard activation,
-reduced motion, and zoom. The harness was removed after evidence collection
-and is not part of the application or this change.
-
-## Automated results
+## Accessibility contract
 
 The accessibility contract tests verify:
 
@@ -56,10 +41,6 @@ The accessibility contract tests verify:
 - the workflow has no fixed or sticky action bars;
 - responsive table overflow remains contained;
 - the M2 route composition remains connected in task order.
-
-Vitest now discovers both `.test.ts` and `.test.tsx`. Before this pass, the game
-setup component suite existed but its `.tsx` suffix excluded it from the
-configured test glob.
 
 Measured palette ratios:
 
@@ -204,14 +185,8 @@ Implementation inspection found:
 - there are no fixed action bars, autoplaying media, or motion-dependent
   interactions.
 
-Local development requests after compilation completed in 26–52ms for the
-synthetic full-workflow route. Initial development compilation is intentionally
-excluded from interaction timing. This is a local observation, not a production
-latency guarantee.
-
-The optimized production build completed in 6.77 seconds (`next` compilation
-1.765 seconds) on the environment above. Unique client JavaScript referenced by
-each route manifest measured:
+One controlled artifact inspection measured the following unique client
+JavaScript referenced by each route manifest:
 
 | Route        |           Raw |          gzip |
 | ------------ | ------------: | ------------: |
@@ -220,8 +195,8 @@ each route manifest measured:
 | Live scoring | 910,490 bytes | 242,370 bytes |
 | Box score    |  91,344 bytes |  25,092 bytes |
 
-These are local artifact sums, not network transfer traces; shared chunks may
-already be cached across navigation. The live-scoring route is the largest M2
+These are artifact sums, not network transfer traces; shared chunks may already
+be cached across navigation. The live-scoring route is the largest
 client surface because it includes recovery, plate appearance, runner,
 substitution, and correction editors. It remains a nonblocking optimization
 target for route-level profiling and safe code splitting after representative
@@ -245,8 +220,7 @@ should be measured with representative hosted data.
   correction preview/errors, and box-score verification errors.
 - Distinguished local/proposal discard actions visually.
 - Constrained correction selects so long options cannot widen the page.
-- Included `.tsx` tests in Vitest discovery.
-- Added an automated scorekeeping accessibility and responsive contract.
+- Added a repeatable scorekeeping accessibility and responsive contract.
 
 ## Remaining limitations and deferrals
 
@@ -262,17 +236,6 @@ Nonblocking M2 validation limitations:
   needs hosted route profiling before deciding where to split;
 - no unsupported league-rule expansion beyond the accepted ruleset.
 
-M3 owns richer reporting/dashboard work. M4 owns offline-first and operational
-hardening beyond the current recoverable local-draft contract. Neither was
-started here.
-
-## Release recommendation
-
-The implementation is suitable for pull-request review after focused tests,
-full repository verification, production build, container smoke tests, and
-exact-head CI pass.
-
-M2 must not be called complete while issue #23 and its PR remain open. M2 can
-close after this change is reviewed and merged if no regression is found and
-the repository's required CI remains green. Physical assistive-technology and
-device testing is strongly recommended before any public accessibility claim.
+Physical assistive-technology, low-end-device, and representative-network
+testing is required before making a broader public accessibility or performance
+claim.

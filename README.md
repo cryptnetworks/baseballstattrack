@@ -21,39 +21,39 @@ Corrections append history, and replay binds to the rules and derivation
 versions that were active for the original game.
 
 Start with [Start here](docs/START_HERE.md) for a role-based documentation
-index or [Installation and development](docs/INSTALLATION_AND_DEVELOPMENT.md)
-to run the repository locally.
+index or [Production installation](docs/PRODUCTION_INSTALLATION.md) to deploy
+the supported production stack.
 
 ## Documentation map
 
-| Area                      | Primary references                                                                                                                                                                                  |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Product scope and roadmap | [Product scope](docs/PRODUCT_SCOPE.md), [roadmap](docs/ROADMAP.md)                                                                                                                                  |
-| Scoring and statistics    | [Scoring semantics](docs/SCORING_SEMANTICS.md), [immutable events](docs/IMMUTABLE_GAME_EVENT_MODEL.md), [statistic derivation](docs/STATISTIC_DERIVATION.md), [fixtures](docs/SCORING_FIXTURES.md)  |
-| Teams and game setup      | [Roster management](docs/TEAM_SEASON_ROSTER_MANAGEMENT.md), [game setup and lineups](docs/GAME_SETUP_AND_LINEUPS.md), [setup workflow](docs/GAME_SETUP_WORKFLOW.md)                                 |
-| Results and portability   | [Season dashboards](docs/SEASON_DASHBOARD_AND_LEADERBOARDS.md), [printable reports](docs/PRINTABLE_REPORTS.md), [export and import](docs/DATA_EXPORT_AND_IMPORT.md)                                 |
-| Persistence               | [Persistence and tenancy](docs/PERSISTENCE_AND_TENANCY.md), [relational schema](docs/RELATIONAL_DOMAIN_SCHEMA.md)                                                                                   |
-| Identity and security     | [Authentication and authorization](docs/AUTHENTICATION_AND_AUTHORIZATION.md), [provider operations](docs/AUTHENTICATION_PROVIDERS.md), [privacy and threat model](docs/PRIVACY_AND_THREAT_MODEL.md) |
-| Integrations              | [Integrations guide](docs/INTEGRATIONS_GUIDE.md), [partner API program](docs/INTEGRATIONS_AND_PARTNER_API_PROGRAM.md), [calendar synchronization](docs/CALENDAR_SYNCHRONIZATION.md)                 |
-| Application experience    | [Product guides](docs/PRODUCT_GUIDES.md), [PWA experience](docs/PWA_APPLICATION_EXPERIENCE.md)                                                                                                      |
-| Operations                | [Operations and security](docs/OPERATIONS_AND_SECURITY.md), [container operations](docs/CONTAINER_OPERATIONS.md), [backup and restore](docs/BACKUP_AND_RESTORE.md)                                  |
+| Area                    | Primary references                                                                                                                                                                                  |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Product scope           | [Product scope](docs/PRODUCT_SCOPE.md)                                                                                                                                                              |
+| Scoring and statistics  | [Scoring semantics](docs/SCORING_SEMANTICS.md), [immutable events](docs/IMMUTABLE_GAME_EVENT_MODEL.md), [statistic derivation](docs/STATISTIC_DERIVATION.md), [fixtures](docs/SCORING_FIXTURES.md)  |
+| Teams and game setup    | [Roster management](docs/TEAM_SEASON_ROSTER_MANAGEMENT.md), [game setup and lineups](docs/GAME_SETUP_AND_LINEUPS.md), [setup workflow](docs/GAME_SETUP_WORKFLOW.md)                                 |
+| Results and portability | [Season dashboards](docs/SEASON_DASHBOARD_AND_LEADERBOARDS.md), [printable reports](docs/PRINTABLE_REPORTS.md), [export and import](docs/DATA_EXPORT_AND_IMPORT.md)                                 |
+| Persistence             | [Persistence and tenancy](docs/PERSISTENCE_AND_TENANCY.md), [relational schema](docs/RELATIONAL_DOMAIN_SCHEMA.md)                                                                                   |
+| Identity and security   | [Authentication and authorization](docs/AUTHENTICATION_AND_AUTHORIZATION.md), [provider operations](docs/AUTHENTICATION_PROVIDERS.md), [privacy and threat model](docs/PRIVACY_AND_THREAT_MODEL.md) |
+| Integrations            | [Integrations guide](docs/INTEGRATIONS_GUIDE.md), [partner API program](docs/INTEGRATIONS_AND_PARTNER_API_PROGRAM.md), [calendar synchronization](docs/CALENDAR_SYNCHRONIZATION.md)                 |
+| Application experience  | [Product guides](docs/PRODUCT_GUIDES.md), [PWA experience](docs/PWA_APPLICATION_EXPERIENCE.md)                                                                                                      |
+| Operations              | [Operations and security](docs/OPERATIONS_AND_SECURITY.md), [container operations](docs/CONTAINER_OPERATIONS.md), [backup and restore](docs/BACKUP_AND_RESTORE.md)                                  |
 
-The detailed delivery history and remaining work live in
-[the roadmap](docs/ROADMAP.md). Contribution and vulnerability-reporting rules
-are in [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+Report suspected vulnerabilities through the private process in
+[SECURITY.md](SECURITY.md), never through a public issue.
 
 ## System Requirements
 
 These are sizing baselines, not concurrency guarantees. Measure the actual
 scorekeeping, report, integration, backup, and migration workload before
-increasing traffic. The application and database may share a development host;
-production should preserve independent CPU, memory, and storage headroom.
+increasing traffic. A small production installation may colocate the
+application and database, but each service still requires independent CPU,
+memory, and storage headroom.
 
 ### Minimum Requirements
 
 | Area               | Minimum supported baseline                       | Workload assumption                                                                                                                                           |
 | ------------------ | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Application CPU    | 2 vCPU                                           | Development, evaluation, or a small scorekeeping workload without concurrent builds.                                                                          |
+| Application CPU    | 2 vCPU                                           | A small production scorekeeping workload without concurrent image builds.                                                                                     |
 | Application memory | 4 GiB RAM                                        | Next.js runtime and ordinary request processing. Run production builds separately when possible.                                                              |
 | Database CPU       | 2 vCPU                                           | PostgreSQL 17 with a small active dataset and low concurrent scoring/report activity.                                                                         |
 | Database memory    | 4 GiB RAM                                        | PostgreSQL, migrations, and modest report queries; monitor for swapping or memory pressure.                                                                   |
@@ -67,14 +67,11 @@ files, WAL, and restore work all require free host space.
 
 Software and client requirements:
 
-- source development and builds require Node.js 24 or newer and npm 11 or newer;
 - the database migration and backup contract targets PostgreSQL 17 and
   PostgreSQL 17-compatible tools;
 - production uses `linux/amd64` containers on a 64-bit Linux host with a current
   Docker Engine and Docker Compose v2; the current publication workflow does
   not produce a multi-architecture image manifest;
-- local development is supported on current macOS or Linux; Windows users
-  should use WSL2 or Docker Desktop because repository operations use Bash;
 - clients need a maintained version of Chrome, Edge, Firefox, or Safari with
   JavaScript, cookies, and TLS enabled on phone, tablet, or desktop; and
 - production needs reliable HTTPS ingress through a TLS-terminating reverse
@@ -107,99 +104,39 @@ and recovery must be validated in that environment. See
 [Container operations](docs/CONTAINER_OPERATIONS.md), and
 [Backup and restore](docs/BACKUP_AND_RESTORE.md).
 
-## Local development
+## Production deployment
 
-Prerequisites:
-
-- Node.js 24 or newer
-- npm 11 or newer
-
-Install dependencies:
-
-```sh
-npm ci
-```
-
-Start the app:
+The supported production deployment is the image-only `docker-compose.yml`
+stack on a 64-bit Linux host. Copy the protected production environment
+examples and Compose manifest from one reviewed source revision, pin all
+application images to that revision's immutable source tag, validate the
+configuration, pull the images, and start the dependency-ordered services:
 
 ```sh
-npm run dev
+sudo install -d -m 755 /opt/baseballstattrack
+sudo install -d -m 700 /etc/baseballstattrack
+sudo install -m 644 docker-compose.yml /opt/baseballstattrack/docker-compose.yml
+sudo install -m 600 compose.production.env.example /etc/baseballstattrack/production.env
+sudo install -m 600 app.production.env.example /etc/baseballstattrack/app.env
+
+docker compose --file /opt/baseballstattrack/docker-compose.yml --env-file /etc/baseballstattrack/production.env config --quiet
+docker compose --file /opt/baseballstattrack/docker-compose.yml --env-file /etc/baseballstattrack/production.env pull
+docker compose --file /opt/baseballstattrack/docker-compose.yml --env-file /etc/baseballstattrack/production.env up --detach --wait
 ```
 
-Open `http://localhost:3000` for the application shell or `http://localhost:3000/status` for the smoke page. The JSON health endpoint is available at `http://localhost:3000/api/health`.
+Follow [Production installation](docs/PRODUCTION_INSTALLATION.md) before using
+the service. It covers secrets, TLS, authentication callbacks, migrations,
+readiness, authorization checks, monitoring, backups, upgrades, and rollback.
+The detailed runtime references are:
 
-Copy `.env.example` to `.env.local` before configuring authentication or
-running migrations. The example contains local placeholders only and no real
-secrets.
+- [Production Docker Compose deployment](docs/PRODUCTION_COMPOSE.md)
+- [Container operations](docs/CONTAINER_OPERATIONS.md)
+- [Operations and security](docs/OPERATIONS_AND_SECURITY.md)
+- [Backup and restore](docs/BACKUP_AND_RESTORE.md)
+- [Discord control-plane deployment](docs/DISCORD_CONTROL_PLANE_DEPLOYMENT.md)
 
-For authentication, set the canonical site URL, application encryption key,
-enabled provider adapters, and each provider's server-side client credentials.
-Register `<site-url>/auth/callback` directly with each provider. Provider access
-proves identity only; an active database membership is still required for every
-Account operation. See
-[Authentication providers](docs/AUTHENTICATION_PROVIDERS.md).
-
-For the image-only production stack, copy the example environment file, pull
-the public GHCR images, and start the dependency-ordered services:
-
-```sh
-cp compose.production.env.example .env.production
-docker compose --env-file .env.production pull
-docker compose --env-file .env.production up --detach --wait
-```
-
-Container architecture, development usage, readiness, migration, reset, security, and troubleshooting are defined in [docs/CONTAINER_OPERATIONS.md](docs/CONTAINER_OPERATIONS.md).
-
-The Discord web settings, OAuth callback, Python gateway, isolated update
-scheduler, secret rotation, and credential-free CI proof are defined in
-[docs/DISCORD_CONTROL_PLANE_DEPLOYMENT.md](docs/DISCORD_CONTROL_PLANE_DEPLOYMENT.md).
-
-The deployable production stack, including PostgreSQL and the Discord bot, is
-the repository's only Compose manifest, `docker-compose.yml`, and is documented in
-[docs/PRODUCTION_COMPOSE.md](docs/PRODUCTION_COMPOSE.md). It pulls matching
-public GHCR images and keeps migrations explicit and dependency ordered.
-
-## Commands
-
-- Format: `npm run format`
-- Lint: `npm run lint`
-- Typecheck: `npm run typecheck`
-- Unit tests: `npm run test`
-- Prisma client generation: `npm run db:generate`
-- Prisma schema validation: `npm run db:validate`
-- Relational representability proof: `npm run db:representability` after applying migrations to an isolated disposable database
-- Defect-policy and issue-form validation: `npm run policy:validate`
-- Production dependency audit: `npm run audit:prod`
-- Database migration: `npm run db:migrate` after `DATABASE_URL` and `DIRECT_URL` are configured
-- Database storage health: `npm run db:storage:check` where the database filesystem is visible
-- Production build: `npm run build`
-- Container configuration: `npm run container:config`
-- Production image build: `npm run container:production:build`
-- Container build and smoke test: `npm run container:verify`
-- Full verification: `npm run verify`
-
-The canonical local/CI quality contract, required `verify` branch-protection check, and failure triage guidance are in [docs/CI_QUALITY_GATES.md](docs/CI_QUALITY_GATES.md).
-
-Repository documentation is authoritative in `docs/`. The generated GitHub Wiki
-publication pipeline, manifest, visibility policy, dry-run commands, credential
-boundary, and recovery procedure are documented in
-[GitHub Wiki publishing guide](docs/WIKI_PUBLISHING_GUIDE.md). Direct
-wiki edits are not authoritative. The public wiki's focused entry points begin
-at [Start here](docs/START_HERE.md); detailed rules and formulas are indexed in
-[Rules and calculations](docs/RULES_AND_CALCULATIONS.md), while setup and
-contributor material is collected in
-[Installation and development](docs/INSTALLATION_AND_DEVELOPMENT.md).
-
-Defect reporting, severity and priority, regression evidence, verification, and closure follow [docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md](docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md). Suspected vulnerabilities must use the private route in [SECURITY.md](SECURITY.md), never an issue.
-
-## Working agreement
-
-- Keep issues small enough to review and deliver independently.
-- Treat game events as the source of truth; derive aggregates from them.
-- Validate baseball scoring rules in domain-level tests.
-- Prefer accessibility, touch-friendly interactions, and explicit online-first interruption recovery.
-- Never commit secrets or production data.
-
-## Repository governance
-
-The intended taxonomy, milestone plan, project-board layout, and security baseline are documented in .github/label-taxonomy.md and .github/branch-protection.md.
+Repository documentation is authoritative in `docs/`; direct Wiki edits are
+not authoritative. The public Wiki intentionally contains production
+installation and operations, product usage, integrations, architectural design
+choices, and calculation rules. Local-development, test, contribution, issue,
+branch, pull-request, and project-planning procedures remain repository-only.

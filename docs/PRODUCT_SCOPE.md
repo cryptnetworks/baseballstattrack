@@ -130,7 +130,8 @@ Report trust:
 Usability:
 
 - Game setup, scoring, correction, and report review are usable on phone, tablet, and desktop.
-- A new contributor or tester can run the app and execute the verification suite from a clean checkout once the foundation milestone exits.
+- An operator can deploy the documented production stack, verify readiness,
+  authenticate an approved user, and restore a tested backup.
 
 ## MVP Completion Criteria
 

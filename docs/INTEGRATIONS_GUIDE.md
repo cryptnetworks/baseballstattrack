@@ -32,5 +32,4 @@ then use the focused references below when configuring or operating the bot.
 - [Discord update worker](DISCORD_UPDATE_WORKER.md)
 - [Discord configuration preview and test delivery](DISCORD_CONFIGURATION_PREVIEW.md)
 - [Discord activity and health](DISCORD_ACTIVITY_AND_HEALTH.md)
-- [Discord end-to-end fixtures](DISCORD_END_TO_END_FIXTURES.md)
 - [Discord control-plane deployment](DISCORD_CONTROL_PLANE_DEPLOYMENT.md)
