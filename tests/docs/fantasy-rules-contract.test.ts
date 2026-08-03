@@ -150,7 +150,7 @@ describe("fantasy rules contract", () => {
   });
 
   it("defers every prohibited implementation", () => {
-    expect(contract).toMatch(/#123 owns fantasy league/iu);
+    expect(contract).toMatch(/#123 defines fantasy league/iu);
     expect(contract).toMatch(/#124 owns transactions/iu);
     expect(contract).toMatch(/#126 owns matchup execution/iu);
     expect(contract).toMatch(/#127 owns configuration/iu);

@@ -134,6 +134,10 @@ The independent fantasy scoring identity, weekly points format, category
 extension, eligibility, lifecycle, correction, and privacy boundary is defined
 in the [Fantasy rules contract](FANTASY_RULES_CONTRACT.md) and
 [ADR 0013](decisions/0013-versioned-weekly-fantasy-points.md).
+The Account-owned fantasy league, team, canonical player-reference, roster
+snapshot, lifecycle, privacy, and exact authorization foundation is defined in
+the [Fantasy domain model](FANTASY_DOMAIN_MODEL.md) and
+[ADR 0014](decisions/0014-account-scoped-immutable-fantasy-aggregates.md).
 
 The low-maintenance fantasy baseball option is defined by [#122](https://github.com/cryptnetworks/baseballstattrack/issues/122): weekly lineup decisions, automatic scoring, scheduled transactions, and low-noise notifications.
 

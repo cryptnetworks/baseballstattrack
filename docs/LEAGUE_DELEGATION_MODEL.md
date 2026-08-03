@@ -139,6 +139,10 @@ Every capability is an allowlisted identifier. A missing row means denied.
 | `league.settings.manage`          | League                         | No                 | No                                | Change exact league settings.                          |
 | `fantasy.rules.manage`            | Organization or League         | No                 | No                                | Manage fantasy rule drafts for the exact owner.        |
 | `fantasy.rules.activate`          | Organization or League         | No                 | Yes                               | Activate an immutable fantasy model version.           |
+| `fantasy.league.manage`           | Account                        | Yes                | No                                | Manage an exact Account-owned fantasy league.          |
+| `fantasy.league.activate`         | Account                        | Yes                | Yes, Account                      | Activate one exact fantasy league and model binding.   |
+| `fantasy.team.manage`             | Account                        | Yes                | No                                | Manage exact Account-owned fantasy team lifecycle.     |
+| `fantasy.roster.manage`           | Account                        | Yes                | No                                | Create exact fantasy player and roster snapshots.      |
 | `team.view`                       | Team                           | Yes                | No                                | View an exact participating Team's shared fields.      |
 | `competition.settings.manage`     | Team or Season                 | Yes                | No                                | Manage competition metadata only.                      |
 | `shared_resources.manage`         | Team or Season                 | Yes                | No                                | Manage explicitly shared non-private resources.        |
@@ -383,9 +387,10 @@ provenance, and verification lineage keep operations explainable.
 
 ## Deferred downstream work
 
-Issue #107 defined authorization architecture only. It did not implement
-Fantasy domain (#123), fantasy data (#124), fantasy scoring (#125/#126), or UI
-(#127). The offline mode and M9 were also untouched. The #125
-[Fantasy rules contract](FANTASY_RULES_CONTRACT.md) now adds two explicit rule
-capabilities to this matrix, but no consumer may infer extra capabilities or
-private player access.
+Issue #107 originally defined authorization architecture only. The #125
+[fantasy rules contract](FANTASY_RULES_CONTRACT.md) later added two explicit rule
+capabilities. The #123 [fantasy domain model](FANTASY_DOMAIN_MODEL.md) now adds
+four Account-delegated aggregate capabilities. Neither change grants private
+player access or makes Organization membership Account authority. Fantasy
+transactions (#124), matchup scoring/standings/playoffs (#126), UI (#127),
+offline mode, and M9 remain untouched.
