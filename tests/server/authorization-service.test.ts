@@ -307,6 +307,60 @@ describe("production authorization boundary", () => {
     ).toBe(false);
   });
 
+  it("separates fantasy commissioners, team administration, participants, and viewers", () => {
+    const accountTarget: ResolvedTarget = {
+      kind: "ACCOUNT",
+      accountId: "account-a",
+      teamIds: [],
+      seasonId: null,
+      gameId: null,
+    };
+    const permits = (
+      value: MembershipRole,
+      capability:
+        | "fantasy.league.view"
+        | "fantasy.league.manage"
+        | "fantasy.league.activate"
+        | "fantasy.team.manage"
+        | "fantasy.roster.manage"
+        | "fantasy.scoring.calculate",
+    ) =>
+      authorityPermits(
+        {
+          appUserId: "user-a",
+          membershipId: "membership-a",
+          accountId: "account-a",
+          assignments: [role(value, "ACCOUNT")],
+        },
+        capability,
+        accountTarget,
+      );
+
+    for (const commissioner of ["OWNER", "ADMINISTRATOR"] as const) {
+      expect(permits(commissioner, "fantasy.league.manage")).toBe(true);
+      expect(permits(commissioner, "fantasy.league.activate")).toBe(true);
+      expect(permits(commissioner, "fantasy.team.manage")).toBe(true);
+      expect(permits(commissioner, "fantasy.scoring.calculate")).toBe(true);
+    }
+    expect(permits("VIEWER", "fantasy.league.view")).toBe(true);
+    expect(permits("VIEWER", "fantasy.roster.manage")).toBe(true);
+    expect(permits("VIEWER", "fantasy.team.manage")).toBe(false);
+    expect(permits("VIEWER", "fantasy.league.manage")).toBe(false);
+    expect(permits("VIEWER", "fantasy.scoring.calculate")).toBe(false);
+    expect(
+      authorityPermits(
+        {
+          appUserId: "user-a",
+          membershipId: "membership-a",
+          accountId: "account-a",
+          assignments: [grant("fantasy.team.manage", "ACCOUNT")],
+        },
+        "fantasy.team.manage",
+        accountTarget,
+      ),
+    ).toBe(true);
+  });
+
   it("observes revocation and regrant on each authorization attempt", async () => {
     const store = new MutableStore();
     const service = new AuthorizationService(store);

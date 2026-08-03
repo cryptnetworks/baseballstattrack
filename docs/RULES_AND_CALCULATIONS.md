@@ -26,6 +26,7 @@ result. They do not silently rewrite the event that was originally recorded.
 
 ## Fantasy results
 
+- [Fantasy league ecosystem](FANTASY_LEAGUE_ECOSYSTEM.md)
 - [Fantasy domain model](FANTASY_DOMAIN_MODEL.md)
 - [Fantasy transactions and roster management](FANTASY_TRANSACTIONS.md)
 - [Fantasy scoring, matchups, and standings](FANTASY_SCORING_AND_MATCHUPS.md)
