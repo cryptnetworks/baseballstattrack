@@ -88,6 +88,59 @@ describe("documentation wiki publication", () => {
     expect(publication.files.has("_generated/.publication-manifest.json")).toBe(
       true,
     );
+    expect(publication.files.get("Home.md")).toContain(
+      "[Rules and calculations](./_generated/RULES-AND-CALCULATIONS.md)",
+    );
+    expect(publication.files.get("_Sidebar.md")).toContain(
+      "[Installation and development](./_generated/INSTALLATION-AND-DEVELOPMENT.md)",
+    );
+    expect(publication.files.get("_Sidebar.md")).not.toContain(
+      "More Documentation",
+    );
+    expect(publication.files.get("_Sidebar.md")).not.toContain(
+      "STATISTIC-DERIVATION",
+    );
+  });
+
+  it("keeps linked detail pages discoverable without crowding curated navigation", async () => {
+    const curatedManifest = manifest().replace(
+      "navigationUnlisted: append",
+      "navigationUnlisted: linked",
+    );
+    const context = await fixture(curatedManifest, {
+      "GUIDE.md": "# Guide\n\n[Details](DETAILS.md)\n",
+      "DETAILS.md": "# Detailed behavior\n",
+    });
+    const publication = await buildPublication({
+      manifestPath: context.manifest,
+      sourceRoot: context.docs,
+    });
+
+    expect(publication.files.has("_generated/DETAILS.md")).toBe(true);
+    expect(publication.files.get("_Sidebar.md")).toContain(
+      "[Guide](./_generated/GUIDE.md)",
+    );
+    expect(publication.files.get("_Sidebar.md")).not.toContain(
+      "Detailed behavior",
+    );
+  });
+
+  it("rejects an undiscoverable detail page in curated navigation", async () => {
+    const curatedManifest = manifest().replace(
+      "navigationUnlisted: append",
+      "navigationUnlisted: linked",
+    );
+    const context = await fixture(curatedManifest, {
+      "GUIDE.md": "# Guide\n",
+      "DETAILS.md": "# Detailed behavior\n",
+    });
+
+    await expect(
+      buildPublication({
+        manifestPath: context.manifest,
+        sourceRoot: context.docs,
+      }),
+    ).rejects.toThrow(/undiscoverable.*DETAILS\.md/u);
   });
 
   it("maps pages, rewrites links and anchors, and copies images", async () => {

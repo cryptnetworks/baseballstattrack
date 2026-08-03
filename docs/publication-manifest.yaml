@@ -12,7 +12,9 @@ publication:
   sidebarPage: _Sidebar.md
   generatedManifest: _generated/.publication-manifest.json
   publicOnly: true
-  navigationUnlisted: append
+  # Detail pages publish but stay out of the compact sidebar. Every hidden page
+  # must be linked directly from one of the curated navigation pages.
+  navigationUnlisted: linked
   excludedLinkPolicy: repository
   repositoryPagesBase: https://github.com/cryptnetworks/baseballstattrack/blob/main/docs
   bootstrap:
@@ -58,73 +60,26 @@ exclusions:
 
 navigation:
   - title: Start Here
+    description: Understand the product, its current scope, and where it is headed.
     pages:
-      - PRODUCT-SCOPE
-      - ROADMAP
-      - REPOSITORY-OPERATIONS-CHECKLIST
-  - title: Scorekeeping
+      - START-HERE
+  - title: Use the Application
+    description: Follow the scorekeeping, roster, reporting, and recovery workflows.
     pages:
-      - SCORING-SEMANTICS
-      - IMMUTABLE-GAME-EVENT-MODEL
-      - STATISTIC-DERIVATION
-      - SCORING-FIXTURES
-      - GAME-SETUP-AND-LINEUPS
-      - GAME-SETUP-WORKFLOW
-      - LIVE-PLATE-APPEARANCE-SCORING
-      - RUNNER-AND-BASE-OUT-INTERACTIONS
-      - LIVE-SUBSTITUTIONS-AND-PITCHING
-      - SCORING-CORRECTION-UX
-      - SCORING-AUTOSAVE-AND-RECOVERY
-  - title: Reports and Analytics
+      - PRODUCT-GUIDES
+  - title: Rules and Calculations
+    description: See exactly how plays, statistics, corrections, analytics, and fantasy results are determined.
     pages:
-      - GAME-BOX-SCORE
-      - SEASON-DASHBOARD-AND-LEADERBOARDS
-      - PRINTABLE-REPORTS
-      - ANALYTICS-CHARTER
-      - ANALYTICS-OBSERVATION-STREAM
-      - PRODUCT-ANALYTICS-AND-PRIVACY
-      - SPRAY-AND-PITCH-CHART-DISCOVERY
+      - RULES-AND-CALCULATIONS
+  - title: Install and Develop
+    description: Set up a local workspace, deploy the stack, and follow the contributor workflow.
+    pages:
+      - INSTALLATION-AND-DEVELOPMENT
   - title: Integrations
+    description: Connect data providers, APIs, notifications, calendars, webhooks, and Discord.
     pages:
-      - EXTERNAL-DATA-INGESTION
-      - INTEGRATIONS-AND-PARTNER-API-PROGRAM
-      - CALENDAR-SYNCHRONIZATION
-      - OUTBOUND-NOTIFICATIONS
-      - WEBHOOKS
-      - STATISTICS-API-V1
-      - API-VERSIONING-AND-COMPATIBILITY
-  - title: Discord
+      - INTEGRATIONS-GUIDE
+  - title: Operate Securely
+    description: Run, protect, observe, back up, and recover a production deployment.
     pages:
-      - DISCORD-INSTALLATION-AND-ONBOARDING
-      - DISCORD-SETTINGS-CONTRACT
-      - DISCORD-SETTINGS-WEB-UI
-      - DISCORD-PERMISSIONS-AND-AUDIT
-      - DISCORD-CHANNEL-ROUTING
-      - DISCORD-TRACKED-SCOPES
-      - DISCORD-UPDATE-CADENCE
-      - DISCORD-UPDATE-CONTENT
-      - DISCORD-UPDATE-WORKER
-      - DISCORD-CONFIGURATION-PREVIEW
-      - DISCORD-ACTIVITY-AND-HEALTH
-      - DISCORD-END-TO-END-FIXTURES
-      - DISCORD-CONTROL-PLANE-DEPLOYMENT
-  - title: Operations and Security
-    pages:
-      - AUTHENTICATION-AND-AUTHORIZATION
-      - PRODUCTION-AUTHENTICATION-AND-TEAM-ISOLATION
-      - PRIVACY-AND-THREAT-MODEL
-      - PRIVACY-LIFECYCLE
-      - DATA-EXPORT-AND-IMPORT
-      - CONTAINER-OPERATIONS
-      - PRODUCTION-COMPOSE
-      - BACKUP-AND-RESTORE
-      - DATABASE-STORAGE-CAPACITY
-      - PRODUCTION-RELIABILITY
-      - OBSERVABILITY-AUDIT-AND-ALERTING
-      - RELEASE-AND-WORKFLOW-SECURITY
-      - CI-QUALITY-GATES
-      - DEFECT-TRIAGE-AND-REGRESSION-POLICY
-      - RATE-LIMITS-AND-ABUSE-PREVENTION
-      - RESPONSIVE-PERFORMANCE-AND-ACCESSIBILITY
-      - PERFORMANCE-AND-LOAD-BUDGETS
-      - PWA-APPLICATION-EXPERIENCE
+      - OPERATIONS-AND-SECURITY

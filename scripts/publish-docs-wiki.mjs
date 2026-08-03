@@ -196,6 +196,10 @@ function validateManifestShape(manifest) {
     "Manifest navigation is required.",
   );
   assert(
+    ["append", "linked"].includes(manifest.publication?.navigationUnlisted),
+    "Publication navigationUnlisted must be append or linked.",
+  );
+  assert(
     manifest.publication.generatedDirectory &&
       manifest.publication.reservedDirectory &&
       manifest.publication.generatedManifest,
@@ -227,6 +231,12 @@ function validateManifestShape(manifest) {
     assert(
       Array.isArray(group.pages) && group.pages.length > 0,
       `Navigation group ${group.title} is empty.`,
+    );
+    assert(
+      group.description === undefined ||
+        (typeof group.description === "string" &&
+          group.description.trim().length > 0),
+      `Navigation group ${group.title} has an invalid description.`,
     );
   }
 }
@@ -284,6 +294,7 @@ function validateNavigation(manifest, pages) {
   const seen = new Set();
   const groups = manifest.navigation.map((group) => ({
     title: group.title,
+    description: group.description,
     pages: [...group.pages],
   }));
   for (const group of manifest.navigation) {
@@ -301,11 +312,13 @@ function validateNavigation(manifest, pages) {
   }
   const unlisted = [...available].filter((wiki) => !seen.has(wiki)).sort();
   if (unlisted.length > 0) {
-    assert(
-      manifest.publication.navigationUnlisted === "append",
-      `Navigation omits public pages: ${unlisted.join(", ")}`,
-    );
-    groups.push({ title: "More Documentation", pages: unlisted });
+    if (manifest.publication.navigationUnlisted === "append") {
+      groups.push({
+        title: "More Documentation",
+        description: "Additional public reference material.",
+        pages: unlisted,
+      });
+    }
   }
   return groups;
 }
@@ -343,6 +356,45 @@ function resolveSourcePath(source, destination) {
     `Unsafe local link from ${source}: ${destination}`,
   );
   return { target: resolved, anchor };
+}
+
+function validateCuratedNavigation(manifest, navigation, pages, metadataMap) {
+  if (manifest.publication.navigationUnlisted !== "linked") return;
+
+  const pageByWiki = new Map(pages.map((page) => [page.wiki, page]));
+  const publicSources = new Set(pages.map((page) => page.source));
+  const navigationSources = new Set(
+    navigation.flatMap((group) =>
+      group.pages.map((wiki) => pageByWiki.get(wiki).source),
+    ),
+  );
+  const linkedSources = new Set();
+
+  for (const source of navigationSources) {
+    const markdown = metadataMap.get(source).lines.join("\n");
+    for (const match of markdown.matchAll(LOCAL_LINK)) {
+      const destination = match[2].replace(/^<|>$/gu, "");
+      if (
+        !destination ||
+        destination.startsWith("#") ||
+        isExternal(destination)
+      ) {
+        continue;
+      }
+      const { target } = resolveSourcePath(source, destination);
+      if (publicSources.has(target)) linkedSources.add(target);
+    }
+  }
+
+  const undiscoverable = [...publicSources]
+    .filter(
+      (source) => !navigationSources.has(source) && !linkedSources.has(source),
+    )
+    .sort();
+  assert(
+    undiscoverable.length === 0,
+    `Curated navigation leaves public pages undiscoverable: ${undiscoverable.join(", ")}`,
+  );
 }
 
 function rewritePage(
@@ -439,18 +491,34 @@ function rewritePage(
   return `${output.join("\n").trimEnd()}\n`;
 }
 
+function navigationDisplay(navigation, pages, metadataMap) {
+  const pageByWiki = new Map(pages.map((page) => [page.wiki, page]));
+  return navigation.map((group) => ({
+    ...group,
+    pages: group.pages.map((wiki) => {
+      const page = pageByWiki.get(wiki);
+      const title = metadataMap
+        .get(page.source)
+        .headings.find((heading) => heading.level === 1).text;
+      return { title, wiki };
+    }),
+  }));
+}
+
 function landingPage(manifest, navigation) {
   const lines = [
     "# Baseball Stat Track Documentation",
     "",
-    "This page is generated from the repository's `docs/` directory.",
-    "The repository documentation is authoritative; direct wiki edits are not.",
+    "Find the right guide by what you want to do. Detailed reference pages remain available through these curated entry points without crowding the main navigation.",
+    "",
+    "This wiki is generated from the repository's `docs/` directory. The repository documentation is authoritative; direct wiki edits are not.",
     "",
   ];
   for (const group of navigation) {
     lines.push(`## ${group.title}`, "");
-    for (const wiki of group.pages)
-      lines.push(`- [${wiki}](./_generated/${wiki}.md)`);
+    if (group.description) lines.push(group.description, "");
+    for (const page of group.pages)
+      lines.push(`- [${page.title}](./_generated/${page.wiki}.md)`);
     lines.push("");
   }
   return `${lines.join("\n").trimEnd()}\n`;
@@ -460,8 +528,8 @@ function sidebar(navigation) {
   const lines = ["### Baseball Stat Track", "", "- [Home](./Home.md)"];
   for (const group of navigation) {
     lines.push("", `#### ${group.title}`);
-    for (const wiki of group.pages) {
-      lines.push(`- [${wiki}](./_generated/${wiki}.md)`);
+    for (const page of group.pages) {
+      lines.push(`- [${page.title}](./_generated/${page.wiki}.md)`);
     }
   }
   return `${lines.join("\n").trimEnd()}\n`;
@@ -496,6 +564,8 @@ export async function buildPublication({
       assert(!pattern.test(markdown), `Potential secret in ${source}.`);
     metadataMap.set(source, markdownMetadata(markdown, source));
   }
+  validateCuratedNavigation(manifest, navigation, pages, metadataMap);
+  const displayNavigation = navigationDisplay(navigation, pages, metadataMap);
   const assets = new Map();
   const files = new Map();
   for (const page of pages) {
@@ -525,9 +595,9 @@ export async function buildPublication({
   }
   files.set(
     manifest.publication.landingPage,
-    landingPage(manifest, navigation),
+    landingPage(manifest, displayNavigation),
   );
-  files.set(manifest.publication.sidebarPage, sidebar(navigation));
+  files.set(manifest.publication.sidebarPage, sidebar(displayNavigation));
   const generatedManifestPath = manifest.publication.generatedManifest;
   files.set(
     generatedManifestPath,

@@ -35,6 +35,13 @@ anything to a wiki checkout.
 - generated and reserved wiki namespaces; and
 - landing-page and sidebar navigation groups.
 
+The public wiki uses curated navigation. Six public hub pages organize product
+use, rules and calculations, installation and development, integrations, and
+secure operations. Detailed public references are still generated, but they do
+not appear individually in the sidebar. Each hidden detail page must be linked
+directly from a curated hub or validation fails. Link labels come from each
+page's H1 heading instead of its storage filename.
+
 Only `public` mappings are rendered. Internal and restricted Markdown is never
 copied into the wiki. A public link to excluded material is rewritten to the
 repository source URL rather than copying that material into the wiki.
@@ -44,7 +51,8 @@ repository source URL rather than copying that material into the wiki.
 Before a wiki write, the generator validates:
 
 - YAML manifest shape, visibility, source coverage, missing sources, safe paths,
-  page collisions, duplicate wiki names, and complete navigation;
+  page collisions, duplicate wiki names, and curated-navigation
+  discoverability;
 - Markdown H1 metadata, headings, anchors, balanced code fences, and NUL bytes;
 - local Markdown links, anchors, images, and other local assets;
 - source links for excluded or machine-readable artifacts; and
@@ -104,6 +112,13 @@ it to the repository, and never exposes it to pull-request jobs. Rotate it by
 creating the replacement credential, updating the Actions secret, running a
 manual dry-run, publishing once under observation, and revoking the old
 credential. A missing or invalid credential stops before publication.
+
+Git-over-HTTPS authentication uses the tracked `scripts/wiki-git-askpass.sh`
+adapter. Git requests a fixed `x-access-token` username and reads the password
+from `WIKI_PUBLISH_TOKEN` at runtime. The token is never embedded in a remote
+URL, converted into an authorization header, stored in Git configuration, or
+written to disk. `GIT_TERMINAL_PROMPT=0` keeps unattended runs fail closed when
+authentication is rejected.
 
 ## Ownership and deletion policy
 
