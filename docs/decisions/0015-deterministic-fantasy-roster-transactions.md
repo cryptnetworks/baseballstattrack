@@ -34,9 +34,9 @@ team-owner acceptances plus league-wide processing authority, have no subjective
 veto, and commit both ownership/roster changes together. Lineup locks are sealed
 UTC intervals; commissioner correction creates a new reasoned audit/snapshot.
 
-No persistence or scheduler is added. A future complete #123/#124/#126 schema
-will atomically persist these results with uniqueness, compare-and-swap,
-immutable history, worker leases, and RLS.
+No persistence or scheduler is added. ADR 0016 now completes the #123/#124/#126
+result identity boundary. A future schema will atomically persist these results
+with uniqueness, compare-and-swap, immutable history, worker leases, and RLS.
 
 ## Consequences
 
@@ -45,7 +45,7 @@ immutable history, worker leases, and RLS.
 - Duplicate delivery, concurrent writers, failed second trade roster, and failed
   post-drop acquisition cannot partially change ownership.
 - Every safe decision has actor/scope/action/player/time/result audit evidence.
-- Past rosters remain addressable for future #126 result lineage.
+- Past rosters remain addressable for #126 result lineage under ADR 0016.
 - The domain does not implement scoring, standings, playoffs, UI, or baseball
   mutation.
 

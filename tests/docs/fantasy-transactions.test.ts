@@ -86,7 +86,7 @@ describe("fantasy transaction contract", () => {
     expect(contract).toMatch(/never edit[s]? an\s+earlier snapshot/iu);
     expect(contract).toMatch(/past fantasy results/iu);
     expect(contract).toMatch(/historical standings/iu);
-    expect(contract).toMatch(/#126 will select exact roster snapshot ids/iu);
+    expect(contract).toMatch(/#126 now selects exact roster snapshot ids/iu);
   });
 
   it("excludes scoring, UI, private data, and partial persistence", () => {

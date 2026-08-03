@@ -11,6 +11,7 @@ export const delegatedCapabilities = [
   "fantasy.league.activate",
   "fantasy.team.manage",
   "fantasy.roster.manage",
+  "fantasy.scoring.calculate",
   "team.view",
   "competition.settings.manage",
   "shared_resources.manage",
@@ -219,6 +220,11 @@ const capabilityPolicies: Readonly<
     approvalRequired: false,
   },
   "fantasy.roster.manage": {
+    scopes: ["ACCOUNT"],
+    accountDelegated: true,
+    approvalRequired: false,
+  },
+  "fantasy.scoring.calculate": {
     scopes: ["ACCOUNT"],
     accountDelegated: true,
     approvalRequired: false,

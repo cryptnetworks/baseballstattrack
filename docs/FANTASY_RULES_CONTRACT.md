@@ -276,15 +276,17 @@ finalization are deterministic:
 - after finalization, canonical stat changes never silently mutate standings.
 
 The initial correction policy is `BEFORE_FINALIZATION_ONLY`. A material late
-correction requires a future #126 append-only adjustment record showing old and
+correction now uses the #126 append-only result revision defined in
+[Fantasy scoring and matchups](FANTASY_SCORING_AND_MATCHUPS.md), showing old and
 new lineage, reason, authority, affected results, and revision. The original
 result remains inspectable. Commissioners cannot edit fantasy points to change
 baseball truth.
 
 ## Matchups, ties, and playoffs boundary
 
-Issue #126 implements matchup scoring, standings, and playoffs. The rule inputs
-are fixed here:
+Issue #126 implements these matchup, standings, and playoff calculations in
+[Fantasy scoring and matchups](FANTASY_SCORING_AND_MATCHUPS.md). The rule inputs
+remain fixed here:
 
 - regular-season periods compare exact total milli-points;
 - equal totals are recorded as a tie; hidden decimal precision or arbitrary
@@ -383,16 +385,17 @@ digest match, reviewed mapping to a semantically identical local version, or
 quarantine. Imports cannot choose an Account owner, activate a model, or rewrite
 historical fantasy results.
 
-Fantasy score/result packages remain deferred until #126 defines their
-identities. #123 fantasy aggregates use stable references and sealed rule
-bindings but do not manufacture fantasy points during baseball import.
+Fantasy score/result identities are defined by #126. A future portable result
+envelope must preserve those immutable ids, revisions, digests, roster/model
+bindings, source lineage, corrections, and audit; baseball import still never
+manufactures fantasy points automatically.
 
 ## Database and implementation deferral
 
-No schema or migration is included in #125. Persisting model families, versions,
-activations, period bindings, eligibility snapshots, or fantasy results depends
-on #124/#126 transaction and result decisions. A future implementation uses forward-only
-migrations, preserved ids/digests, owner-scoped composite constraints, immutable
+No schema or migration is included in #125. #124 and #126 now define the
+transaction and result identities required by a complete persistence design. A
+future implementation uses forward-only migrations, preserved ids/digests,
+owner-scoped composite constraints, immutable
 semantic columns after review, non-overlapping activation intervals, and
 rollback by disabling selection rather than deleting history.
 
@@ -455,7 +458,9 @@ remove wall-clock, floating-point, and silent-recalculation ambiguity.
   entities in the [fantasy domain model](FANTASY_DOMAIN_MODEL.md).
 - #124 defines transactions, waivers, trades, lineup changes, and deterministic
   processing; production scheduling remains deferred.
-- #126 owns matchup execution, score persistence, standings, and playoffs.
+- #126 implements deterministic matchup execution, standings, playoff results,
+  uncertainty, and append-only correction identities; production persistence
+  remains a separate reviewed implementation.
 - #127 owns configuration, lineup, results, and notification experiences.
 
 Offline fantasy behavior and all M9 work remain out of scope.

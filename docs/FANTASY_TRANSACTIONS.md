@@ -257,10 +257,11 @@ lineup lock can affect only a future unlocked roster. There is no path to edit:
 - past fantasy results or adjustments; or
 - historical standings or playoff state.
 
-#126 will select exact roster snapshot ids at sealed locks and implement
-matchups, scores, standings, playoffs, and late result adjustments. It must
-consume this history without adding a transaction shortcut back into baseball
-truth.
+#126 now selects exact roster snapshot ids at sealed locks and implements
+matchups, scores, standings, playoff/championship results, and late result
+revisions in [Fantasy scoring and matchups](FANTASY_SCORING_AND_MATCHUPS.md).
+It consumes this history without adding a transaction shortcut back into
+baseball truth.
 
 ## Privacy and security
 
@@ -278,8 +279,9 @@ result, latency, and correlation metadata, never roster payloads.
 
 No Prisma migration, queue, cron schedule, worker, route, or service is included.
 The domain returns the complete atomic commit proposal and deterministic audit.
-Production persistence remains gated on the complete #123/#124/#126 relational
-design so roster snapshots referenced by results cannot be deleted or rewritten.
+Production persistence remains a separate reviewed implementation of the now
+complete #123/#124/#126 relational boundary so roster snapshots referenced by
+results cannot be deleted or rewritten.
 
 A future implementation must add a forward-only migration with Account-prefixed
 foreign keys, operation-id uniqueness, compare-and-swap revision, immutable
@@ -303,9 +305,9 @@ lock.
 ### Database review
 
 Current ownership is a projection of immutable revisions, not a mutable source
-of history. Transaction, roster, ownership, and audit writes must share one
-database transaction. Schema work is deferred until #126 supplies durable result
-references, preventing a partial design that permits deleting scored rosters.
+of history. Transaction, roster, ownership, result, and audit writes must share
+reviewed atomic boundaries. #126 now supplies durable result references; schema
+work remains separate so no partial design can delete scored rosters.
 
 ### Fantasy commissioner review
 
@@ -337,8 +339,9 @@ per-claim resolution audit, and frozen append-only history.
 
 ## Deferred downstream work
 
-- #126: scoring-period identities, lineup-to-result binding, scoring engine,
-  matchups, standings, playoffs, and append-only result corrections.
+- #126 implements scoring-period identities, lineup-to-result binding, the pure
+  scoring engine, matchups, standings, playoff/championship results, uncertainty,
+  and append-only corrections.
 - #127: draft, waiver, trade, roster, lineup, audit, and correction UI.
 - Production fantasy persistence, API routes, scheduler, and worker ship only
   with the complete reviewed relational/operational design.

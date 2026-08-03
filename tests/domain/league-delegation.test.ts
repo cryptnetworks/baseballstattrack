@@ -133,6 +133,30 @@ describe("league delegation authorization", () => {
     });
   });
 
+  it("allows fantasy scoring only through an exact Account delegation", () => {
+    const accountScope = scope("ACCOUNT");
+    expect(
+      evaluateLeagueDelegation(
+        evidence("fantasy.scoring.calculate", accountScope),
+        "fantasy.scoring.calculate",
+        target("ACCOUNT"),
+        NOW,
+      ),
+    ).toMatchObject({
+      allowed: true,
+      capability: "fantasy.scoring.calculate",
+      scope: { accountId: "account-a" },
+    });
+    expect(
+      evaluateLeagueDelegation(
+        evidence("fantasy.scoring.calculate", accountScope),
+        "fantasy.scoring.calculate",
+        { ...target("ACCOUNT"), accountId: "account-b" },
+        NOW,
+      ),
+    ).toMatchObject({ allowed: false, code: "DELEGATION_MISMATCH" });
+  });
+
   it("does not treat organization membership as Account authority", () => {
     expect(
       evaluateLeagueDelegation(

@@ -6,10 +6,10 @@ snapshot domain. It consumes the [fantasy rules contract](FANTASY_RULES_CONTRACT
 from #125 and the [delegation model](LEAGUE_DELEGATION_MODEL.md) from #107.
 
 This is a framework-independent aggregate contract. The downstream
-[fantasy transaction contract](FANTASY_TRANSACTIONS.md) now consumes these
-entities without changing them in place. This document itself does not add
-persistence, matchup scoring, standings, or playoffs (#126), UI (#127),
-notifications, or offline behavior.
+[fantasy transaction contract](FANTASY_TRANSACTIONS.md) and
+[fantasy scoring engine](FANTASY_SCORING_AND_MATCHUPS.md) consume these entities
+without changing them in place. This document itself does not add persistence,
+UI (#127), notifications, or offline behavior.
 
 ## Non-negotiable invariants
 
@@ -200,8 +200,9 @@ ancestry, and has a strictly later effective time. Returned aggregates and
 nested arrays are frozen. Trades, drops, source corrections, model changes, or
 new periods cannot edit an older snapshot; downstream work appends a new one.
 
-This contract does not define a scoring-period entity. #126 will bind an exact
-roster snapshot to a sealed period when it implements matchup scoring.
+This contract does not define a scoring-period entity. #126 now binds an exact
+roster snapshot to a sealed period and immutable result revision in
+[Fantasy scoring and matchups](FANTASY_SCORING_AND_MATCHUPS.md).
 
 ## Authorization and delegation
 
@@ -209,12 +210,13 @@ The domain accepts a validated authority context, never browser-provided role
 flags. Its evidence includes exact Account, actor, source, capability, scope,
 authority-reference ids, and authorization time.
 
-| Capability                | Purpose                              | #107 Account delegation | Approval |
-| ------------------------- | ------------------------------------ | ----------------------- | -------- |
-| `fantasy.league.manage`   | Create/complete/archive exact league | Required for org actor  | No       |
-| `fantasy.league.activate` | Activate exact league and rules      | Required for org actor  | Yes      |
-| `fantasy.team.manage`     | Create/transition exact fantasy team | Required for org actor  | No       |
-| `fantasy.roster.manage`   | Create player/roster snapshots       | Required for org actor  | No       |
+| Capability                  | Purpose                                 | #107 Account delegation | Approval |
+| --------------------------- | --------------------------------------- | ----------------------- | -------- |
+| `fantasy.league.manage`     | Create/complete/archive exact league    | Required for org actor  | No       |
+| `fantasy.league.activate`   | Activate exact league and rules         | Required for org actor  | Yes      |
+| `fantasy.team.manage`       | Create/transition exact fantasy team    | Required for org actor  | No       |
+| `fantasy.roster.manage`     | Create player/roster snapshots          | Required for org actor  | No       |
+| `fantasy.scoring.calculate` | Calculate exact-league result revisions | Required for org actor  | No       |
 
 Direct Account operations require the corresponding future Account permission
 from a freshly validated Account membership. Delegated Organization operations
@@ -250,10 +252,11 @@ revision chains, non-overlapping current ownership projections, atomic audit,
 and deny-by-default RLS. Existing migrations must not be edited.
 
 The in-memory contract intentionally establishes representability and failure
-semantics before persistence. #124 now defines ownership transaction and audit
-semantics, while matchup scoring (#126) still owns period/result references.
-That final dependency must be resolved before one schema safely represents the
-whole fantasy lifecycle.
+semantics before persistence. #124 defines ownership transaction and audit
+semantics, while #126 now defines period, team-result, matchup-result, standings,
+correction, digest, and audit references. A separate reviewed forward migration
+must implement the complete lifecycle atomically rather than adding partial
+mutable fantasy tables.
 
 ## Adversarial review findings
 
@@ -279,8 +282,9 @@ revision evidence only. Public visibility is metadata-only and not authority.
 Caller-supplied accepted UTC instants, one-way lifecycles, immutable nested
 values, exact predecessor links, monotonically increasing revisions, and sealed
 digests remove hidden wall-clock, last-write-wins, and mutable-history behavior.
-Persistence remains deferred until the transaction and scoring references are
-known, avoiding a partial schema that would later corrupt lineage.
+Persistence remains a separate reviewed implementation even though transaction
+and scoring references are now known, avoiding a partial schema that would
+later corrupt lineage.
 
 ## Focused test contract
 
@@ -294,7 +298,8 @@ identity prevention, immutable ordered snapshots, and completed-history denial.
 - #124 implements draft/assignment effects, add/drop, waivers, trades, lineup
   changes, atomic ownership transitions, and audit in
   [Fantasy transactions](FANTASY_TRANSACTIONS.md).
-- #126: scoring periods, lineup locking, matchups, scoring execution, standings,
-  playoffs, corrections, and result persistence.
+- #126 implements scoring periods, locked-roster scoring, matchups, standings,
+  playoff/championship results, corrections, and immutable result identities in
+  [Fantasy scoring and matchups](FANTASY_SCORING_AND_MATCHUPS.md).
 - #127: league/team/roster UI and public presentation.
 - Offline fantasy behavior and synchronization remain out of scope.

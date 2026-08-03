@@ -28,7 +28,8 @@ export type FantasyDomainCapability =
   | "fantasy.league.manage"
   | "fantasy.league.activate"
   | "fantasy.team.manage"
-  | "fantasy.roster.manage";
+  | "fantasy.roster.manage"
+  | "fantasy.scoring.calculate";
 
 export type FantasyDomainErrorCode =
   | "INVALID_INPUT"
@@ -186,6 +187,7 @@ const authoritySchema = z
       "fantasy.league.activate",
       "fantasy.team.manage",
       "fantasy.roster.manage",
+      "fantasy.scoring.calculate",
     ]),
     scope: z.discriminatedUnion("kind", [
       z.object({ kind: z.literal("ACCOUNT") }).strict(),
