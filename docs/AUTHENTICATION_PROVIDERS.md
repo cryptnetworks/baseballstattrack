@@ -112,11 +112,11 @@ session and pending flow because plaintext recovery is impossible.
 
 ## Linking and legacy migration
 
-Provider linking is explicit and authenticated. `POST
-/api/auth/providers/link` requires same-origin metadata plus a current session,
-starts a fresh provider proof, and records `EXPLICIT_LINK`, linking `AppUser`,
-timestamp, and reason. It never searches by email. Linking an identity owned by
-another user fails generically.
+Provider linking is explicit and authenticated. The `POST /api/auth/providers/link`
+endpoint requires same-origin metadata and a current session. It starts a fresh
+provider proof and records `EXPLICIT_LINK`, the linking `AppUser`, timestamp,
+and reason. It never searches by email. Linking an identity owned by another
+user fails generically.
 
 The schema migration backfills each legacy `AppUser(provider,
 providerSubject)` as `LEGACY_BACKFILL` without updating or deleting legacy
@@ -211,9 +211,11 @@ provider subjects and ownership lineage remain only to prevent account reuse,
 preserve security history, and retain opaque attribution under the documented
 privacy lifecycle.
 
-Security review found no client-claim trust, email identity, plaintext token
-storage, open redirect, automatic merge, cross-Account authority, or
-Supabase-auth runtime dependency. Residual risks are provider availability,
-callback registration, mapping-review quality, and coordinated root-key
-rotation. Fail-closed configuration, exact mappings, append-only evidence, and
-the deployment procedure contain those risks.
+## Known operational risks
+
+Provider availability, incorrect callback registration, poor mapping review,
+and uncoordinated root-key rotation remain operational risks. Configuration
+fails closed, mappings require exact reviewed subjects, and append-only session
+and identity evidence supports incident review. Treat a root-key rotation as a
+planned global sign-out, and test provider configuration outside production
+before enabling an adapter.

@@ -1,16 +1,17 @@
 # Import portability and portable baseball data contract
 
-Issue [#101](https://github.com/cryptnetworks/baseballstattrack/issues/101)
-defines how authorized baseball history moves between systems without changing
-its ownership, provenance, ruleset lineage, corrections, verification state, or
-historical meaning. It builds on the [Ruleset contract](RULESET_CONTRACT.md)
-from #106 and the existing versioned Account export and mutation-free import
-dry run. [ADR 0011](decisions/0011-import-portability-quarantine-and-atomic-promotion.md)
-records the architectural decision.
+This contract defines how authorized baseball history moves between systems
+without changing its ownership, provenance, ruleset lineage, corrections,
+verification state, or historical meaning. It covers import packages, identity
+resolution, quarantine, review, atomic promotion, and reconciliation.
 
-This document is the contract for import packages, identity resolution,
-quarantine, review, atomic promotion, and reconciliation. It does not implement
-fantasy, delegation, UI, offline mode, or a production import commit endpoint.
+The contract builds on the [ruleset contract](RULESET_CONTRACT.md), the
+versioned Account export, and the mutation-free import dry run. It does not
+implement fantasy, delegation, UI, offline mode, or a production import commit
+endpoint. The work was tracked in
+[#101](https://github.com/cryptnetworks/baseballstattrack/issues/101), and
+[ADR 0011](decisions/0011-import-portability-quarantine-and-atomic-promotion.md)
+records the architectural decision.
 
 ## Non-negotiable invariants
 
@@ -622,14 +623,14 @@ service are implemented. Final M8 validation is not claimed by #101.
   provider staging boundary and prevented retrieval or normalization from
   becoming automatic publication.
 
-Material findings resolved were: a checksum is not producer authentication;
-legacy packages are not commit-ready without provenance; reviewed ruleset
-mapping must prove equivalence; ambiguous entities quarantine dependents;
-derived reports cannot repair events; unsupported and invalid packages need
-distinct visible states; dry-run expected changes are hypothetical; uploaded
-ownership claims cannot grant access; provider staging is not canonical truth;
-per-entity decisions need minimized audits; and post-commit recovery cannot
-delete accepted history silently.
+The review settled the following points. A checksum is not producer authentication.
+Legacy packages are not commit-ready without provenance. Reviewed ruleset
+mapping must prove equivalence, and ambiguous entities quarantine their
+dependents. Derived reports cannot repair events. Unsupported and invalid
+packages need distinct visible states. Dry-run changes are hypothetical.
+Uploaded ownership claims cannot grant access, and provider staging is not
+canonical truth. Per-entity decisions need minimized audits, and post-commit
+recovery cannot silently delete accepted history.
 
 ## Downstream boundary
 

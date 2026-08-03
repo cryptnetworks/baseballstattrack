@@ -1,15 +1,15 @@
 # Fantasy scoring, matchups, and standings
 
-Issue [#126](https://github.com/cryptnetworks/baseballstattrack/issues/126)
-implements deterministic weekly fantasy results downstream from the
+This framework-independent engine calculates deterministic weekly fantasy
+results from the
 [fantasy rules contract](FANTASY_RULES_CONTRACT.md),
 [fantasy domain model](FANTASY_DOMAIN_MODEL.md), and
-[fantasy transactions](FANTASY_TRANSACTIONS.md). [ADR 0016](decisions/0016-versioned-fantasy-results-and-standings.md)
-records the result and correction decision.
-
-This is a framework-independent calculation engine. It does not add UI (#127),
-notifications, a database migration, API route, scheduler, worker, proprietary
-projection, or offline behavior.
+[fantasy transactions](FANTASY_TRANSACTIONS.md). It does not add UI (#127),
+notifications, persistence, APIs, scheduling, proprietary projections, or
+offline behavior. The work was tracked in
+[#126](https://github.com/cryptnetworks/baseballstattrack/issues/126), and
+[ADR 0016](decisions/0016-versioned-fantasy-results-and-standings.md) records the
+result and correction decision.
 
 ## Non-negotiable invariants
 

@@ -1,12 +1,13 @@
 # Fantasy rules, scoring, and eligibility contract
 
-Issue [#125](https://github.com/cryptnetworks/baseballstattrack/issues/125)
-defines the M8 fantasy-rules foundation. It depends on the
+This contract defines the fantasy-rules foundation. It depends on the
 [ruleset contract](RULESET_CONTRACT.md),
 [import portability contract](IMPORT_PORTABILITY.md), and
-[league delegation model](LEAGUE_DELEGATION_MODEL.md). This contract defines
-rules only. It does not create fantasy leagues, managers, rosters, transactions,
-matchup execution, standings, playoffs, UI, or notifications.
+[league delegation model](LEAGUE_DELEGATION_MODEL.md). It defines rules only;
+fantasy leagues, managers, rosters, transactions, matchup execution, standings,
+playoffs, UI, and notifications belong to downstream components. The work was
+tracked in
+[#125](https://github.com/cryptnetworks/baseballstattrack/issues/125).
 
 ## Non-negotiable invariants
 
