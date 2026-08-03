@@ -142,7 +142,6 @@ RETURNS trigger AS $$
 BEGIN
   IF NEW."externalId" IS DISTINCT FROM OLD."externalId"
      OR NEW."appUserId" IS DISTINCT FROM OLD."appUserId"
-     OR NEW."initiatingSessionId" IS DISTINCT FROM OLD."initiatingSessionId"
      OR NEW."provider" IS DISTINCT FROM OLD."provider"
      OR NEW."providerSubject" IS DISTINCT FROM OLD."providerSubject"
      OR NEW."source" IS DISTINCT FROM OLD."source"
@@ -183,6 +182,7 @@ BEGIN
      OR NEW."provider" IS DISTINCT FROM OLD."provider"
      OR NEW."purpose" IS DISTINCT FROM OLD."purpose"
      OR NEW."appUserId" IS DISTINCT FROM OLD."appUserId"
+     OR NEW."initiatingSessionId" IS DISTINCT FROM OLD."initiatingSessionId"
      OR NEW."stateHash" IS DISTINCT FROM OLD."stateHash"
      OR NEW."browserBindingHash" IS DISTINCT FROM OLD."browserBindingHash"
      OR NEW."encryptedSecrets" IS DISTINCT FROM OLD."encryptedSecrets"

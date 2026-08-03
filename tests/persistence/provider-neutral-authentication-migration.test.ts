@@ -40,6 +40,16 @@ describe("provider-neutral authentication migration", () => {
     expect(migration).toContain(
       'CREATE TRIGGER "OAuthLoginAttempt_one_time_consumption"',
     );
+    const identityTriggerFunction = migration.match(
+      /CREATE OR REPLACE FUNCTION "protect_authentication_identity"\(\)[\s\S]+?\$\$ LANGUAGE plpgsql/u,
+    )?.[0];
+    const loginAttemptTriggerFunction = migration.match(
+      /CREATE OR REPLACE FUNCTION "protect_oauth_login_attempt"\(\)[\s\S]+?\$\$ LANGUAGE plpgsql/u,
+    )?.[0];
+
+    expect(identityTriggerFunction).toBeDefined();
+    expect(identityTriggerFunction).not.toContain('"initiatingSessionId"');
+    expect(loginAttemptTriggerFunction).toContain('"initiatingSessionId"');
   });
 
   it("denies direct API roles access to authentication tables", () => {
