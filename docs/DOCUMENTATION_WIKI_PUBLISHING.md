@@ -105,6 +105,13 @@ creating the replacement credential, updating the Actions secret, running a
 manual dry-run, publishing once under observation, and revoking the old
 credential. A missing or invalid credential stops before publication.
 
+Git-over-HTTPS authentication uses the tracked `scripts/wiki-git-askpass.sh`
+adapter. Git requests a fixed `x-access-token` username and reads the password
+from `WIKI_PUBLISH_TOKEN` at runtime. The token is never embedded in a remote
+URL, converted into an authorization header, stored in Git configuration, or
+written to disk. `GIT_TERMINAL_PROMPT=0` keeps unattended runs fail closed when
+authentication is rejected.
+
 ## Ownership and deletion policy
 
 Generated pages are overwritten only when listed in the prior generated
