@@ -88,6 +88,9 @@ pages:
       visibility: public,
       order: 100,
     }
+  - source: COPYRIGHT_AND_INTELLECTUAL_PROPERTY.md
+    visibility: internal
+    reason: Draft legal language contains placeholders and requires attorney approval before publication.
   - {
       source: CORRECTION_AUDIT_AND_REPLAY.md,
       wiki: Correction-Audit-and-Replay,
@@ -106,6 +109,9 @@ pages:
       visibility: public,
       order: 130,
     }
+  - source: DATA_OWNERSHIP_AND_USAGE.md
+    visibility: internal
+    reason: Draft legal language contains placeholders and requires attorney approval before publication.
   - {
       source: DATA_QUALITY_RECONCILIATION.md,
       wiki: Data-Quality-Reconciliation,
@@ -274,6 +280,9 @@ pages:
   - source: IMPORT_PORTABILITY.md
     visibility: internal
     reason: Import quarantine and promotion design remains implementation-planning material.
+  - source: IN_APP_LEGAL_CONTENT.md
+    visibility: internal
+    reason: Draft legal language contains placeholders and requires attorney approval before publication.
   - {
       source: PRODUCTION_INSTALLATION.md,
       wiki: Production-Installation,
@@ -319,6 +328,9 @@ pages:
       visibility: public,
       order: 430,
     }
+  - source: OPEN_SOURCE_AND_CONTRIBUTION.md
+    visibility: internal
+    reason: Draft legal language contains placeholders and requires attorney approval before publication.
   - source: OFFLINE_SCORING_AND_SYNC_DECISION.md
     visibility: restricted
     reason: Deferred offline-conflict design is not an active public capability.
@@ -364,6 +376,9 @@ pages:
       visibility: public,
       order: 500,
     }
+  - source: PRIVACY_POLICY_DRAFT.md
+    visibility: internal
+    reason: Draft legal language contains placeholders and requires attorney approval before publication.
   - {
       source: PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md,
       wiki: Production-Authentication-and-Team-Isolation,
@@ -394,6 +409,9 @@ pages:
       visibility: public,
       order: 550,
     }
+  - source: PRODUCT_PURPOSE.md
+    visibility: internal
+    reason: Draft legal language contains placeholders and requires attorney approval before publication.
   - {
       source: PRODUCT_SCOPE.md,
       wiki: Product-Scope,
@@ -515,6 +533,12 @@ pages:
       visibility: public,
       order: 760,
     }
+  - source: TERMS_OF_USE_DRAFT.md
+    visibility: internal
+    reason: Draft legal language contains placeholders and requires attorney approval before publication.
+  - source: THIRD_PARTY_SERVICES.md
+    visibility: internal
+    reason: Draft legal language contains placeholders and requires attorney approval before publication.
   - {
       source: UI_DESIGN_SYSTEM.md,
       wiki: UI-Design-System,

@@ -58,6 +58,28 @@ provisioning, updates, backups, recovery, and uninstall safety.
 Report suspected vulnerabilities through the private process in
 [SECURITY.md](SECURITY.md), never through a public issue.
 
+## Legal and product governance
+
+The following documents are drafts for attorney review and are not final legal
+agreements or claims of compliance:
+
+- [Product purpose](docs/PRODUCT_PURPOSE.md)
+- [Copyright and intellectual property](docs/COPYRIGHT_AND_INTELLECTUAL_PROPERTY.md)
+- [Terms of Use — draft](docs/TERMS_OF_USE_DRAFT.md)
+- [Privacy Policy — draft](docs/PRIVACY_POLICY_DRAFT.md)
+- [Data ownership and usage](docs/DATA_OWNERSHIP_AND_USAGE.md)
+- [Third-party services](docs/THIRD_PARTY_SERVICES.md)
+- [Open source and contribution](docs/OPEN_SOURCE_AND_CONTRIBUTION.md)
+- [In-app legal content](docs/IN_APP_LEGAL_CONTENT.md)
+
+Repository contributions remain subject to [CONTRIBUTING.md](CONTRIBUTING.md),
+security reports must follow [SECURITY.md](SECURITY.md), and repository software
+is distributed under the [MIT License](LICENSE).
+
+Copyright © [YEAR] [LEGAL ENTITY NAME OR COPYRIGHT HOLDER NAME]. Rights in the
+repository software are licensed as stated in the MIT License. Replace these
+placeholders only after ownership and attorney review.
+
 ## System Requirements
 
 These are sizing baselines, not concurrency guarantees. Measure the actual
