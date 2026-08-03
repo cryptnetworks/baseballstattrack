@@ -42,6 +42,12 @@ not appear individually in the sidebar. Each hidden detail page must be linked
 directly from a curated hub or validation fails. Link labels come from each
 page's H1 heading instead of its storage filename.
 
+GitHub indexes wiki pages by filename even when the owned source file is stored
+under `_generated/`. Generated navigation and page-to-page links therefore use
+the canonical full URL `https://github.com/cryptnetworks/baseballstattrack/wiki/<PAGE>`;
+they never expose the storage directory or a `.md` suffix. Generated image links
+use the wiki's `raw.githubusercontent.com/wiki/` publication URL.
+
 Only `public` mappings are rendered. Internal and restricted Markdown is never
 copied into the wiki. A public link to excluded material is rewritten to the
 repository source URL rather than copying that material into the wiki.

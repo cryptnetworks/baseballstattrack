@@ -89,10 +89,10 @@ describe("documentation wiki publication", () => {
       true,
     );
     expect(publication.files.get("Home.md")).toContain(
-      "[Rules and calculations](./_generated/RULES-AND-CALCULATIONS.md)",
+      "[Rules and calculations](https://github.com/cryptnetworks/baseballstattrack/wiki/RULES-AND-CALCULATIONS)",
     );
     expect(publication.files.get("_Sidebar.md")).toContain(
-      "[Installation and development](./_generated/INSTALLATION-AND-DEVELOPMENT.md)",
+      "[Installation and development](https://github.com/cryptnetworks/baseballstattrack/wiki/INSTALLATION-AND-DEVELOPMENT)",
     );
     expect(publication.files.get("_Sidebar.md")).not.toContain(
       "More Documentation",
@@ -118,7 +118,7 @@ describe("documentation wiki publication", () => {
 
     expect(publication.files.has("_generated/DETAILS.md")).toBe(true);
     expect(publication.files.get("_Sidebar.md")).toContain(
-      "[Guide](./_generated/GUIDE.md)",
+      "[Guide](https://github.com/cryptnetworks/baseballstattrack/wiki/GUIDE)",
     );
     expect(publication.files.get("_Sidebar.md")).not.toContain(
       "Detailed behavior",
@@ -158,13 +158,18 @@ describe("documentation wiki publication", () => {
     });
     const guide = publication.files.get("_generated/GUIDE.md");
 
-    expect(guide).toContain("./DETAILS.md#details");
-    expect(guide).toContain("./assets/logo.png");
+    expect(guide).toContain(
+      "https://github.com/cryptnetworks/baseballstattrack/wiki/DETAILS#details",
+    );
+    expect(guide).toContain(
+      "https://raw.githubusercontent.com/wiki/cryptnetworks/baseballstattrack/_generated/assets/logo.png",
+    );
     expect(publication.files.has("_generated/assets/logo.png")).toBe(true);
     expect(guide).not.toContain("./DETAILS.md';");
     expect(publication.files.get("_Sidebar.md")).toContain(
-      "./_generated/GUIDE.md",
+      "https://github.com/cryptnetworks/baseballstattrack/wiki/GUIDE",
     );
+    expect(publication.files.get("Home.md")).not.toContain("wiki/./");
   });
 
   it("fails closed for collisions, unsafe paths, missing sources, and missing anchors", async () => {

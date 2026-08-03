@@ -342,6 +342,23 @@ function sourceUrl(manifest, target, anchor = "") {
   return `${base}/${target}${anchor ? `#${anchor}` : ""}`;
 }
 
+function wikiRepositoryName(manifest) {
+  const match = manifest.source.repository.match(
+    /^https:\/\/github\.com\/([^/]+\/[^/]+)\/?$/u,
+  );
+  assert(match, "Source repository must be a canonical GitHub repository URL.");
+  return match[1];
+}
+
+function wikiPageUrl(manifest, wiki, anchor = "") {
+  const repository = manifest.source.repository.replace(/\/$/u, "");
+  return `${repository}/wiki/${encodeURIComponent(wiki)}${anchor ? `#${anchor}` : ""}`;
+}
+
+function wikiAssetUrl(manifest, assetName) {
+  return `https://raw.githubusercontent.com/wiki/${wikiRepositoryName(manifest)}/${manifest.publication.generatedDirectory}/assets/${encodeURIComponent(assetName)}`;
+}
+
 function resolveSourcePath(source, destination) {
   const { path: destinationPath, anchor } = splitDestination(destination);
   const resolved = path.posix.normalize(
@@ -447,7 +464,7 @@ function rewritePage(
               `Missing anchor from ${page.source}: ${target}#${anchor}`,
             );
           }
-          const rewritten = `./${targetPage.wiki}.md${anchor ? `#${anchor}` : ""}`;
+          const rewritten = wikiPageUrl(manifest, targetPage.wiki, anchor);
           return `${label}(${rewritten}${suffix})`;
         }
         if (path.posix.extname(target).toLowerCase() === ".md") {
@@ -480,7 +497,7 @@ function rewritePage(
           `Asset collision: ${assetName}`,
         );
         assets.set(assetName, assetPath);
-        return `${label}(./assets/${assetName}${suffix})`;
+        return `${label}(${wikiAssetUrl(manifest, assetName)}${suffix})`;
       }),
     );
   }
@@ -518,18 +535,22 @@ function landingPage(manifest, navigation) {
     lines.push(`## ${group.title}`, "");
     if (group.description) lines.push(group.description, "");
     for (const page of group.pages)
-      lines.push(`- [${page.title}](./_generated/${page.wiki}.md)`);
+      lines.push(`- [${page.title}](${wikiPageUrl(manifest, page.wiki)})`);
     lines.push("");
   }
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
-function sidebar(navigation) {
-  const lines = ["### Baseball Stat Track", "", "- [Home](./Home.md)"];
+function sidebar(manifest, navigation) {
+  const lines = [
+    "### Baseball Stat Track",
+    "",
+    `- [Home](${manifest.source.repository.replace(/\/$/u, "")}/wiki)`,
+  ];
   for (const group of navigation) {
     lines.push("", `#### ${group.title}`);
     for (const page of group.pages) {
-      lines.push(`- [${page.title}](./_generated/${page.wiki}.md)`);
+      lines.push(`- [${page.title}](${wikiPageUrl(manifest, page.wiki)})`);
     }
   }
   return `${lines.join("\n").trimEnd()}\n`;
@@ -597,7 +618,10 @@ export async function buildPublication({
     manifest.publication.landingPage,
     landingPage(manifest, displayNavigation),
   );
-  files.set(manifest.publication.sidebarPage, sidebar(displayNavigation));
+  files.set(
+    manifest.publication.sidebarPage,
+    sidebar(manifest, displayNavigation),
+  );
   const generatedManifestPath = manifest.publication.generatedManifest;
   files.set(
     generatedManifestPath,
