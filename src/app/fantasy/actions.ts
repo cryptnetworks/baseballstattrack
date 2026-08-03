@@ -88,11 +88,13 @@ export async function provisionFantasyLeague(
 ): Promise<never> {
   const accountId = id.parse(formData.get("accountId"));
   try {
-    const [manageLeague, activateLeague, manageRoster] = await Promise.all([
-      authorize(accountId, "fantasy.league.manage"),
-      authorize(accountId, "fantasy.league.activate"),
-      authorize(accountId, "fantasy.roster.manage"),
-    ]);
+    const [manageLeague, activateLeague, manageTeam, manageRoster] =
+      await Promise.all([
+        authorize(accountId, "fantasy.league.manage"),
+        authorize(accountId, "fantasy.league.activate"),
+        authorize(accountId, "fantasy.team.manage"),
+        authorize(accountId, "fantasy.roster.manage"),
+      ]);
     const result = await getFantasyExperienceService().provision(
       {
         accountId,
@@ -110,7 +112,7 @@ export async function provisionFantasyLeague(
       {
         manageLeague,
         activateLeague,
-        manageTeam: manageLeague,
+        manageTeam,
         manageRoster,
       },
     );

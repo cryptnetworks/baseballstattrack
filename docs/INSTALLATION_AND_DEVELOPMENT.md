@@ -90,7 +90,7 @@ Supporting references:
 - [CI quality gates](CI_QUALITY_GATES.md)
 - [Repository operations checklist](REPOSITORY_OPERATIONS_CHECKLIST.md)
 - [Defect triage and regression policy](DEFECT_TRIAGE_AND_REGRESSION_POLICY.md)
-- [Documentation wiki publishing](DOCUMENTATION_WIKI_PUBLISHING.md)
+- [GitHub Wiki publishing](WIKI_PUBLISHING_GUIDE.md)
 - [Responsive performance and accessibility](RESPONSIVE_PERFORMANCE_AND_ACCESSIBILITY.md)
 
 The full verification command includes the production build and dependency

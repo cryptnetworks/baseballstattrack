@@ -1,6 +1,17 @@
 name: Publish documentation wiki
 
 on:
+  pull_request:
+    paths:
+      - docs/**
+      - README.md
+      - scripts/publish-docs-wiki.mjs
+      - scripts/publish-docs-wiki.d.mts
+      - scripts/verify-docs-wiki-workflow.mjs
+      - tests/docs/documentation-wiki-publishing.test.ts
+      - .github/workflows/publish-docs-wiki.yml
+      - package.json
+      - package-lock.json
   workflow_run:
     workflows:
       - CI
@@ -16,6 +27,7 @@ on:
         type: choice
         default: dry-run
         options:
+          - validate
           - dry-run
           - publish
       source_sha:
@@ -34,6 +46,7 @@ jobs:
   scope:
     name: Check for publishable documentation changes
     if: >-
+      github.event_name == 'pull_request' ||
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
@@ -53,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" || "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
             echo "publish=true" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
@@ -79,6 +92,7 @@ jobs:
     name: Validate and publish documentation wiki
     needs: scope
     if: >-
+      github.event_name == 'pull_request' ||
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
@@ -90,7 +104,6 @@ jobs:
     permissions:
       contents: read
     env:
-      WIKI_PUBLISH_TOKEN: ${{ secrets.WIKI_PUBLISH_TOKEN }}
       WIKI_BRANCH: master
       WIKI_REPOSITORY: cryptnetworks/baseballstattrack.wiki.git
     steps:
@@ -101,6 +114,9 @@ jobs:
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_run" ]]; then
             echo "MODE=publish" >> "${GITHUB_ENV}"
             echo "SOURCE_SHA=${{ github.event.workflow_run.head_sha }}" >> "${GITHUB_ENV}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            echo "MODE=dry-run" >> "${GITHUB_ENV}"
+            echo "SOURCE_SHA=${{ github.event.pull_request.head.sha }}" >> "${GITHUB_ENV}"
           else
             echo "MODE=${{ inputs.mode }}" >> "${GITHUB_ENV}"
             echo "SOURCE_SHA=${{ inputs.source_sha || github.sha }}" >> "${GITHUB_ENV}"
@@ -109,7 +125,7 @@ jobs:
       - name: Checkout exact source revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || inputs.source_sha || github.sha }}
           fetch-depth: 1
 
       - name: Setup Node
@@ -124,13 +140,36 @@ jobs:
       - name: Validate manifest, generated navigation, and workflow boundary
         run: npm run docs:wiki:validate && npm run docs:wiki:workflow:validate
 
-      - name: Clone wiki publication target
+      - name: Verify publish source is trusted main
+        if: env.MODE == 'publish'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "${SOURCE_SHA}" refs/remotes/origin/main || {
+            echo "Publish source is not reachable from trusted main; refusing to publish." >&2
+            exit 1
+          }
+
+      - name: Clone wiki for read-only preview
+        if: env.MODE == 'dry-run'
         shell: bash
         env:
           WIKI_DIR: ${{ runner.temp }}/baseballstattrack-wiki
         run: |
           set -euo pipefail
-          test -n "${WIKI_PUBLISH_TOKEN}" || { echo "WIKI_PUBLISH_TOKEN is required; refusing to access the wiki." >&2; exit 1; }
+          export GIT_TERMINAL_PROMPT=0
+          git clone --depth 1 --branch "${WIKI_BRANCH}" "https://github.com/${WIKI_REPOSITORY}" "${WIKI_DIR}"
+
+      - name: Clone wiki publication target
+        if: env.MODE == 'publish'
+        shell: bash
+        env:
+          WIKI_DIR: ${{ runner.temp }}/baseballstattrack-wiki
+          WIKI_PUBLISH_TOKEN: ${{ secrets.WIKI_PUBLISH_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "${WIKI_PUBLISH_TOKEN}" || { echo "WIKI_PUBLISH_TOKEN is required; refusing to publish." >&2; exit 1; }
           export GIT_ASKPASS="${GITHUB_WORKSPACE}/scripts/wiki-git-askpass.sh"
           export GIT_TERMINAL_PROMPT=0
           chmod 700 "${GIT_ASKPASS}"
@@ -140,17 +179,21 @@ jobs:
           git -C "${WIKI_DIR}" config user.name "baseballstattrack-docs-publisher"
           git -C "${WIKI_DIR}" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Dry run or publish
+      - name: Show wiki diff without writing
+        if: env.MODE == 'dry-run'
         shell: bash
         env:
           WIKI_DIR: ${{ runner.temp }}/baseballstattrack-wiki
         run: |
           set -euo pipefail
-          if [[ "${MODE}" == "dry-run" ]]; then
-            npm run docs:wiki:dry-run -- --wiki-dir "${WIKI_DIR}" --source-sha "${SOURCE_SHA}" --target-branch "${WIKI_BRANCH}"
-          elif [[ "${MODE}" == "publish" ]]; then
-            npm run docs:wiki:publish -- --wiki-dir "${WIKI_DIR}" --source-sha "${SOURCE_SHA}" --target-branch "${WIKI_BRANCH}"
-          else
-            echo "Unsupported publication mode: ${MODE}" >&2
-            exit 1
-          fi
+          npm run docs:wiki:dry-run -- --wiki-dir "${WIKI_DIR}" --source-sha "${SOURCE_SHA}" --target-branch "${WIKI_BRANCH}"
+
+      - name: Publish trusted wiki changes
+        if: env.MODE == 'publish'
+        shell: bash
+        env:
+          WIKI_DIR: ${{ runner.temp }}/baseballstattrack-wiki
+          WIKI_PUBLISH_TOKEN: ${{ secrets.WIKI_PUBLISH_TOKEN }}
+        run: |
+          set -euo pipefail
+          npm run docs:wiki:publish -- --wiki-dir "${WIKI_DIR}" --source-sha "${SOURCE_SHA}" --target-branch "${WIKI_BRANCH}"

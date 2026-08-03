@@ -9,7 +9,6 @@ Primary workspaces:
 - `src/app` — Next.js App Router pages and route handlers.
 - `src/components` — reusable UI, app shell, and client providers.
 - `src/domain` — framework-independent baseball domain logic.
-- `src/validation` — shared Zod validation primitives.
 - `src/server` — server-side application services, Prisma data access, and Supabase integration boundaries.
 - `tests` — focused Vitest tests.
 - `docs/decisions` — architecture decision records.

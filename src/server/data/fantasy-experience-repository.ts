@@ -946,12 +946,48 @@ export class PrismaFantasyExperienceRepository {
           "Fantasy result crossed an Account or league boundary.",
         );
       }
+      const snapshot = parseFantasyWorkspaceSnapshot(workspace.snapshot);
+      if (
+        payload.lineage.fantasyModelId !== snapshot.model.modelId ||
+        payload.lineage.fantasyModelVersionId !==
+          workspace.rulesModelVersionId ||
+        payload.lineage.fantasyModelVersion !== snapshot.model.version ||
+        payload.lineage.fantasyModelDigest !== workspace.rulesModelDigest
+      ) {
+        throw new Error(
+          "Fantasy result does not match the league's sealed scoring model.",
+        );
+      }
+      const leagueTeamIds = new Set(snapshot.teams.map(({ id }) => id));
+      let resultTeamIds: readonly string[];
+      if (input.result.kind === "TEAM_PERIOD") {
+        resultTeamIds = [input.result.payload.fantasyTeamId];
+      } else if (input.result.kind === "MATCHUP") {
+        resultTeamIds = [
+          input.result.payload.first.fantasyTeamId,
+          input.result.payload.second.fantasyTeamId,
+        ];
+      } else {
+        resultTeamIds = input.result.payload.records.map(
+          ({ fantasyTeamId }) => fantasyTeamId,
+        );
+      }
+      if (resultTeamIds.some((teamId) => !leagueTeamIds.has(teamId))) {
+        throw new Error("Fantasy result references a team outside its league.");
+      }
+      const { resultDigest, ...semanticResult } = payload;
+      if (digest(semanticResult) !== resultDigest) {
+        throw new Error("Fantasy result digest verification failed.");
+      }
       const kind =
         input.result.kind === "TEAM_PERIOD"
           ? FantasyResultKind.TEAM_PERIOD
           : input.result.kind === "MATCHUP"
             ? FantasyResultKind.MATCHUP
             : FantasyResultKind.STANDINGS;
+      if ((payload.revision === 0) !== (payload.previousResultId === null)) {
+        throw new Error("Fantasy result revision lineage is incomplete.");
+      }
       const previous =
         payload.revision === 0
           ? null
@@ -959,12 +995,26 @@ export class PrismaFantasyExperienceRepository {
               where: {
                 fantasyLeagueId: workspace.id,
                 kind,
-                logicalId: payload.previousResultId ?? "",
                 revision: payload.revision - 1,
+                payload: {
+                  path: ["id"],
+                  equals: payload.previousResultId!,
+                },
               },
             });
       if (payload.revision > 0 !== Boolean(previous)) {
         throw new Error("Fantasy result predecessor is unavailable.");
+      }
+      if (
+        previous &&
+        (new Date(payload.calculatedAt).getTime() <=
+          previous.calculatedAt.getTime() ||
+          (payload.correction !== null &&
+            (payload.correction.previousResultId !== payload.previousResultId ||
+              payload.correction.previousResultDigest !==
+                previous.resultDigest)))
+      ) {
+        throw new Error("Fantasy result predecessor evidence is inconsistent.");
       }
       const periodSequence =
         input.result.kind === "STANDINGS"
