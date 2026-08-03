@@ -43,6 +43,7 @@ describe("fantasy experience UI", () => {
   it("re-authorizes mutations and exports at exact Account boundaries", () => {
     expect(actions).toContain("authorizeProtectedAction");
     expect(actions).toContain("selectedAccountCookie.name");
+    expect(actions).toContain('authorize(accountId, "fantasy.team.manage")');
     expect(actions).toContain('commissioner ? "fantasy.league.manage"');
     expect(exportRoute).toContain("selectedAccountCookie.name");
     expect(exportRoute).toContain('"fantasy.league.manage"');

@@ -70,6 +70,7 @@ const administrator = [
   "ruleset.manage",
   "fantasy.league.manage",
   "fantasy.league.activate",
+  "fantasy.team.manage",
   "fantasy.scoring.calculate",
 ] satisfies Capability[];
 
@@ -146,6 +147,7 @@ const exactGrantScopes: Readonly<
   "fantasy.league.view": ["ACCOUNT"],
   "fantasy.league.manage": ["ACCOUNT"],
   "fantasy.league.activate": ["ACCOUNT"],
+  "fantasy.team.manage": ["ACCOUNT"],
   "fantasy.roster.manage": ["ACCOUNT"],
   "fantasy.scoring.calculate": ["ACCOUNT"],
   "fantasy.scoring.view": ["ACCOUNT"],

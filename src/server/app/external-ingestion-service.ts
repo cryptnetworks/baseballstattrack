@@ -258,8 +258,17 @@ export async function getExternalIngestionService(accountId: string) {
     await getApplicationConfigurationService().runtime(accountId);
   const baseUrl = configuration.values.integrations.externalDataProviderBaseUrl;
   const apiKey = runtimeSecretConfiguration().externalDataProviderApiKey;
+  const allowedOrigin =
+    deploymentConfiguration().externalDataProviderAllowedOrigin;
   if (baseUrl && apiKey) {
-    const provider = new LicensedJsonFeedProvider(baseUrl, apiKey);
+    if (!allowedOrigin) {
+      throw new Error("Licensed provider credential origin is not configured.");
+    }
+    const provider = new LicensedJsonFeedProvider(
+      baseUrl,
+      apiKey,
+      allowedOrigin,
+    );
     adapters.set(provider.contract.key, provider);
   }
   return new ExternalIngestionService(

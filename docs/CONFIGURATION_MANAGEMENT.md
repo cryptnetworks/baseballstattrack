@@ -116,6 +116,10 @@ topology and remain deployment-owned.
   `AUTHENTICATION_ENABLED_PROVIDERS`, `OAUTH_CALLBACK_URL`, provider issuer and
   client identifiers, Apple team/key identifiers, `DISCORD_OAUTH_CLIENT_ID`,
   and `DISCORD_OAUTH_REDIRECT_URI`.
+- Credential routing boundary: `EXTERNAL_DATA_PROVIDER_ALLOWED_ORIGIN`. This
+  must be the HTTPS origin authorized to receive
+  `EXTERNAL_DATA_PROVIDER_API_KEY`; an Account administrator may choose a path
+  on that origin but cannot redirect the credential to another host.
 - Container/process networking: `HOSTNAME`, `PORT`, `APP_BIND_ADDRESS`,
   `APP_PORT`, `HEALTH_HOST`, `HEALTH_PORT`,
   `DISCORD_UPDATE_WORKER_HEALTH_HOST`, `DISCORD_UPDATE_WORKER_HEALTH_PORT`.

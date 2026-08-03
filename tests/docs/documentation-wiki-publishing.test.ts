@@ -18,18 +18,18 @@ async function fixture(
   temporaryDirectories.push(root);
   const docs = path.join(root, "docs");
   await mkdir(docs, { recursive: true });
-  await writeFile(path.join(docs, "publication-manifest.yaml"), manifest);
+  await writeFile(path.join(docs, "wiki-manifest.yaml"), manifest);
   for (const [file, content] of Object.entries(files)) {
     const target = path.join(docs, file);
     await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, content);
   }
-  return { root, docs, manifest: path.join(docs, "publication-manifest.yaml") };
+  return { root, docs, manifest: path.join(docs, "wiki-manifest.yaml") };
 }
 
 function manifest(pages = "*.md") {
   return `
-version: 1
+version: 2
 source:
   root: docs
   repository: https://github.com/cryptnetworks/baseballstattrack
@@ -39,6 +39,7 @@ publication:
   reservedDirectory: _wiki-owned
   landingPage: Home.md
   sidebarPage: _Sidebar.md
+  footerPage: _Footer.md
   generatedManifest: _generated/.publication-manifest.json
   publicOnly: true
   navigationUnlisted: append
@@ -48,9 +49,8 @@ pages:
   - source: "${pages}"
     wiki: "{stem}"
     visibility: public
-    orderBy: source
-exclusions:
-  - source: publication-manifest.yaml
+    order: 10
+  - source: wiki-manifest.yaml
     visibility: internal
     reason: test metadata
   - source: internal.md
@@ -75,7 +75,7 @@ afterEach(async () => {
 describe("documentation wiki publication", () => {
   it("parses the repository manifest and expands the public page set", async () => {
     const publication = await buildPublication({
-      manifestPath: "docs/publication-manifest.yaml",
+      manifestPath: "docs/wiki-manifest.yaml",
       sourceRoot: "docs",
     });
 
@@ -85,14 +85,15 @@ describe("documentation wiki publication", () => {
     ).toBe(true);
     expect(publication.files.has("Home.md")).toBe(true);
     expect(publication.files.has("_Sidebar.md")).toBe(true);
+    expect(publication.files.has("_Footer.md")).toBe(true);
     expect(publication.files.has("_generated/.publication-manifest.json")).toBe(
       true,
     );
     expect(publication.files.get("Home.md")).toContain(
-      "[Rules and calculations](https://github.com/cryptnetworks/baseballstattrack/wiki/RULES-AND-CALCULATIONS)",
+      "[Rules and calculations](https://github.com/cryptnetworks/baseballstattrack/wiki/Rules-and-Calculations)",
     );
     expect(publication.files.get("_Sidebar.md")).toContain(
-      "[Installation and development](https://github.com/cryptnetworks/baseballstattrack/wiki/INSTALLATION-AND-DEVELOPMENT)",
+      "[Installation and development](https://github.com/cryptnetworks/baseballstattrack/wiki/Installation-and-Development)",
     );
     expect(publication.files.get("_Sidebar.md")).not.toContain(
       "More Documentation",
@@ -100,6 +101,12 @@ describe("documentation wiki publication", () => {
     expect(publication.files.get("_Sidebar.md")).not.toContain(
       "STATISTIC-DERIVATION",
     );
+    expect(publication.files.get("_Footer.md")).toContain(
+      "authoritative [repository documentation]",
+    );
+    expect(
+      publication.files.get("_generated/.publication-manifest.json"),
+    ).toContain('"contentHash"');
   });
 
   it("keeps linked detail pages discoverable without crowding curated navigation", async () => {
@@ -166,17 +173,78 @@ describe("documentation wiki publication", () => {
     );
     expect(publication.files.has("_generated/assets/logo.png")).toBe(true);
     expect(guide).not.toContain("./DETAILS.md';");
+    expect(guide).toContain("_Source: [`docs/GUIDE.md`]");
     expect(publication.files.get("_Sidebar.md")).toContain(
       "https://github.com/cryptnetworks/baseballstattrack/wiki/GUIDE",
     );
     expect(publication.files.get("Home.md")).not.toContain("wiki/./");
   });
 
+  it("rewrites docs-root links and preserves GitHub-compatible tables and Mermaid", async () => {
+    const context = await fixture(manifest(), {
+      "GUIDE.md":
+        "# Guide\n\n[Details](docs/DETAILS.md#details)\n\n| Item | Meaning |\n| --- | --- |\n| One | Safe |\n\n```mermaid\ngraph TD\n  A --> B\n```\n",
+      "DETAILS.md": "# Details\n\n## Details\n",
+    });
+    const publication = await buildPublication({
+      manifestPath: context.manifest,
+      sourceRoot: context.docs,
+    });
+    const guide = publication.files.get("_generated/GUIDE.md");
+
+    expect(guide).toContain("wiki/DETAILS#details");
+    expect(guide).toContain("| Item | Meaning |");
+    expect(guide).toContain("```mermaid");
+  });
+
+  it("rejects invalid tables, unsafe active HTML, private paths, and secrets", async () => {
+    const invalidTable = await fixture(manifest("GUIDE.md"), {
+      "GUIDE.md": "# Guide\n\n| One | Two |\n| --- | --- |\n| Value |\n",
+    });
+    await expect(
+      buildPublication({
+        manifestPath: invalidTable.manifest,
+        sourceRoot: invalidTable.docs,
+      }),
+    ).rejects.toThrow(/inconsistent Markdown table row/u);
+
+    for (const unsafeContent of [
+      "<script>alert('unsafe')</script>",
+      "Use /Users/example/private/file",
+      "WIKI_PUBLISH_TOKEN=ghp_not-a-real-token",
+    ]) {
+      const unsafe = await fixture(manifest("GUIDE.md"), {
+        "GUIDE.md": `# Guide\n\n${unsafeContent}\n`,
+      });
+      await expect(
+        buildPublication({
+          manifestPath: unsafe.manifest,
+          sourceRoot: unsafe.docs,
+        }),
+      ).rejects.toThrow(/Unsafe public content|Potential secret/u);
+    }
+  });
+
+  it("removes nested inline HTML before deriving heading anchors", async () => {
+    const context = await fixture(manifest(), {
+      "GUIDE.md": "# Guide\n\n[Details](DETAILS.md#safe-heading).\n",
+      "DETAILS.md": "# <span<em>>Safe</em> heading</span>\n",
+    });
+    const publication = await buildPublication({
+      manifestPath: context.manifest,
+      sourceRoot: context.docs,
+    });
+
+    expect(publication.files.get("_generated/GUIDE.md")).toContain(
+      "wiki/DETAILS#safe-heading",
+    );
+  });
+
   it("fails closed for collisions, unsafe paths, missing sources, and missing anchors", async () => {
     const duplicate = await fixture(
       manifest().replace(
-        `pages:\n  - source: "*.md"\n    wiki: "{stem}"\n    visibility: public\n    orderBy: source`,
-        `pages:\n  - source: "A.md"\n    wiki: "Same"\n    visibility: public\n  - source: "B.md"\n    wiki: "Same"\n    visibility: public`,
+        `pages:\n  - source: "*.md"\n    wiki: "{stem}"\n    visibility: public\n    order: 10`,
+        `pages:\n  - source: "A.md"\n    wiki: "Same"\n    visibility: public\n    order: 10\n  - source: "B.md"\n    wiki: "same"\n    visibility: public\n    order: 20`,
       ),
       { "A.md": "# A\n", "B.md": "# B\n" },
     );
@@ -277,6 +345,41 @@ describe("documentation wiki publication", () => {
       sourceSha: "test",
     });
     expect(secondRun.changed).toEqual([]);
+  });
+
+  it("treats a case-only rename of a previously generated page as managed", async () => {
+    const context = await fixture(
+      manifest("GUIDE.md")
+        .replace('wiki: "{stem}"', 'wiki: "Guide"')
+        .replace("      - GUIDE", "      - Guide"),
+      { "GUIDE.md": "# Guide\n" },
+    );
+    const publication = await buildPublication({
+      manifestPath: context.manifest,
+      sourceRoot: context.docs,
+    });
+    const wiki = path.join(context.root, "wiki");
+    await mkdir(path.join(wiki, "_generated"), { recursive: true });
+    await writeFile(path.join(wiki, "_generated", "GUIDE.md"), "# Old\n");
+    await writeFile(
+      path.join(wiki, "_generated", ".publication-manifest.json"),
+      JSON.stringify({
+        generatedPaths: [
+          "_generated/GUIDE.md",
+          "_generated/.publication-manifest.json",
+        ],
+      }),
+    );
+
+    const dryRun = await publishPublication({
+      publication,
+      wikiRoot: wiki,
+      mode: "dry-run",
+      sourceSha: "test",
+    });
+
+    expect(dryRun.stale).toContain("_generated/GUIDE.md");
+    expect(dryRun.changed).toContain("_generated/Guide.md");
   });
 
   it("requires the publication credential before publish mode", async () => {

@@ -25,14 +25,23 @@ export class LicensedJsonFeedProvider implements ExternalProviderAdapter {
   constructor(
     baseUrl: string,
     private readonly apiKey: string,
+    allowedOrigin: string,
   ) {
     this.baseUrl = new URL(baseUrl);
+    const credentialOrigin = new URL(allowedOrigin);
     if (
       this.baseUrl.protocol !== "https:" ||
       this.baseUrl.username ||
       this.baseUrl.password ||
       this.baseUrl.search ||
       this.baseUrl.hash ||
+      credentialOrigin.protocol !== "https:" ||
+      credentialOrigin.username ||
+      credentialOrigin.password ||
+      credentialOrigin.pathname !== "/" ||
+      credentialOrigin.search ||
+      credentialOrigin.hash ||
+      this.baseUrl.origin !== credentialOrigin.origin ||
       !apiKey ||
       apiKey.length < 24
     ) {
