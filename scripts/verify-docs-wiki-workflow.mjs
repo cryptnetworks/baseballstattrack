@@ -20,8 +20,12 @@ assert(
   "Wiki workflow name changed unexpectedly.",
 );
 assert(
-  !Object.hasOwn(triggers, "pull_request"),
-  "Wiki workflow must not run from pull requests.",
+  Object.hasOwn(triggers, "pull_request"),
+  "Wiki workflow must provide pull-request validation and diff preview.",
+);
+assert(
+  !Object.hasOwn(triggers, "pull_request_target"),
+  "Wiki workflow must not expose trusted context through pull_request_target.",
 );
 assert(
   !Object.hasOwn(triggers, "push"),
@@ -61,9 +65,10 @@ assert(
   "Manual wiki publication must default to dry-run.",
 );
 assert(
-  modeInput.options?.includes("dry-run") &&
+  modeInput.options?.includes("validate") &&
+    modeInput.options?.includes("dry-run") &&
     modeInput.options?.includes("publish"),
-  "Manual mode must support dry-run and publish.",
+  "Manual mode must support validate, dry-run, and publish.",
 );
 
 const serialized = JSON.stringify(workflow);
@@ -84,6 +89,12 @@ assert(
   "Automatic wiki publication must require main.",
 );
 assert(
+  serialized.includes("GITHUB_EVENT_NAME") &&
+    serialized.includes("pull_request") &&
+    serialized.includes("MODE=dry-run"),
+  "Pull requests must be forced into dry-run mode.",
+);
+assert(
   serialized.includes("WIKI_PUBLISH_TOKEN"),
   "Wiki workflow must use the documented publication credential.",
 );
@@ -96,6 +107,22 @@ assert(
   serialized.includes("docs:wiki:dry-run") &&
     serialized.includes("docs:wiki:publish"),
   "Wiki workflow must invoke both modes.",
+);
+assert(
+  serialized.includes("docs:wiki:validate"),
+  "Wiki workflow must validate generated documentation before cloning or writing.",
+);
+assert(
+  !workflow.jobs.publish.env?.WIKI_PUBLISH_TOKEN,
+  "The publication credential must not exist in job-wide or PR-visible environment.",
+);
+const publishSteps = workflow.jobs.publish.steps.filter(
+  (step) => step.if === "env.MODE == 'publish'",
+);
+assert(
+  publishSteps.length >= 2 &&
+    publishSteps.some((step) => step.env?.WIKI_PUBLISH_TOKEN),
+  "Only explicitly publish-scoped steps may receive the publication credential.",
 );
 assert(
   /git\s+.*clone/u.test(serialized),

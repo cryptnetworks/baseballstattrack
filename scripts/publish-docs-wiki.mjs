@@ -14,14 +14,18 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parse } from "yaml";
 
-const DEFAULT_MANIFEST = "docs/publication-manifest.yaml";
+const DEFAULT_MANIFEST = "docs/wiki-manifest.yaml";
 const VISIBILITIES = new Set(["public", "internal", "restricted"]);
-const SAFE_WIKI_NAME = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/u;
+const SAFE_WIKI_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const LOCAL_LINK = /(!?\[[^\]]*\])\((<[^>]+>|[^)\s]+)([^)]*)\)/gu;
 const SECRET_PATTERNS = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/u,
-  /(?:ghp_|github_pat_|xox[baprs]-|sk-[A-Za-z0-9])/u,
+  /(?:^|[^A-Za-z0-9])(?:ghp_|github_pat_|xox[baprs]-|sk-[A-Za-z0-9])/u,
   /^(?:WIKI_PUBLISH_TOKEN|SUPABASE_SERVICE_ROLE_KEY|DISCORD_TOKEN|AWS_SECRET_ACCESS_KEY|[A-Z0-9_]*(?:CLIENT_SECRET|PRIVATE_KEY|ENCRYPTION_KEY))[ \t]*[:=][ \t]*(?=\S)(?!\\$|<|\$\{|your-|example|placeholder|replace-)[^\n]+/imu,
+];
+const UNSAFE_PUBLIC_CONTENT = [
+  /<(?:embed|form|iframe|input|object|script|style)\b/iu,
+  /(?:^|[\s`'"])(?:\/Users\/[^/\s]+|\/home\/[^/\s]+|[A-Za-z]:\\Users\\[^\\\s]+)/u,
 ];
 
 export class PublicationError extends Error {
@@ -161,11 +165,66 @@ function markdownMetadata(text, source) {
     headings.some((heading) => heading.level === 1),
     `${source} must contain an H1 title.`,
   );
+  validateMarkdownTables(lines, source);
   return {
     lines,
     headings,
     anchors: new Set(headings.map((heading) => heading.anchor)),
   };
+}
+
+function tableCells(line) {
+  const trimmed = line.trim().replace(/^\|/u, "").replace(/\|$/u, "");
+  const cells = [];
+  let current = "";
+  let escaped = false;
+  for (const character of trimmed) {
+    if (escaped) {
+      current += character;
+      escaped = false;
+    } else if (character === "\\") {
+      current += character;
+      escaped = true;
+    } else if (character === "|") {
+      cells.push(current.trim());
+      current = "";
+    } else {
+      current += character;
+    }
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
+function validateMarkdownTables(lines, source) {
+  let fence = null;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const fenceMatch = line.match(/^\s{0,3}(`{3,}|~{3,})/u);
+    if (fenceMatch) {
+      const marker = fenceMatch[1][0];
+      if (fence === null) fence = marker;
+      else if (fence === marker) fence = null;
+      continue;
+    }
+    if (fence !== null || !line.includes("|")) continue;
+    const cells = tableCells(line);
+    if (!cells.every((cell) => /^:?-{3,}:?$/u.test(cell))) continue;
+    assert(index > 0, `${source}:${index + 1} has a table without a header.`);
+    const header = tableCells(lines[index - 1]);
+    assert(
+      header.length === cells.length && header.every(Boolean),
+      `${source}:${index + 1} has an invalid Markdown table header.`,
+    );
+    for (let row = index + 1; row < lines.length; row += 1) {
+      const candidate = lines[row];
+      if (!candidate.trim() || !candidate.includes("|")) break;
+      assert(
+        tableCells(candidate).length === cells.length,
+        `${source}:${row + 1} has an inconsistent Markdown table row.`,
+      );
+    }
+  }
 }
 
 function templateWikiName(template, source) {
@@ -180,7 +239,7 @@ function validateManifestShape(manifest) {
     manifest && typeof manifest === "object",
     "Publication manifest must be an object.",
   );
-  assert(manifest.version === 1, "Publication manifest version must be 1.");
+  assert(manifest.version === 2, "Wiki manifest version must be 2.");
   assert(
     manifest.source?.root === "docs",
     "Publication source root must be docs.",
@@ -194,10 +253,6 @@ function validateManifestShape(manifest) {
     "Manifest pages are required.",
   );
   assert(
-    Array.isArray(manifest.exclusions),
-    "Manifest exclusions are required.",
-  );
-  assert(
     Array.isArray(manifest.navigation) && manifest.navigation.length > 0,
     "Manifest navigation is required.",
   );
@@ -208,7 +263,8 @@ function validateManifestShape(manifest) {
   assert(
     manifest.publication.generatedDirectory &&
       manifest.publication.reservedDirectory &&
-      manifest.publication.generatedManifest,
+      manifest.publication.generatedManifest &&
+      manifest.publication.footerPage,
     "Manifest must define generated and reserved wiki namespaces.",
   );
   for (const bootstrap of manifest.publication.bootstrap ?? []) {
@@ -218,7 +274,7 @@ function validateManifestShape(manifest) {
       `Bootstrap hash is invalid: ${bootstrap.path}`,
     );
   }
-  for (const entry of [...manifest.pages, ...manifest.exclusions]) {
+  for (const entry of manifest.pages) {
     assert(
       typeof entry.source === "string",
       "Every manifest mapping needs a source pattern.",
@@ -228,6 +284,22 @@ function validateManifestShape(manifest) {
       VISIBILITIES.has(entry.visibility),
       `Unsupported visibility: ${entry.visibility}`,
     );
+    if (entry.visibility === "public") {
+      assert(
+        typeof entry.wiki === "string" &&
+          SAFE_WIKI_NAME.test(entry.wiki.replaceAll("{stem}", "Example")),
+        `Public mapping has an unsafe wiki name: ${entry.source}`,
+      );
+      assert(
+        Number.isInteger(entry.order) && entry.order > 0,
+        `Public mapping needs a positive order: ${entry.source}`,
+      );
+    } else {
+      assert(
+        typeof entry.reason === "string" && entry.reason.trim().length > 0,
+        `Non-public mapping needs a reason: ${entry.source}`,
+      );
+    }
   }
   for (const group of manifest.navigation) {
     assert(
@@ -247,10 +319,22 @@ function validateManifestShape(manifest) {
   }
 }
 
-function excludedEntry(manifest, source) {
-  return (
-    manifest.exclusions.find((entry) => matches(entry.source, source)) ?? null
+function inventoryEntry(manifest, source) {
+  const exact = manifest.pages.filter((entry) => entry.source === source);
+  const rules =
+    exact.length > 0
+      ? exact
+      : manifest.pages.filter((entry) => matches(entry.source, source));
+  assert(
+    rules.length === 1,
+    `${source} must match exactly one inventory rule, found ${rules.length}.`,
   );
+  return rules[0];
+}
+
+function excludedEntry(manifest, source) {
+  const entry = inventoryEntry(manifest, source);
+  return entry.visibility === "public" ? null : entry;
 }
 
 function expandPages(manifest, sourceFiles) {
@@ -259,40 +343,32 @@ function expandPages(manifest, sourceFiles) {
   const seenWikiNames = new Map();
   for (const source of sourceFiles) {
     if (!source.endsWith(".md")) continue;
-    const exclusion = excludedEntry(manifest, source);
-    if (exclusion) continue;
-    const rules = manifest.pages.filter((entry) =>
-      matches(entry.source, source),
-    );
-    assert(
-      rules.length === 1,
-      `${source} must match exactly one page rule, found ${rules.length}.`,
-    );
-    const rule = rules[0];
-    assert(
-      rule.visibility === "public",
-      `${source} is eligible for publication but is not public.`,
-    );
+    const rule = inventoryEntry(manifest, source);
+    if (rule.visibility !== "public") continue;
     assert(
       source.endsWith(".md"),
       `${source} is not Markdown and cannot be published as a page.`,
     );
     const wiki = templateWikiName(rule.wiki, source);
     assert(!seenSources.has(source), `Duplicate source mapping: ${source}`);
-    assert(!seenWikiNames.has(wiki), `Duplicate wiki name: ${wiki}`);
+    const foldedWiki = wiki.toLocaleLowerCase("en-US");
+    assert(!seenWikiNames.has(foldedWiki), `Duplicate wiki name: ${wiki}`);
     const page = {
       source,
       wiki,
       visibility: rule.visibility,
-      orderBy: rule.orderBy ?? "source",
+      order: rule.order,
     };
     pages.push(page);
     seenSources.add(source);
-    seenWikiNames.set(wiki, source);
+    seenWikiNames.set(foldedWiki, source);
   }
   assert(pages.length > 0, "Manifest expands to no public pages.");
-  pages.sort((left, right) => left.source.localeCompare(right.source));
-  return pages.map((page, index) => ({ ...page, order: index + 1 }));
+  pages.sort(
+    (left, right) =>
+      left.order - right.order || left.source.localeCompare(right.source),
+  );
+  return pages;
 }
 
 function validateNavigation(manifest, pages) {
@@ -367,9 +443,14 @@ function wikiAssetUrl(manifest, assetName) {
 
 function resolveSourcePath(source, destination) {
   const { path: destinationPath, anchor } = splitDestination(destination);
+  const docsRootDestination = destinationPath.startsWith("docs/")
+    ? destinationPath.slice("docs/".length)
+    : destinationPath;
   const resolved = path.posix.normalize(
-    destinationPath
-      ? path.posix.join(path.posix.dirname(source), destinationPath)
+    docsRootDestination
+      ? destinationPath.startsWith("docs/")
+        ? docsRootDestination
+        : path.posix.join(path.posix.dirname(source), docsRootDestination)
       : source,
   );
   assert(
@@ -511,7 +592,8 @@ function rewritePage(
     fence === null,
     `${page.source} has an unclosed code fence after rewriting.`,
   );
-  return `${output.join("\n").trimEnd()}\n`;
+  const sourceLink = sourceUrl(manifest, page.source);
+  return `${output.join("\n").trimEnd()}\n\n---\n\n_Source: [\`docs/${page.source}\`](${sourceLink}). Edit the repository source; this Wiki page is generated._\n`;
 }
 
 function navigationDisplay(navigation, pages, metadataMap) {
@@ -532,7 +614,9 @@ function landingPage(manifest, navigation) {
   const lines = [
     "# Baseball Stat Track Documentation",
     "",
-    "Find the right guide by what you want to do. Detailed reference pages remain available through these curated entry points without crowding the main navigation.",
+    "Baseball Stat Track is an event-oriented scorekeeping and statistics platform for coaches, scorekeepers, developers, and operators.",
+    "",
+    "Choose a section below to install the application, score and review games, understand calculations, connect integrations, or operate the service securely. Detailed references remain available through these curated entry points without crowding the main navigation.",
     "",
     "This wiki is generated from the repository's `docs/` directory. The repository documentation is authoritative; direct wiki edits are not.",
     "",
@@ -545,6 +629,29 @@ function landingPage(manifest, navigation) {
     lines.push("");
   }
   return `${lines.join("\n").trimEnd()}\n`;
+}
+
+function footer(manifest) {
+  return [
+    "---",
+    "",
+    `Generated from the authoritative [repository documentation](${manifest.source.repository}/tree/${manifest.source.branch}/docs).`,
+    "Direct Wiki edits are not authoritative.",
+    "",
+  ].join("\n");
+}
+
+function publicationHash(files) {
+  const hash = createHash("sha256");
+  for (const [relative, content] of [...files.entries()].sort(
+    ([left], [right]) => left.localeCompare(right),
+  )) {
+    hash.update(relative);
+    hash.update("\0");
+    hash.update(Buffer.isBuffer(content) ? content : Buffer.from(content));
+    hash.update("\0");
+  }
+  return hash.digest("hex");
 }
 
 function sidebar(manifest, navigation) {
@@ -589,6 +696,11 @@ export async function buildPublication({
     assert(!markdown.includes("\0"), `${source} contains a NUL byte.`);
     for (const pattern of SECRET_PATTERNS)
       assert(!pattern.test(markdown), `Potential secret in ${source}.`);
+    const entry = inventoryEntry(manifest, source);
+    if (entry.visibility === "public") {
+      for (const pattern of UNSAFE_PUBLIC_CONTENT)
+        assert(!pattern.test(markdown), `Unsafe public content in ${source}.`);
+    }
     metadataMap.set(source, markdownMetadata(markdown, source));
   }
   validateCuratedNavigation(manifest, navigation, pages, metadataMap);
@@ -628,12 +740,15 @@ export async function buildPublication({
     manifest.publication.sidebarPage,
     sidebar(manifest, displayNavigation),
   );
+  files.set(manifest.publication.footerPage, footer(manifest));
   const generatedManifestPath = manifest.publication.generatedManifest;
+  const contentHash = publicationHash(files);
   files.set(
     generatedManifestPath,
     `${JSON.stringify(
       {
         manifestVersion: manifest.version,
+        contentHash,
         generatedPaths: [...files.keys(), generatedManifestPath].sort(),
         sourceFiles: pages.map(({ source, wiki, order, visibility }) => ({
           source,
@@ -711,6 +826,12 @@ async function comparePublication(publication, state) {
       existsSync(path.join(state.root, desiredPath)) &&
       !previous.has(desiredPath)
     ) {
+      const managedCaseVariant = [...previous].find(
+        (value) =>
+          value.toLocaleLowerCase("en-US") ===
+          desiredPath.toLocaleLowerCase("en-US"),
+      );
+      if (managedCaseVariant) continue;
       const bootstrap = (publication.manifest.publication.bootstrap ?? []).find(
         (entry) => entry.path === desiredPath,
       );
@@ -776,12 +897,24 @@ function readFileSyncSafe(filePath) {
 }
 
 async function writePublication(publication, comparison, state) {
+  const desiredByFoldedPath = new Set(
+    [...publication.files.keys()].map((relative) =>
+      relative.toLocaleLowerCase("en-US"),
+    ),
+  );
+  const caseOnlyRenames = comparison.stale.filter((relative) =>
+    desiredByFoldedPath.has(relative.toLocaleLowerCase("en-US")),
+  );
+  for (const relative of caseOnlyRenames)
+    await rm(path.join(state.root, relative), { force: true });
   for (const [relative, content] of publication.files) {
     const target = path.join(state.root, relative);
     await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, content);
   }
-  for (const relative of comparison.stale)
+  for (const relative of comparison.stale.filter(
+    (value) => !caseOnlyRenames.includes(value),
+  ))
     await rm(path.join(state.root, relative), { force: true });
 }
 
