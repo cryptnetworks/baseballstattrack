@@ -14,7 +14,7 @@ on:
         description: Validate and show the wiki diff, or publish it
         required: true
         type: choice
-        default: publish
+        default: dry-run
         options:
           - dry-run
           - publish
@@ -84,10 +84,14 @@ jobs:
         run: |
           set -euo pipefail
           test -n "${WIKI_PUBLISH_TOKEN}" || { echo "WIKI_PUBLISH_TOKEN is required; refusing to access the wiki." >&2; exit 1; }
-          git -c "http.extraheader=Authorization: Bearer ${WIKI_PUBLISH_TOKEN}" clone --depth 1 --branch "${WIKI_BRANCH}" "https://github.com/${WIKI_REPOSITORY}" "${WIKI_DIR}"
+          export GIT_ASKPASS="${GITHUB_WORKSPACE}/scripts/wiki-git-askpass.sh"
+          export GIT_TERMINAL_PROMPT=0
+          chmod 700 "${GIT_ASKPASS}"
+          echo "GIT_ASKPASS=${GIT_ASKPASS}" >> "${GITHUB_ENV}"
+          echo "GIT_TERMINAL_PROMPT=${GIT_TERMINAL_PROMPT}" >> "${GITHUB_ENV}"
+          git clone --depth 1 --branch "${WIKI_BRANCH}" "https://github.com/${WIKI_REPOSITORY}" "${WIKI_DIR}"
           git -C "${WIKI_DIR}" config user.name "baseballstattrack-docs-publisher"
           git -C "${WIKI_DIR}" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C "${WIKI_DIR}" config --local http.extraheader "Authorization: Bearer ${WIKI_PUBLISH_TOKEN}"
 
       - name: Dry run or publish
         shell: bash

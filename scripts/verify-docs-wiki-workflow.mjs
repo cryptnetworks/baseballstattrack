@@ -57,6 +57,10 @@ assert(
   "Manual wiki mode must be a choice input.",
 );
 assert(
+  modeInput.default === "dry-run",
+  "Manual wiki publication must default to dry-run.",
+);
+assert(
   modeInput.options?.includes("dry-run") &&
     modeInput.options?.includes("publish"),
   "Manual mode must support dry-run and publish.",
@@ -84,6 +88,11 @@ assert(
   "Wiki workflow must use the documented publication credential.",
 );
 assert(
+  serialized.includes("GIT_ASKPASS") &&
+    serialized.includes("GIT_TERMINAL_PROMPT"),
+  "Wiki Git authentication must be non-interactive and use GIT_ASKPASS.",
+);
+assert(
   serialized.includes("docs:wiki:dry-run") &&
     serialized.includes("docs:wiki:publish"),
   "Wiki workflow must invoke both modes.",
@@ -95,6 +104,11 @@ assert(
 assert(
   !/echo[^\n]*\$\{WIKI_PUBLISH_TOKEN\}/iu.test(source),
   "Wiki workflow must not print the wiki credential.",
+);
+assert(
+  !/Authorization:\s*Bearer/iu.test(source) &&
+    !/http\.extraheader/iu.test(source),
+  "Wiki Git authentication must not use an unsupported Bearer header.",
 );
 
 console.log("Documentation wiki workflow boundary passed.");
