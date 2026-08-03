@@ -4,11 +4,12 @@ import {
   WebhookError,
   getWebhookDeliveryService,
 } from "@/server/app/webhook-service";
+import { runtimeSecretConfiguration } from "@/server/config/runtime-environment";
 
 export const dynamic = "force-dynamic";
 
 function authorized(request: Request): boolean {
-  const configured = process.env.WEBHOOK_WORKER_TOKEN;
+  const configured = runtimeSecretConfiguration().webhookWorkerToken;
   const presented = request.headers
     .get("authorization")
     ?.replace(/^Bearer /u, "");

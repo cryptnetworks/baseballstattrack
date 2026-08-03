@@ -98,7 +98,12 @@ Node 24 and npm 11 or newer are the supported runtime baseline. The `actions/set
 
 CI has read-only `contents` permission and receives no deployment, identity-provider, production database, or application secrets. Its PostgreSQL credentials are fixed, workflow-local values for the isolated disposable service. Fork pull requests run the same verification without repository secrets. `NEXT_TELEMETRY_DISABLED=1` disables framework telemetry; it is not a credential or application setting.
 
-The application build currently does not create Prisma or Supabase clients. `prisma validate` validates the checked-in schema without changing data. CI sets `DATABASE_URL` only to its disposable service so `prisma migrate deploy` can execute the checked-in chain. The representability script uses fixed synthetic identifiers inside a transaction and always rolls it back; it is not a seed. No production URL is available to the workflow.
+The application build currently does not create a Prisma client or contact an
+authentication provider. `prisma validate` validates the checked-in schema
+without changing data. CI sets `DATABASE_URL` only to its disposable service so
+`prisma migrate deploy` can execute the checked-in chain. The representability
+script uses fixed synthetic identifiers inside a transaction and always rolls
+it back; it is not a seed. No production URL is available to the workflow.
 
 Future CI changes must keep PR verification fail-closed: do not add production secrets, production database access, seeds, destructive access outside the disposable CI database, or deployment steps. Preview and test environments must remain isolated as required by `PERSISTENCE_AND_TENANCY.md`.
 

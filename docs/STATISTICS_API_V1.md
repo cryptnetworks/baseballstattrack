@@ -25,7 +25,7 @@ and have an `apiVersion` envelope field. Responses are private and `no-store`.
 
 ## Authorization and errors
 
-Cookie sessions and Supabase bearer access tokens use the same server-side
+Cookie sessions and opaque application bearer session tokens use the same server-side
 active-user, active-membership, target-resolution, role, and exact-grant
 boundary. Directories require their matching view capability; box scores and
 leaders require `report.view` at the exact game or team-season scope. A URL is

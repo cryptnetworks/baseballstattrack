@@ -6,12 +6,17 @@ import {
   renderCalendarFeed,
   type CalendarFeedDetailLevel,
 } from "@/domain/calendar-feed";
+import { getApplicationConfigurationService } from "@/server/app/application-configuration-service";
 import { AuthorizationError } from "@/server/auth/errors";
 import {
   requireTrustedActor,
   type TrustedActorContext,
 } from "@/server/auth/types";
 import { featureEnabled } from "@/server/config/feature-flags";
+import {
+  deploymentConfiguration,
+  runtimeSecretConfiguration,
+} from "@/server/config/runtime-environment";
 import { getPrismaClient } from "@/server/data/prisma";
 
 const externalId = z.uuid();
@@ -30,17 +35,11 @@ export class CalendarFeedError extends Error {
 }
 
 function signingKey(): string {
-  const key = process.env.ICS_FEED_SIGNING_KEY;
+  const key = runtimeSecretConfiguration().calendarFeedSigningKey;
   if (!key || key.length < 32) {
     throw new CalendarFeedError("CONFIGURATION_ERROR", 500);
   }
   return key;
-}
-
-function configuredDetailLevel(): CalendarFeedDetailLevel {
-  return detailLevelSchema.parse(
-    process.env.ICS_FEED_DETAIL_LEVEL?.trim().toLowerCase(),
-  );
 }
 
 function signature(accountId: string, teamId: string): string {
@@ -49,14 +48,13 @@ function signature(accountId: string, teamId: string): string {
     .digest("base64url");
 }
 
-function requireEnabled(): void {
-  if (!featureEnabled("FEATURE_ICS_CALENDAR_ENABLED")) {
+async function requireEnabled(accountId: string): Promise<void> {
+  if (!(await featureEnabled("FEATURE_ICS_CALENDAR_ENABLED", accountId))) {
     throw new CalendarFeedError("DISABLED", 404);
   }
 }
 
 export function calendarFeedToken(accountId: string, teamId: string): string {
-  requireEnabled();
   return signature(externalId.parse(accountId), externalId.parse(teamId));
 }
 
@@ -64,9 +62,10 @@ export function calendarFeedTokenIsValid(
   accountId: string,
   teamId: string,
   token: string,
+  enabled = true,
 ): boolean {
   try {
-    requireEnabled();
+    if (!enabled) return false;
     const expected = Buffer.from(
       signature(externalId.parse(accountId), externalId.parse(teamId)),
     );
@@ -86,7 +85,7 @@ export class CalendarFeedService {
     input: { accountId: string; teamId: string },
     actorInput: TrustedActorContext,
   ) {
-    requireEnabled();
+    await requireEnabled(input.accountId);
     const actor = requireTrustedActor(
       actorInput,
       input.accountId,
@@ -107,7 +106,7 @@ export class CalendarFeedService {
       },
     });
     if (!team) throw new CalendarFeedError("NOT_FOUND", 404);
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const siteUrl = deploymentConfiguration().siteUrl;
     if (!siteUrl) throw new CalendarFeedError("CONFIGURATION_ERROR", 500);
     const url = new URL(
       `/api/calendars/${team.account.externalId}/${team.externalId}/feed.ics`,
@@ -139,6 +138,10 @@ export class CalendarFeedService {
       },
     });
     if (!team) throw new CalendarFeedError("NOT_FOUND", 404);
+    await requireEnabled(team.accountId);
+    const configuration = await getApplicationConfigurationService().runtime(
+      team.accountId,
+    );
 
     const games = await this.prisma.game.findMany({
       where: {
@@ -168,7 +171,9 @@ export class CalendarFeedService {
 
     return renderCalendarFeed({
       name: `${team.displayName} games`,
-      detailLevel: configuredDetailLevel(),
+      detailLevel: detailLevelSchema.parse(
+        configuration.values.calendar.detailLevel,
+      ) as CalendarFeedDetailLevel,
       games: games.flatMap((game) =>
         game.scheduledAt
           ? [

@@ -2,6 +2,8 @@ export type AuthorizationErrorCode =
   | "AUTHENTICATION_REQUIRED"
   | "INVALID_SESSION"
   | "SESSION_EXPIRED"
+  | "INVALID_OAUTH_CALLBACK"
+  | "IDENTITY_ALREADY_LINKED"
   | "PROVIDER_FAILURE"
   | "USER_PROVISIONING_FAILURE"
   | "USER_DISABLED"
@@ -30,7 +32,8 @@ export function safeAuthorizationStatus(error: unknown): 401 | 403 | 500 {
   if (
     error.code === "AUTHENTICATION_REQUIRED" ||
     error.code === "INVALID_SESSION" ||
-    error.code === "SESSION_EXPIRED"
+    error.code === "SESSION_EXPIRED" ||
+    error.code === "INVALID_OAUTH_CALLBACK"
   ) {
     return 401;
   }

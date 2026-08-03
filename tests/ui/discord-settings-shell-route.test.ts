@@ -21,7 +21,8 @@ describe("Discord settings shell route", () => {
     expect(page).toContain("authenticatePageSession");
     expect(page).toContain("listAvailableAccounts(identity)");
     expect(page).toContain('"discord.settings.view"');
-    expect(page).toContain("getDiscordInstallationService().list");
+    expect(page).toContain("getDiscordInstallationService(selectedAccount.id)");
+    expect(page).toContain(").list(selectedAccount.id, selected.actor)");
     expect(page).toContain('redirect("/login")');
     expect(page).toContain('error.code === "INSUFFICIENT_CAPABILITY"');
     expect(page).toContain("getDiscordActivityService().get");

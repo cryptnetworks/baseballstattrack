@@ -4,7 +4,6 @@ import { createAuthContextHandler } from "@/app/api/auth/context/route";
 import type { AuthorizationService } from "@/server/auth/authorization-service";
 import { AuthorizationError } from "@/server/auth/errors";
 import { authorizeProtectedAction } from "@/server/auth/protected-boundary";
-import { AUTH_PROVIDER } from "@/server/auth/types";
 
 describe("protected framework boundaries", () => {
   it("calls the route handler directly and returns only minimum authority", async () => {
@@ -80,7 +79,7 @@ describe("protected framework boundaries", () => {
 
   it("protects direct action invocation with origin and server authority", async () => {
     const authenticate = vi.fn().mockResolvedValue({
-      provider: AUTH_PROVIDER,
+      provider: "google",
       providerSubject: "provider-subject",
     });
     const authorize = vi.fn().mockResolvedValue({ capability: "team.manage" });
@@ -117,7 +116,7 @@ describe("protected framework boundaries", () => {
     ).resolves.toMatchObject({ capability: "team.manage" });
     expect(authorize).toHaveBeenCalledWith(
       {
-        provider: AUTH_PROVIDER,
+        provider: "google",
         providerSubject: "provider-subject",
       },
       { kind: "TEAM", accountId: "account-a", teamId: "team-a" },

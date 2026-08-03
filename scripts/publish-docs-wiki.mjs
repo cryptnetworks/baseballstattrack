@@ -21,7 +21,7 @@ const LOCAL_LINK = /(!?\[[^\]]*\])\((<[^>]+>|[^)\s]+)([^)]*)\)/gu;
 const SECRET_PATTERNS = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/u,
   /(?:ghp_|github_pat_|xox[baprs]-|sk-[A-Za-z0-9])/u,
-  /^(?:WIKI_PUBLISH_TOKEN|SUPABASE_SERVICE_ROLE_KEY|DISCORD_TOKEN|CLIENT_SECRET|PRIVATE_KEY|AWS_SECRET_ACCESS_KEY)[ \t]*[:=][ \t]*(?=\S)(?!\\$|<|\$\{|your-|example|placeholder)[^\n]+/imu,
+  /^(?:WIKI_PUBLISH_TOKEN|SUPABASE_SERVICE_ROLE_KEY|DISCORD_TOKEN|AWS_SECRET_ACCESS_KEY|[A-Z0-9_]*(?:CLIENT_SECRET|PRIVATE_KEY|ENCRYPTION_KEY))[ \t]*[:=][ \t]*(?=\S)(?!\\$|<|\$\{|your-|example|placeholder|replace-)[^\n]+/imu,
 ];
 
 export class PublicationError extends Error {

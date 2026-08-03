@@ -1,15 +1,14 @@
 # Fantasy domain model
 
-Issue [#123](https://github.com/cryptnetworks/baseballstattrack/issues/123)
-defines the M8 fantasy league, team, player-reference, eligibility, and roster
-snapshot domain. It consumes the [fantasy rules contract](FANTASY_RULES_CONTRACT.md)
-from #125 and the [delegation model](LEAGUE_DELEGATION_MODEL.md) from #107.
-
-This is a framework-independent aggregate contract. The downstream
+This framework-independent contract defines fantasy leagues, teams, player
+references, eligibility, and roster snapshots. It uses the
+[fantasy rules contract](FANTASY_RULES_CONTRACT.md) and
+[delegation model](LEAGUE_DELEGATION_MODEL.md). The downstream
 [fantasy transaction contract](FANTASY_TRANSACTIONS.md) and
 [fantasy scoring engine](FANTASY_SCORING_AND_MATCHUPS.md) consume these entities
-without changing them in place. This document itself does not add persistence,
-UI (#127), notifications, or offline behavior.
+without changing them in place. Persistence, UI, notifications, and offline
+behavior remain outside this domain boundary. The work was tracked in
+[#123](https://github.com/cryptnetworks/baseballstattrack/issues/123).
 
 ## Non-negotiable invariants
 

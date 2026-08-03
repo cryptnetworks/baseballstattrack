@@ -60,15 +60,19 @@ the same transaction that records a successful Discord attempt.
 
 ## Configuration and operation
 
-Keep the feature disabled until the migration and credentials are ready:
+Keep the feature disabled in **Settings → Application configuration** until the
+migration and credentials are ready. The portal owns the feature state,
+statistics API base URL, and Discord update API base URL. Retain only these
+secrets externally:
 
-- `FEATURE_DISCORD_UPDATES_ENABLED`
 - `DISCORD_UPDATE_EVENT_TOKEN` (at least 32 random characters)
 - `DISCORD_UPDATE_WORKER_TOKEN` (a separate 32-character token)
-- `DISCORD_STATISTICS_API_BASE_URL` (HTTPS application API origin)
 - `DISCORD_STATISTICS_API_TOKEN` (dedicated least-privilege read token)
 - `DISCORD_UPDATE_BOT_TOKEN` (managed Discord bot credential)
-- optional `DISCORD_UPDATE_API_BASE_URL`, defaulting to Discord API v10
+
+Legacy `FEATURE_DISCORD_UPDATES_ENABLED`,
+`DISCORD_STATISTICS_API_BASE_URL`, and `DISCORD_UPDATE_API_BASE_URL` values are
+accepted only by the reviewed initial seed action.
 
 The event endpoint returns `202` for accepted, duplicate, unavailable, or
 feature-disabled signals and never enumerates cross-Account games. The run

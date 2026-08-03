@@ -2,16 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { z } from "zod";
 
-import { AuthorizationError } from "@/server/auth/errors";
-import {
-  createSupabaseNextClient,
-  nextCookieStore,
-} from "@/server/auth/next-session";
+import { getOAuthAuthenticationService } from "@/server/app/oauth-authentication-service";
+import { getApplicationSessionService } from "@/server/auth/application-session";
+import { nextCookieStore } from "@/server/auth/next-session";
 import { requireSameOriginValues } from "@/server/auth/request-security";
-import { signOutSupabaseCookies } from "@/server/auth/supabase-session";
-
-const supportedProviders = new Set(["google", "github", "azure"]);
 
 async function requireActionOrigin() {
   const requestHeaders = await headers();
@@ -21,35 +17,16 @@ async function requireActionOrigin() {
   );
 }
 
-export async function signIn(): Promise<never> {
+export async function signIn(formData: FormData): Promise<never> {
   await requireActionOrigin();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  const configuredProvider = process.env.SUPABASE_OAUTH_PROVIDER ?? "google";
-  if (!siteUrl || !supportedProviders.has(configuredProvider)) {
-    throw new AuthorizationError(
-      "CONFIGURATION_ERROR",
-      "Authentication sign-in is not configured.",
-    );
-  }
-  const client = await createSupabaseNextClient();
-  const { data, error } = await client.auth.signInWithOAuth({
-    provider: configuredProvider as "google" | "github" | "azure",
-    options: {
-      redirectTo: new URL("/auth/callback", siteUrl).toString(),
-      skipBrowserRedirect: true,
-    },
-  });
-  if (error || !data.url) {
-    throw new AuthorizationError(
-      "CONFIGURATION_ERROR",
-      "Authentication sign-in is unavailable.",
-    );
-  }
-  redirect(data.url);
+  const provider = z.string().trim().parse(formData.get("provider"));
+  const started = await getOAuthAuthenticationService().startSignIn(provider);
+  (await nextCookieStore()).setAll([started.cookie]);
+  redirect(started.authorizationUrl);
 }
 
 export async function signOut(): Promise<never> {
   await requireActionOrigin();
-  await signOutSupabaseCookies(await nextCookieStore());
+  await getApplicationSessionService().revokeCookies(await nextCookieStore());
   redirect("/login");
 }

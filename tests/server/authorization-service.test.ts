@@ -6,7 +6,6 @@ import { authorityPermits } from "@/server/auth/capability-policy";
 import { requireSameOrigin } from "@/server/auth/request-security";
 import type { AuthorizationStore } from "@/server/auth/store";
 import {
-  AUTH_PROVIDER,
   requireTrustedActor,
   type ActiveAuthority,
   type AuthenticatedIdentity,
@@ -16,7 +15,7 @@ import {
 } from "@/server/auth/types";
 
 const identity: AuthenticatedIdentity = {
-  provider: AUTH_PROVIDER,
+  provider: "google",
   providerSubject: "provider-user-a",
 };
 
@@ -70,7 +69,7 @@ class MutableStore implements AuthorizationStore {
   };
   targets = new Map<string, ResolvedTarget>([["GAME:game-a", game]]);
 
-  async resolveOrProvisionUser() {
+  async resolveUser() {
     return { id: "user-a", active: this.userActive };
   }
 

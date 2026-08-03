@@ -1,36 +1,43 @@
-import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { authCookieOptions } from "@/server/auth/cookie-policy";
+import {
+  applicationSessionCookie,
+  getApplicationSessionService,
+  type SessionCookieStore,
+} from "@/server/auth/application-session";
+import { AuthorizationError } from "@/server/auth/errors";
 
 export async function proxy(request: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    const response = NextResponse.next({ request });
-    response.headers.set("Cache-Control", "private, no-store");
-    return response;
-  }
-
-  let response = NextResponse.next({ request });
-  const client = createServerClient(url, key, {
-    cookieOptions: authCookieOptions(),
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll: (cookiesToSet) => {
-        for (const { name, value } of cookiesToSet) {
-          request.cookies.set(name, value);
-        }
-        response = NextResponse.next({ request });
-        for (const { name, value, options } of cookiesToSet) {
-          response.cookies.set(name, value, options);
-        }
-      },
-    },
-  });
-
-  await client.auth.getUser();
+  const response = NextResponse.next({ request });
   response.headers.set("Cache-Control", "private, no-store");
+  if (!request.cookies.has(applicationSessionCookie.name)) return response;
+
+  const store: SessionCookieStore = {
+    getAll: () =>
+      request.cookies.getAll().map(({ name, value }) => ({ name, value })),
+    setAll: (values) => {
+      for (const cookie of values) {
+        if (cookie.options) {
+          response.cookies.set(cookie.name, cookie.value, cookie.options);
+        } else {
+          response.cookies.set(cookie.name, cookie.value);
+        }
+      }
+    },
+  };
+  try {
+    await getApplicationSessionService().authenticateCookies(store, true);
+  } catch (error) {
+    if (
+      error instanceof AuthorizationError &&
+      ["INVALID_SESSION", "SESSION_EXPIRED"].includes(error.code)
+    ) {
+      response.cookies.set(applicationSessionCookie.name, "", {
+        ...applicationSessionCookie.options,
+        maxAge: 0,
+      });
+    }
+  }
   return response;
 }
 

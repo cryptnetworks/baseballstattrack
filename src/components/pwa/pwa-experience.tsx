@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 
+import { productionBuild } from "@/lib/runtime-mode";
+
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
@@ -297,7 +299,7 @@ export function PwaExperience() {
 
     window.addEventListener("beforeinstallprompt", handleInstallPrompt);
 
-    if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
+    if (productionBuild && "serviceWorker" in navigator) {
       void navigator.serviceWorker
         .register("/service-worker.js", { scope: "/" })
         .catch(() => undefined);

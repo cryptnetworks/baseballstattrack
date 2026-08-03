@@ -65,10 +65,9 @@ export async function refreshDiscordChannels(formData: FormData) {
   const actor = await authorize(account, "discord.settings.configure");
   let errorCode: string | null = null;
   try {
-    await getDiscordChannelRoutingService().refresh(
-      { accountId: account, installationId: installation },
-      actor,
-    );
+    await (
+      await getDiscordChannelRoutingService(account)
+    ).refresh({ accountId: account, installationId: installation }, actor);
   } catch (error) {
     errorCode = safeError(error);
   }
@@ -93,7 +92,9 @@ export async function saveDiscordChannelRouting(formData: FormData) {
         return [id, value ? destinationId.parse(value) : null];
       }),
     );
-    await getDiscordChannelRoutingService().updateRouting(
+    await (
+      await getDiscordChannelRoutingService(account)
+    ).updateRouting(
       {
         accountId: account,
         installationId: installation,
@@ -125,7 +126,9 @@ export async function toggleDiscordChannel(formData: FormData) {
   const actor = await authorize(account, "discord.settings.configure");
   let errorCode: string | null = null;
   try {
-    await getDiscordChannelRoutingService().toggle(
+    await (
+      await getDiscordChannelRoutingService(account)
+    ).toggle(
       {
         accountId: account,
         installationId: installation,
@@ -156,7 +159,9 @@ export async function testDiscordChannelDelivery(formData: FormData) {
     .parse(formData.get("returnSection"));
   let errorCode: string | null = null;
   try {
-    await getDiscordChannelRoutingService().testDelivery(
+    await (
+      await getDiscordChannelRoutingService(account)
+    ).testDelivery(
       {
         accountId: account,
         installationId: installation,

@@ -25,7 +25,7 @@ Authorization failures retain their existing generic 401/403/404 behavior.
 Only an already authorized caller receives a quota response. This ordering
 prevents the limiter from becoming an Account, actor, or resource oracle.
 
-Authentication and OAuth token issuance are hosted by Supabase and must also
+Authentication and OAuth callback attempts are application-owned and must also
 use provider-side IP, credential, and bot protections. The application does not
 trust `X-Forwarded-For` directly and therefore does not pretend its authenticated
 Account limiter protects the upstream provider endpoints.
@@ -33,10 +33,11 @@ Account limiter protects the upstream provider endpoints.
 ## Endpoint classes and defaults
 
 Defaults are conservative operational guardrails, not billing entitlements.
-`RATE_LIMIT_POLICIES_JSON` may override named policies at deployment after
-strict server-side validation; an Account limit cannot be lower than its actor
-limit. Invalid configuration fails startup of the limiter rather than silently
-disabling it.
+Account administrators may override named policies in **Settings → Application
+configuration** after strict server-side validation; an Account limit cannot be
+lower than its actor limit. Invalid configuration is rejected without changing
+the current revision. Legacy `RATE_LIMIT_POLICIES_JSON` is read only by the
+reviewed initial seed action.
 
 | Class                     | Actor units | Account units | Window | Current or reserved consumers                                   |
 | ------------------------- | ----------: | ------------: | -----: | --------------------------------------------------------------- |

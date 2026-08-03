@@ -156,6 +156,31 @@ enum AuditScope {
   SYSTEM
 }
 
+enum ConfigurationRevisionSource {
+  ENVIRONMENT_SEED
+  ADMIN_UPDATE
+  ROLLBACK
+}
+
+enum AuthenticationIdentitySource {
+  LEGACY_BACKFILL
+  OAUTH_SIGN_IN
+  EXPLICIT_LINK
+  REVIEWED_MIGRATION
+}
+
+enum AuthenticationSessionEventType {
+  CREATED
+  ROTATED
+  REVOKED
+  EXPIRED
+}
+
+enum OAuthAttemptPurpose {
+  SIGN_IN
+  LINK
+}
+
 enum CorrectionPolicy {
   REPLACE_PLAY
   REPLACE_EVENT_RANGE
@@ -511,6 +536,8 @@ model Account {
   fantasyLeagueWorkspaces  FantasyLeagueWorkspace[]
   fantasyLeagueEvents      FantasyLeagueEvent[]
   fantasyResultSnapshots   FantasyResultSnapshot[]
+  applicationConfiguration ApplicationConfiguration?
+  configurationRevisions   ApplicationConfigurationRevision[]
 }
 
 model AppUser {
@@ -522,18 +549,114 @@ model AppUser {
   updatedAt       DateTime   @updatedAt
   detachedAt      DateTime?
 
-  memberships             AccountMembership[]
-  invitationsReceived     MembershipInvitation[]   @relation("InvitationRecipient")
-  invitationsSent         MembershipInvitation[]   @relation("InvitationInviter")
-  recordedPlays           PlayTransaction[]        @relation("PlayTransactionActor")
-  recordedEvents          SourceEvent[]            @relation("SourceEventActor")
-  analyticsObservations   AnalyticsObservation[]   @relation("AnalyticsObservationActor")
-  auditRecords            SecurityAuditRecord[]    @relation("AuditActor")
-  privacyOverlays         PrivacyOverlay[]         @relation("PrivacyOverlayActor")
-  productAnalyticsConsent ProductAnalyticsConsent?
-  fantasyLeagueEvents     FantasyLeagueEvent[]     @relation("FantasyLeagueEventActor")
+  memberships              AccountMembership[]
+  invitationsReceived      MembershipInvitation[]             @relation("InvitationRecipient")
+  invitationsSent          MembershipInvitation[]             @relation("InvitationInviter")
+  recordedPlays            PlayTransaction[]                  @relation("PlayTransactionActor")
+  recordedEvents           SourceEvent[]                      @relation("SourceEventActor")
+  analyticsObservations    AnalyticsObservation[]             @relation("AnalyticsObservationActor")
+  auditRecords             SecurityAuditRecord[]              @relation("AuditActor")
+  privacyOverlays          PrivacyOverlay[]                   @relation("PrivacyOverlayActor")
+  productAnalyticsConsent  ProductAnalyticsConsent?
+  fantasyLeagueEvents      FantasyLeagueEvent[]               @relation("FantasyLeagueEventActor")
+  configurationsCreated    ApplicationConfiguration[]         @relation("ApplicationConfigurationCreatedBy")
+  configurationsUpdated    ApplicationConfiguration[]         @relation("ApplicationConfigurationUpdatedBy")
+  configurationRevisions   ApplicationConfigurationRevision[] @relation("ApplicationConfigurationRevisionActor")
+  authenticationIdentities AuthenticationIdentity[]           @relation("AuthenticationIdentityOwner")
+  authenticationLinks      AuthenticationIdentity[]           @relation("AuthenticationIdentityLinkActor")
+  authenticationSessions   AuthenticationSession[]
+  oauthLinkAttempts        OAuthLoginAttempt[]
 
   @@unique([provider, providerSubject])
+}
+
+model AuthenticationIdentity {
+  id                  String                       @id @default(cuid())
+  externalId          String                       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appUserId           String
+  provider            String
+  providerSubject     String
+  email               String?
+  emailVerified       Boolean?
+  source              AuthenticationIdentitySource
+  linkedByAppUserId   String?
+  linkedReason        String?
+  linkedAt            DateTime                     @default(now())
+  lastAuthenticatedAt DateTime?
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+
+  appUser  AppUser                 @relation("AuthenticationIdentityOwner", fields: [appUserId], references: [id], onDelete: Restrict)
+  linkedBy AppUser?                @relation("AuthenticationIdentityLinkActor", fields: [linkedByAppUserId], references: [id], onDelete: Restrict)
+  sessions AuthenticationSession[]
+
+  @@unique([provider, providerSubject])
+  @@unique([appUserId, id])
+  @@index([appUserId, linkedAt])
+}
+
+model AuthenticationSession {
+  id                      String    @id @default(cuid())
+  externalId              String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appUserId               String
+  identityId              String
+  tokenHash               String
+  previousTokenHash       String?
+  previousTokenValidUntil DateTime?
+  tokenVersion            Int       @default(1)
+  createdAt               DateTime  @default(now())
+  lastSeenAt              DateTime  @default(now())
+  rotatedAt               DateTime  @default(now())
+  idleExpiresAt           DateTime
+  absoluteExpiresAt       DateTime
+  revokedAt               DateTime?
+  revocationReason        String?
+
+  appUser           AppUser                      @relation(fields: [appUserId], references: [id], onDelete: Restrict)
+  identity          AuthenticationIdentity       @relation(fields: [appUserId, identityId], references: [appUserId, id], onDelete: Restrict)
+  events            AuthenticationSessionEvent[]
+  oauthLinkAttempts OAuthLoginAttempt[]
+
+  @@unique([appUserId, id])
+  @@index([appUserId, revokedAt, absoluteExpiresAt])
+  @@index([idleExpiresAt])
+}
+
+model AuthenticationSessionEvent {
+  id           String                         @id @default(cuid())
+  sessionId    String
+  eventType    AuthenticationSessionEventType
+  tokenVersion Int
+  reasonCode   String?
+  occurredAt   DateTime                       @default(now())
+
+  session AuthenticationSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+
+  @@index([sessionId, occurredAt])
+}
+
+model OAuthLoginAttempt {
+  id                  String              @id @default(cuid())
+  externalId          String              @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider            String
+  purpose             OAuthAttemptPurpose
+  appUserId           String?
+  initiatingSessionId String?
+  stateHash           String              @unique
+  browserBindingHash  String
+  encryptedSecrets    String
+  redirectUri         String
+  returnTo            String
+  expiresAt           DateTime
+  consumedAt          DateTime?
+  createdAt           DateTime            @default(now())
+
+  appUser           AppUser?               @relation(fields: [appUserId], references: [id], onDelete: Restrict)
+  initiatingSession AuthenticationSession? @relation(fields: [appUserId, initiatingSessionId], references: [appUserId, id], onDelete: Restrict)
+
+  @@index([expiresAt, consumedAt])
+  @@index([appUserId, createdAt])
+  @@index([appUserId, initiatingSessionId])
 }
 
 model ProductAnalyticsConsent {
@@ -1266,6 +1389,57 @@ model SecurityAuditRecord {
   @@index([accountId, createdAt])
   @@index([accountId, targetType, targetId])
   @@index([correlationId])
+}
+
+model ApplicationConfiguration {
+  id              String   @id @default(cuid())
+  externalId      String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId       String   @unique
+  schemaVersion   Int
+  currentRevision Int
+  values          Json
+  digest          String
+  createdById     String
+  updatedById     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  account   Account                            @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  createdBy AppUser                            @relation("ApplicationConfigurationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy AppUser                            @relation("ApplicationConfigurationUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  revisions ApplicationConfigurationRevision[]
+
+  @@unique([accountId, id])
+  @@index([accountId, updatedAt])
+}
+
+model ApplicationConfigurationRevision {
+  id                     String                      @id @default(cuid())
+  externalId             String                      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId              String
+  configurationId        String
+  revision               Int
+  schemaVersion          Int
+  values                 Json
+  digest                 String
+  source                 ConfigurationRevisionSource
+  reason                 String
+  actorId                String
+  actorUserId            String
+  previousRevisionId     String?
+  rolledBackFromRevision Int?
+  createdAt              DateTime                    @default(now())
+
+  account          Account                            @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  configuration    ApplicationConfiguration           @relation(fields: [accountId, configurationId], references: [accountId, id], onDelete: Restrict)
+  actorUser        AppUser                            @relation("ApplicationConfigurationRevisionActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  previousRevision ApplicationConfigurationRevision?  @relation("ApplicationConfigurationRevisionLineage", fields: [accountId, configurationId, previousRevisionId], references: [accountId, configurationId, id], onDelete: Restrict, map: "ApplicationConfigurationRevision_lineage_fkey")
+  nextRevisions    ApplicationConfigurationRevision[] @relation("ApplicationConfigurationRevisionLineage")
+
+  @@unique([accountId, configurationId, id], map: "AppConfigRevision_account_config_id_key")
+  @@unique([configurationId, revision])
+  @@index([accountId, configurationId, createdAt], map: "AppConfigRevision_account_config_created_idx")
+  @@index([actorUserId, createdAt])
 }
 
 model PrivacyOverlay {

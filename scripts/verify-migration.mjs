@@ -118,6 +118,24 @@ const expectedConstraints = [
   "FantasyResultSnapshot_fantasyLeagueId_kind_logicalId_revision_k",
   "FantasyResultSnapshot_accountId_fantasyLeagueId_kind_calculated",
   "FantasyResultSnapshot_values_check",
+  "ApplicationConfiguration_values_check",
+  "ApplicationConfiguration_accountId_key",
+  "ApplicationConfiguration_accountId_id_key",
+  "ApplicationConfigurationRevision_values_check",
+  "AppConfigRevision_account_config_id_key",
+  "ApplicationConfigurationRevision_configurationId_revision_key",
+  "AppConfigRevision_account_config_created_idx",
+  "ApplicationConfigurationRevision_accountId_configurationId_fkey",
+  "ApplicationConfigurationRevision_lineage_fkey",
+  "AuthenticationIdentity_values_check",
+  "AuthenticationIdentity_provider_providerSubject_key",
+  "AuthenticationIdentity_appUserId_id_key",
+  "AuthenticationSession_values_check",
+  "AuthenticationSession_appUserId_identityId_fkey",
+  "AuthenticationSessionEvent_values_check",
+  "OAuthLoginAttempt_values_check",
+  "OAuthLoginAttempt_stateHash_key",
+  "OAuthLoginAttempt_appUserId_initiatingSessionId_fkey",
 ];
 
 const expectedTriggers = [
@@ -160,6 +178,14 @@ const expectedTriggers = [
   "FantasyLeagueWorkspace_identity_immutable",
   "FantasyLeagueEvent_append_only",
   "FantasyResultSnapshot_append_only",
+  "ApplicationConfiguration_identity_immutable",
+  "ApplicationConfigurationRevision_append_only",
+  "ApplicationConfigurationRevision_lineage_guard",
+  "ApplicationConfiguration_history_required",
+  "AuthenticationIdentity_identity_immutable",
+  "AuthenticationSession_identity_immutable",
+  "AuthenticationSessionEvent_append_only",
+  "OAuthLoginAttempt_one_time_consumption",
 ];
 
 const client = new pg.Client({ connectionString: databaseUrl });

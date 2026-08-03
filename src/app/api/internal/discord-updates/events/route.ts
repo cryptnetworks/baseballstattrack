@@ -4,11 +4,12 @@ import { z } from "zod";
 
 import { getDiscordUpdatePublicationService } from "@/server/app/discord-update-worker-service";
 import { featureEnabled } from "@/server/config/feature-flags";
+import { runtimeSecretConfiguration } from "@/server/config/runtime-environment";
 
 export const dynamic = "force-dynamic";
 
 function authorized(request: Request): boolean {
-  const configured = process.env.DISCORD_UPDATE_EVENT_TOKEN;
+  const configured = runtimeSecretConfiguration().discordUpdateEventToken;
   const presented = request.headers
     .get("authorization")
     ?.replace(/^Bearer /u, "");
@@ -25,16 +26,19 @@ export async function POST(request: Request) {
       { status: 401, headers: { "Cache-Control": "no-store" } },
     );
   }
-  if (!featureEnabled("FEATURE_DISCORD_UPDATES_ENABLED")) {
-    return Response.json(
-      { disabled: true, outcome: "unavailable", created: 0 },
-      { status: 202, headers: { "Cache-Control": "no-store" } },
-    );
-  }
   try {
-    const result = await getDiscordUpdatePublicationService().publish(
-      await request.json(),
-    );
+    const input = await request.json();
+    const accountId = z
+      .object({ accountId: z.string().trim().min(1).max(128) })
+      .loose()
+      .parse(input).accountId;
+    if (!(await featureEnabled("FEATURE_DISCORD_UPDATES_ENABLED", accountId))) {
+      return Response.json(
+        { disabled: true, outcome: "unavailable", created: 0 },
+        { status: 202, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    const result = await getDiscordUpdatePublicationService().publish(input);
     return Response.json(result, {
       status: 202,
       headers: { "Cache-Control": "no-store" },

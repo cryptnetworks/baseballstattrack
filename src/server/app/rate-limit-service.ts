@@ -11,6 +11,7 @@ import {
   type RateLimitClass,
   type RateLimitPolicy,
 } from "@/domain/rate-limits";
+import { getApplicationConfigurationService } from "@/server/app/application-configuration-service";
 import { AuthorizationError } from "@/server/auth/errors";
 import {
   requireTrustedActor,
@@ -93,9 +94,21 @@ function policyIdentity(
 export class RateLimitService {
   constructor(
     private readonly repository: RateLimitRepository,
-    private readonly policies = loadRateLimitPolicies(),
+    private readonly policies:
+      | Readonly<Record<RateLimitClass, RateLimitPolicy>>
+      | ((
+          accountId: string,
+        ) => Promise<
+          Readonly<Record<RateLimitClass, RateLimitPolicy>>
+        >) = loadRateLimitPolicies(),
     private readonly operationalEvents: OperationalEventSink = getOperationalEventSink(),
   ) {}
+
+  private configuredPolicies(accountId: string) {
+    return typeof this.policies === "function"
+      ? this.policies(accountId)
+      : Promise.resolve(this.policies);
+  }
 
   async enforce(
     input: unknown,
@@ -107,7 +120,8 @@ export class RateLimitService {
       parsed.accountId,
       actorInput.capability,
     );
-    const policy = this.policies[parsed.endpointClass];
+    const policies = await this.configuredPolicies(parsed.accountId);
+    const policy = policies[parsed.endpointClass];
     const decision = await this.repository.consume({
       accountId: parsed.accountId,
       endpointClass: parsed.endpointClass,
@@ -163,7 +177,9 @@ export class RateLimitService {
     if (actor.target.kind !== "ACCOUNT") {
       throw new AuthorizationError("AUTHORIZATION_REQUIRED");
     }
-    const policy = this.policies[parsed.endpointClass];
+    const policy = (await this.configuredPolicies(parsed.accountId))[
+      parsed.endpointClass
+    ];
     if (
       parsed.actorLimit > policy.actorLimit * 10 ||
       parsed.accountLimit > policy.accountLimit * 10
@@ -242,6 +258,9 @@ let defaultService: RateLimitService | undefined;
 export function getRateLimitService(): RateLimitService {
   defaultService ??= new RateLimitService(
     new PrismaRateLimitRepository(getPrismaClient()),
+    async (accountId) =>
+      (await getApplicationConfigurationService().runtime(accountId)).values
+        .rateLimits,
   );
   return defaultService;
 }
