@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { authCookieOptions } from "@/server/auth/cookie-policy";
 import { AuthorizationError } from "@/server/auth/errors";
 import { AUTH_PROVIDER, type AuthenticatedIdentity } from "@/server/auth/types";
+import { runtimeSecretConfiguration } from "@/server/config/runtime-environment";
 
 export type SessionCookie = {
   name: string;
@@ -17,8 +18,9 @@ export type SessionCookieStore = {
 };
 
 function configuration() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const environment = runtimeSecretConfiguration();
+  const url = environment.supabaseUrl;
+  const key = environment.supabaseAnonymousKey;
   if (!url || !key) {
     throw new AuthorizationError(
       "CONFIGURATION_ERROR",

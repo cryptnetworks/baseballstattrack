@@ -1,4 +1,5 @@
 import { getServerEnv } from "@/lib/env";
+import { deploymentConfiguration } from "@/server/config/runtime-environment";
 
 export type ApplicationStatus = {
   status: "ok";
@@ -14,6 +15,6 @@ export function getApplicationStatus(): ApplicationStatus {
     status: "ok",
     environment: env.NEXT_PUBLIC_APP_ENV,
     eventSource: "game-events",
-    version: process.env.npm_package_version ?? "0.1.0",
+    version: deploymentConfiguration().packageVersion,
   };
 }

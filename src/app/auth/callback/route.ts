@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { createSupabaseNextClient } from "@/server/auth/next-session";
+import { deploymentConfiguration } from "@/server/config/runtime-environment";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const siteUrl = deploymentConfiguration().siteUrl;
   const redirectOrigin = siteUrl ? new URL(siteUrl).origin : requestUrl.origin;
   const code = requestUrl.searchParams.get("code");
   if (!code) {

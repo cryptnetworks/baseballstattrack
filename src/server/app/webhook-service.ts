@@ -29,6 +29,7 @@ import {
   PrismaWebhookRepository,
   type ClaimedWebhookDelivery,
 } from "@/server/data/webhook-repository";
+import { runtimeSecretConfiguration } from "@/server/config/runtime-environment";
 import { getPrismaClient } from "@/server/data/prisma";
 import {
   emitOperationalEvent,
@@ -603,7 +604,7 @@ export class WebhookDeliveryService {
 }
 
 function signingSecrets(): WebhookSecretDeriver {
-  const key = process.env.WEBHOOK_SIGNING_MASTER_KEY;
+  const key = runtimeSecretConfiguration().webhookSigningMasterKey;
   if (!key)
     throw new WebhookError(
       "CONFIGURATION_ERROR",

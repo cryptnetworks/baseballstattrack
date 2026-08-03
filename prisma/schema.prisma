@@ -156,6 +156,12 @@ enum AuditScope {
   SYSTEM
 }
 
+enum ConfigurationRevisionSource {
+  ENVIRONMENT_SEED
+  ADMIN_UPDATE
+  ROLLBACK
+}
+
 enum CorrectionPolicy {
   REPLACE_PLAY
   REPLACE_EVENT_RANGE
@@ -511,6 +517,8 @@ model Account {
   fantasyLeagueWorkspaces  FantasyLeagueWorkspace[]
   fantasyLeagueEvents      FantasyLeagueEvent[]
   fantasyResultSnapshots   FantasyResultSnapshot[]
+  applicationConfiguration ApplicationConfiguration?
+  configurationRevisions   ApplicationConfigurationRevision[]
 }
 
 model AppUser {
@@ -523,15 +531,18 @@ model AppUser {
   detachedAt      DateTime?
 
   memberships             AccountMembership[]
-  invitationsReceived     MembershipInvitation[]   @relation("InvitationRecipient")
-  invitationsSent         MembershipInvitation[]   @relation("InvitationInviter")
-  recordedPlays           PlayTransaction[]        @relation("PlayTransactionActor")
-  recordedEvents          SourceEvent[]            @relation("SourceEventActor")
-  analyticsObservations   AnalyticsObservation[]   @relation("AnalyticsObservationActor")
-  auditRecords            SecurityAuditRecord[]    @relation("AuditActor")
-  privacyOverlays         PrivacyOverlay[]         @relation("PrivacyOverlayActor")
+  invitationsReceived     MembershipInvitation[]             @relation("InvitationRecipient")
+  invitationsSent         MembershipInvitation[]             @relation("InvitationInviter")
+  recordedPlays           PlayTransaction[]                  @relation("PlayTransactionActor")
+  recordedEvents          SourceEvent[]                      @relation("SourceEventActor")
+  analyticsObservations   AnalyticsObservation[]             @relation("AnalyticsObservationActor")
+  auditRecords            SecurityAuditRecord[]              @relation("AuditActor")
+  privacyOverlays         PrivacyOverlay[]                   @relation("PrivacyOverlayActor")
   productAnalyticsConsent ProductAnalyticsConsent?
-  fantasyLeagueEvents     FantasyLeagueEvent[]     @relation("FantasyLeagueEventActor")
+  fantasyLeagueEvents     FantasyLeagueEvent[]               @relation("FantasyLeagueEventActor")
+  configurationsCreated   ApplicationConfiguration[]         @relation("ApplicationConfigurationCreatedBy")
+  configurationsUpdated   ApplicationConfiguration[]         @relation("ApplicationConfigurationUpdatedBy")
+  configurationRevisions  ApplicationConfigurationRevision[] @relation("ApplicationConfigurationRevisionActor")
 
   @@unique([provider, providerSubject])
 }
@@ -1266,6 +1277,57 @@ model SecurityAuditRecord {
   @@index([accountId, createdAt])
   @@index([accountId, targetType, targetId])
   @@index([correlationId])
+}
+
+model ApplicationConfiguration {
+  id              String   @id @default(cuid())
+  externalId      String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId       String   @unique
+  schemaVersion   Int
+  currentRevision Int
+  values          Json
+  digest          String
+  createdById     String
+  updatedById     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  account   Account                            @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  createdBy AppUser                            @relation("ApplicationConfigurationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy AppUser                            @relation("ApplicationConfigurationUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  revisions ApplicationConfigurationRevision[]
+
+  @@unique([accountId, id])
+  @@index([accountId, updatedAt])
+}
+
+model ApplicationConfigurationRevision {
+  id                     String                      @id @default(cuid())
+  externalId             String                      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId              String
+  configurationId        String
+  revision               Int
+  schemaVersion          Int
+  values                 Json
+  digest                 String
+  source                 ConfigurationRevisionSource
+  reason                 String
+  actorId                String
+  actorUserId            String
+  previousRevisionId     String?
+  rolledBackFromRevision Int?
+  createdAt              DateTime                    @default(now())
+
+  account          Account                            @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  configuration    ApplicationConfiguration           @relation(fields: [accountId, configurationId], references: [accountId, id], onDelete: Restrict)
+  actorUser        AppUser                            @relation("ApplicationConfigurationRevisionActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  previousRevision ApplicationConfigurationRevision?  @relation("ApplicationConfigurationRevisionLineage", fields: [accountId, configurationId, previousRevisionId], references: [accountId, configurationId, id], onDelete: Restrict, map: "ApplicationConfigurationRevision_lineage_fkey")
+  nextRevisions    ApplicationConfigurationRevision[] @relation("ApplicationConfigurationRevisionLineage")
+
+  @@unique([accountId, configurationId, id], map: "AppConfigRevision_account_config_id_key")
+  @@unique([configurationId, revision])
+  @@index([accountId, configurationId, createdAt], map: "AppConfigRevision_account_config_created_idx")
+  @@index([actorUserId, createdAt])
 }
 
 model PrivacyOverlay {

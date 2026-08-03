@@ -10,6 +10,7 @@ import {
 } from "@/server/auth/next-session";
 import { requireSameOriginValues } from "@/server/auth/request-security";
 import { signOutSupabaseCookies } from "@/server/auth/supabase-session";
+import { deploymentConfiguration } from "@/server/config/runtime-environment";
 
 const supportedProviders = new Set(["google", "github", "azure"]);
 
@@ -23,8 +24,9 @@ async function requireActionOrigin() {
 
 export async function signIn(): Promise<never> {
   await requireActionOrigin();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  const configuredProvider = process.env.SUPABASE_OAUTH_PROVIDER ?? "google";
+  const deployment = deploymentConfiguration();
+  const siteUrl = deployment.siteUrl;
+  const configuredProvider = deployment.supabaseOauthProvider;
   if (!siteUrl || !supportedProviders.has(configuredProvider)) {
     throw new AuthorizationError(
       "CONFIGURATION_ERROR",

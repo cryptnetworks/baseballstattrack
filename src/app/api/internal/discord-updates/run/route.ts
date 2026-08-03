@@ -6,13 +6,13 @@ import {
   DiscordUpdateWorkerError,
   getDiscordUpdateWorkerService,
 } from "@/server/app/discord-update-worker-service";
-import { featureEnabled } from "@/server/config/feature-flags";
+import { runtimeSecretConfiguration } from "@/server/config/runtime-environment";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 function authorized(request: Request): boolean {
-  const configured = process.env.DISCORD_UPDATE_WORKER_TOKEN;
+  const configured = runtimeSecretConfiguration().discordUpdateWorkerToken;
   const presented = request.headers
     .get("authorization")
     ?.replace(/^Bearer /u, "");
@@ -42,16 +42,6 @@ export async function POST(request: Request) {
     return Response.json(
       { error: "The update worker request is unavailable." },
       { status: 401, headers: { "Cache-Control": "no-store" } },
-    );
-  }
-  if (!featureEnabled("FEATURE_DISCORD_UPDATES_ENABLED")) {
-    return Response.json(
-      {
-        disabled: true,
-        evaluations: summary([]),
-        deliveries: summary([]),
-      },
-      { headers: { "Cache-Control": "no-store" } },
     );
   }
   try {

@@ -57,11 +57,14 @@ Register the exact callback URI with Discord and configure:
 
 - `DISCORD_OAUTH_CLIENT_ID` and `DISCORD_OAUTH_CLIENT_SECRET`;
 - `DISCORD_INSTALLATION_BOT_TOKEN`;
-- `DISCORD_INSTALLATION_CREDENTIAL_REFERENCE`, an opaque secret-manager path;
 - `DISCORD_OAUTH_STATE_SECRET`, independent and at least 32 characters;
-- `DISCORD_OAUTH_REDIRECT_URI` (or derive it from `NEXT_PUBLIC_SITE_URL`);
-- optional HTTPS `DISCORD_INSTALLATION_API_BASE_URL`; and
-- optional 1–30 second `DISCORD_INSTALLATION_TIMEOUT_MS`.
+- `DISCORD_OAUTH_REDIRECT_URI` (or derive it from `NEXT_PUBLIC_SITE_URL`).
+
+In **Settings → Application configuration**, configure the non-secret
+credential reference, Discord API base URL, and bounded installation timeout.
+Legacy `DISCORD_INSTALLATION_CREDENTIAL_REFERENCE`,
+`DISCORD_INSTALLATION_API_BASE_URL`, and `DISCORD_INSTALLATION_TIMEOUT_MS`
+values are accepted only by the reviewed initial seed action.
 
 Configuration fails closed. HTTPS is mandatory except loopback HTTP for local
 development. Rotate secrets in the manager, update the deployment, verify one

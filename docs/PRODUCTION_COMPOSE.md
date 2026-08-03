@@ -54,15 +54,15 @@ dedicated identity with only the exact-team `report.view` grant. The bot's API
 and web URLs must be the public HTTPS application origin; the bot never joins
 the database network or reads database credentials.
 
-`FEATURE_ICS_CALENDAR_ENABLED` enables the pull-only calendar feed.
 `ICS_FEED_SIGNING_KEY` signs its subscription URLs and must be at least 32
-random characters. `ICS_FEED_DETAIL_LEVEL` is `private`, `opponent`, or `full`.
+random characters. Enable the feed and choose its `private`, `opponent`, or
+`full` detail level in **Settings → Application configuration**.
 
-Email and Discord notifications are independently controlled by
-`FEATURE_EMAIL_NOTIFICATIONS_ENABLED` and
-`FEATURE_DISCORD_NOTIFICATIONS_ENABLED`. Email uses only `SMTP_HOST`,
-`SMTP_PORT`, `SMTP_SECURE`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`.
-Disabled channels do not require their provider credentials.
+Email and Discord notifications are independently controlled in the
+application configuration portal. SMTP host, port, TLS, and from identity are
+database-owned; `SMTP_USERNAME`, `SMTP_PASSWORD`, and
+`NOTIFICATION_DISCORD_BOT_TOKEN` remain external secrets. Disabled channels do
+not require their provider credentials.
 
 Optional containers use Compose profiles. Set
 `COMPOSE_PROFILES=discord-control-plane` for the Python bot and update

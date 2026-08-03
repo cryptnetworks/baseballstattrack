@@ -1,5 +1,10 @@
 import { Client } from "pg";
 
+import {
+  deploymentConfiguration,
+  runtimeSecretConfiguration,
+} from "@/server/config/runtime-environment";
+
 export type ApplicationReadiness = {
   status: "ready" | "not_ready";
   checks: {
@@ -96,8 +101,9 @@ async function probeDatabase(
 
 export async function getApplicationReadiness(
   environment: ReadinessEnvironment = {
-    DATABASE_URL: process.env.DATABASE_URL,
-    REQUIRED_DATABASE_MIGRATION: process.env.REQUIRED_DATABASE_MIGRATION,
+    DATABASE_URL: runtimeSecretConfiguration().databaseUrl,
+    REQUIRED_DATABASE_MIGRATION:
+      deploymentConfiguration().requiredDatabaseMigration,
   },
   databaseProbe: DatabaseProbe = probeDatabase,
 ): Promise<ApplicationReadiness> {

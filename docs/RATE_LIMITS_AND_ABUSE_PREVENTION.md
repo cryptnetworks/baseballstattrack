@@ -33,10 +33,11 @@ Account limiter protects the upstream provider endpoints.
 ## Endpoint classes and defaults
 
 Defaults are conservative operational guardrails, not billing entitlements.
-`RATE_LIMIT_POLICIES_JSON` may override named policies at deployment after
-strict server-side validation; an Account limit cannot be lower than its actor
-limit. Invalid configuration fails startup of the limiter rather than silently
-disabling it.
+Account administrators may override named policies in **Settings → Application
+configuration** after strict server-side validation; an Account limit cannot be
+lower than its actor limit. Invalid configuration is rejected without changing
+the current revision. Legacy `RATE_LIMIT_POLICIES_JSON` is read only by the
+reviewed initial seed action.
 
 | Class                     | Actor units | Account units | Window | Current or reserved consumers                                   |
 | ------------------------- | ----------: | ------------: | -----: | --------------------------------------------------------------- |

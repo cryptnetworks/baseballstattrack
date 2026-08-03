@@ -10,6 +10,7 @@ import {
   noRateLimit,
   type RateLimitEnforcer,
 } from "@/server/app/rate-limit-service";
+import { getApplicationConfigurationService } from "@/server/app/application-configuration-service";
 import {
   issueDiscordOAuthState,
   verifyDiscordOAuthState,
@@ -217,10 +218,12 @@ export class DiscordInstallationService {
   }
 }
 
-export function getDiscordInstallationService() {
+export async function getDiscordInstallationService(accountId: string) {
+  const runtime = await getApplicationConfigurationService().runtime(accountId);
+  const configuration = loadDiscordInstallationConfiguration(runtime.values);
   return new DiscordInstallationService(
     new PrismaDiscordInstallationRepository(getPrismaClient()),
-    loadDiscordInstallationConfiguration,
+    () => configuration,
     (configuration) => new ConfiguredDiscordInstallationProvider(configuration),
     getRateLimitService(),
   );

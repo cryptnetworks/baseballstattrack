@@ -85,7 +85,7 @@ export const RATE_LIMIT_POLICY_VERSION = "m4-v1";
 export const RATE_LIMIT_IDEMPOTENCY_TTL_SECONDS = 86_400;
 
 export function loadRateLimitPolicies(
-  encoded = process.env.RATE_LIMIT_POLICIES_JSON,
+  encoded?: string,
 ): Readonly<Record<RateLimitClass, RateLimitPolicy>> {
   if (!encoded?.trim()) return DEFAULT_RATE_LIMIT_POLICIES;
   let parsed: unknown;

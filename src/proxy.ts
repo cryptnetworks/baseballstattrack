@@ -2,10 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { authCookieOptions } from "@/server/auth/cookie-policy";
+import { runtimeSecretConfiguration } from "@/server/config/runtime-environment";
 
 export async function proxy(request: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const environment = runtimeSecretConfiguration();
+  const url = environment.supabaseUrl;
+  const key = environment.supabaseAnonymousKey;
   if (!url || !key) {
     const response = NextResponse.next({ request });
     response.headers.set("Cache-Control", "private, no-store");
