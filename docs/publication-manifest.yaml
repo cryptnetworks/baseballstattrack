@@ -48,6 +48,9 @@ exclusions:
   - source: M5_DISCORD_CONTROL_PLANE_RECONCILIATION.md
     visibility: internal
     reason: Internal milestone reconciliation is not a user-facing wiki page.
+  - source: M8_EXIT_AUDIT.md
+    visibility: internal
+    reason: Internal milestone validation evidence is not a user-facing wiki page.
   - source: OFFLINE_SCORING_AND_SYNC_DECISION.md
     visibility: restricted
     reason: Offline scoring remains a deferred product boundary.

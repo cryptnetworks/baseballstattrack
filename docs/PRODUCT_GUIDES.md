@@ -32,3 +32,4 @@ data contracts, and architecture are collected separately in
 ## Application experience
 
 - [Progressive web application experience](PWA_APPLICATION_EXPERIENCE.md)
+- [Fantasy user interface and notifications](FANTASY_USER_INTERFACE_AND_NOTIFICATIONS.md)
