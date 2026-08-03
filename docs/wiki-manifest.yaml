@@ -205,6 +205,12 @@ pages:
       visibility: public,
       order: 300,
     }
+  - {
+      source: FANTASY_LEAGUE_ECOSYSTEM.md,
+      wiki: Fantasy-League-Ecosystem,
+      visibility: public,
+      order: 305,
+    }
   - source: FANTASY_RULES_CONTRACT.md
     visibility: internal
     reason: Future fantasy-rule activation planning is not a supported public contract.
