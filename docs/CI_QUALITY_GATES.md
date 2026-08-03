@@ -94,12 +94,16 @@ detection/recovery drill. Production-container checks run for container/runtime,
 migration, Node dependency, release-workflow, and CI-policy changes. These checks use only disposable
 synthetic PostgreSQL and Docker state.
 
-The main SAST workflow starts only when a push, pull request, or merge-group diff
-contains an Actions, JavaScript/TypeScript, or Python source path. Its planner
-passes only the affected languages to CodeQL. Dependency-only changes use the
-monthly security workflow's independently scoped npm or Python audit and the
-container audit; they do not also run CodeQL. Pull requests do not duplicate the
-scheduled full-history secret scan or the monthly all-language SAST run.
+For pushes and pull requests, the main SAST workflow starts only when the diff
+contains an Actions, JavaScript/TypeScript, or Python source path. GitHub Advanced
+Security treats each language/category pair as a required CodeQL configuration,
+so Actions, JavaScript/TypeScript, and Python run together whenever SAST starts;
+omitting an unchanged language would fail the aggregate CodeQL check as an
+incomplete analysis. Dependency-only changes instead use the monthly security
+workflow's independently scoped npm or Python audit and the container audit.
+Pull requests do not duplicate the scheduled full-history secret scan or the
+monthly SAST run. Merge-queue checks use the event's supported
+`checks_requested` activity; GitHub does not support path filters on that event.
 
 Documentation wiki publication still waits for a successful `main` CI run. A
 small follow-up scope job checks the exact successful commit and starts the

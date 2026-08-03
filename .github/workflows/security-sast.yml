@@ -2,12 +2,6 @@ name: Reusable security SAST
 
 on:
   workflow_call:
-    inputs:
-      languages:
-        description: JSON array of CodeQL languages required for this change
-        required: false
-        type: string
-        default: '["actions","javascript-typescript","python"]'
 
 permissions:
   contents: read
@@ -21,7 +15,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ${{ fromJSON(inputs.languages) }}
+        language:
+          - actions
+          - javascript-typescript
+          - python
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

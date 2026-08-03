@@ -63,21 +63,12 @@ for (const [name, entry] of Object.entries({ main, monthly, reusable })) {
   }
 }
 
-const defaultLanguages = JSON.parse(
-  reusable.value.on.workflow_call.inputs?.languages?.default ?? "[]",
-);
 for (const language of ["actions", "javascript-typescript", "python"]) {
-  if (!defaultLanguages.includes(language))
+  if (!reusable.text.includes(`- ${language}`))
     fail(`CodeQL does not cover ${language}.`);
 }
-if (!reusable.text.includes("fromJSON(inputs.languages)"))
-  fail("CodeQL does not accept the scoped language plan.");
 if (!reusable.text.includes("queries: security-extended"))
   fail("CodeQL security-extended queries are not enabled.");
-if (!main.text.includes("scripts/plan-security-ci.mjs"))
-  fail("main SAST does not classify changed languages.");
-if (main.value.jobs?.sast?.if !== "needs.scope.outputs.languages != '[]'")
-  fail("main SAST does not skip empty merge-queue language plans.");
 if (
   main.text.includes("npm run security:test") ||
   main.text.includes("npm audit")
