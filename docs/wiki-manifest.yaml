@@ -1,0 +1,548 @@
+version: 2
+
+source:
+  root: docs
+  repository: https://github.com/cryptnetworks/baseballstattrack
+  branch: main
+
+publication:
+  generatedDirectory: _generated
+  reservedDirectory: _wiki-owned
+  landingPage: Home.md
+  sidebarPage: _Sidebar.md
+  footerPage: _Footer.md
+  generatedManifest: _generated/.publication-manifest.json
+  publicOnly: true
+  navigationUnlisted: linked
+  excludedLinkPolicy: repository
+  repositoryPagesBase: https://github.com/cryptnetworks/baseballstattrack/blob/main/docs
+  bootstrap:
+    - path: Home.md
+      sha256: c6a18cf49d1d4ae70f48f744bd3352f3b2337b4b6ed4c9050663851bb2da4a3e
+
+# This is the fail-closed publication inventory. Every Markdown source must
+# match exactly one entry. Public pages have an explicit, reader-friendly Wiki
+# name and stable order. Internal and restricted sources require a reason and
+# are never copied to the Wiki.
+pages:
+  - {
+      source: ANALYTICS_CHARTER.md,
+      wiki: Analytics-Charter,
+      visibility: public,
+      order: 10,
+    }
+  - {
+      source: ANALYTICS_OBSERVATION_STREAM.md,
+      wiki: Analytics-Observation-Stream,
+      visibility: public,
+      order: 20,
+    }
+  - {
+      source: API_VERSIONING_AND_COMPATIBILITY.md,
+      wiki: API-Versioning-and-Compatibility,
+      visibility: public,
+      order: 30,
+    }
+  - {
+      source: AUTHENTICATION_AND_AUTHORIZATION.md,
+      wiki: Authentication-and-Authorization,
+      visibility: public,
+      order: 40,
+    }
+  - {
+      source: AUTHENTICATION_PROVIDERS.md,
+      wiki: Authentication-Providers,
+      visibility: public,
+      order: 50,
+    }
+  - {
+      source: BACKUP_AND_RESTORE.md,
+      wiki: Backup-and-Restore,
+      visibility: public,
+      order: 60,
+    }
+  - {
+      source: CALENDAR_SYNCHRONIZATION.md,
+      wiki: Calendar-Synchronization,
+      visibility: public,
+      order: 70,
+    }
+  - {
+      source: CI_QUALITY_GATES.md,
+      wiki: CI-Quality-Gates,
+      visibility: public,
+      order: 80,
+    }
+  - {
+      source: CONFIGURATION_MANAGEMENT.md,
+      wiki: Configuration-Management,
+      visibility: public,
+      order: 90,
+    }
+  - {
+      source: CONTAINER_OPERATIONS.md,
+      wiki: Container-Operations,
+      visibility: public,
+      order: 100,
+    }
+  - {
+      source: CORRECTION_AUDIT_AND_REPLAY.md,
+      wiki: Correction-Audit-and-Replay,
+      visibility: public,
+      order: 110,
+    }
+  - {
+      source: DATABASE_STORAGE_CAPACITY.md,
+      wiki: Database-Storage-Capacity,
+      visibility: public,
+      order: 120,
+    }
+  - {
+      source: DATA_EXPORT_AND_IMPORT.md,
+      wiki: Data-Export-and-Import,
+      visibility: public,
+      order: 130,
+    }
+  - {
+      source: DATA_QUALITY_RECONCILIATION.md,
+      wiki: Data-Quality-Reconciliation,
+      visibility: public,
+      order: 140,
+    }
+  - {
+      source: DEFECT_TRIAGE_AND_REGRESSION_POLICY.md,
+      wiki: Defect-Triage-and-Regression-Policy,
+      visibility: public,
+      order: 150,
+    }
+  - {
+      source: DISCORD_ACTIVITY_AND_HEALTH.md,
+      wiki: Discord-Activity-and-Health,
+      visibility: public,
+      order: 160,
+    }
+  - {
+      source: DISCORD_CHANNEL_ROUTING.md,
+      wiki: Discord-Channel-Routing,
+      visibility: public,
+      order: 170,
+    }
+  - {
+      source: DISCORD_CONFIGURATION_PREVIEW.md,
+      wiki: Discord-Configuration-Preview,
+      visibility: public,
+      order: 180,
+    }
+  - {
+      source: DISCORD_CONTROL_PLANE_DEPLOYMENT.md,
+      wiki: Discord-Control-Plane-Deployment,
+      visibility: public,
+      order: 190,
+    }
+  - {
+      source: DISCORD_END_TO_END_FIXTURES.md,
+      wiki: Discord-End-to-End-Fixtures,
+      visibility: public,
+      order: 200,
+    }
+  - {
+      source: DISCORD_INSTALLATION_AND_ONBOARDING.md,
+      wiki: Discord-Installation-and-Onboarding,
+      visibility: public,
+      order: 210,
+    }
+  - {
+      source: DISCORD_PERMISSIONS_AND_AUDIT.md,
+      wiki: Discord-Permissions-and-Audit,
+      visibility: public,
+      order: 220,
+    }
+  - {
+      source: DISCORD_SETTINGS_CONTRACT.md,
+      wiki: Discord-Settings-Contract,
+      visibility: public,
+      order: 230,
+    }
+  - {
+      source: DISCORD_SETTINGS_WEB_UI.md,
+      wiki: Discord-Settings-Web-UI,
+      visibility: public,
+      order: 240,
+    }
+  - {
+      source: DISCORD_TRACKED_SCOPES.md,
+      wiki: Discord-Tracked-Scopes,
+      visibility: public,
+      order: 250,
+    }
+  - {
+      source: DISCORD_UPDATE_CADENCE.md,
+      wiki: Discord-Update-Cadence,
+      visibility: public,
+      order: 260,
+    }
+  - {
+      source: DISCORD_UPDATE_CONTENT.md,
+      wiki: Discord-Update-Content,
+      visibility: public,
+      order: 270,
+    }
+  - {
+      source: DISCORD_UPDATE_WORKER.md,
+      wiki: Discord-Update-Worker,
+      visibility: public,
+      order: 280,
+    }
+  - {
+      source: EXTERNAL_DATA_INGESTION.md,
+      wiki: External-Data-Ingestion,
+      visibility: public,
+      order: 290,
+    }
+  - {
+      source: FANTASY_DOMAIN_MODEL.md,
+      wiki: Fantasy-Domain-Model,
+      visibility: public,
+      order: 300,
+    }
+  - {
+      source: FANTASY_LEAGUE_ECOSYSTEM.md,
+      wiki: Fantasy-League-Ecosystem,
+      visibility: public,
+      order: 305,
+    }
+  - source: FANTASY_RULES_CONTRACT.md
+    visibility: internal
+    reason: Future fantasy-rule activation planning is not a supported public contract.
+  - {
+      source: FANTASY_SCORING_AND_MATCHUPS.md,
+      wiki: Fantasy-Scoring-and-Matchups,
+      visibility: public,
+      order: 310,
+    }
+  - {
+      source: FANTASY_TRANSACTIONS.md,
+      wiki: Fantasy-Transactions,
+      visibility: public,
+      order: 320,
+    }
+  - {
+      source: FANTASY_USER_INTERFACE_AND_NOTIFICATIONS.md,
+      wiki: Fantasy-User-Interface-and-Notifications,
+      visibility: public,
+      order: 330,
+    }
+  - {
+      source: GAME_BOX_SCORE.md,
+      wiki: Game-Box-Score,
+      visibility: public,
+      order: 340,
+    }
+  - {
+      source: GAME_SETUP_AND_LINEUPS.md,
+      wiki: Game-Setup-and-Lineups,
+      visibility: public,
+      order: 350,
+    }
+  - {
+      source: GAME_SETUP_WORKFLOW.md,
+      wiki: Game-Setup-Workflow,
+      visibility: public,
+      order: 360,
+    }
+  - {
+      source: IMMUTABLE_GAME_EVENT_MODEL.md,
+      wiki: Immutable-Game-Event-Model,
+      visibility: public,
+      order: 370,
+    }
+  - source: IMPORT_PORTABILITY.md
+    visibility: internal
+    reason: Import quarantine and promotion design remains implementation-planning material.
+  - {
+      source: INSTALLATION_AND_DEVELOPMENT.md,
+      wiki: Installation-and-Development,
+      visibility: public,
+      order: 380,
+    }
+  - {
+      source: INTEGRATIONS_AND_PARTNER_API_PROGRAM.md,
+      wiki: Integrations-and-Partner-API-Program,
+      visibility: public,
+      order: 390,
+    }
+  - {
+      source: INTEGRATIONS_GUIDE.md,
+      wiki: Integrations-Guide,
+      visibility: public,
+      order: 400,
+    }
+  - source: LEAGUE_DELEGATION_MODEL.md
+    visibility: internal
+    reason: Future organization and league authority planning is not public documentation.
+  - {
+      source: LIVE_PLATE_APPEARANCE_SCORING.md,
+      wiki: Live-Plate-Appearance-Scoring,
+      visibility: public,
+      order: 410,
+    }
+  - {
+      source: LIVE_SUBSTITUTIONS_AND_PITCHING.md,
+      wiki: Live-Substitutions-and-Pitching,
+      visibility: public,
+      order: 420,
+    }
+  - source: M5_DISCORD_CONTROL_PLANE_RECONCILIATION.md
+    visibility: internal
+    reason: Milestone reconciliation evidence is maintainer-only material.
+  - source: M8_EXIT_AUDIT.md
+    visibility: internal
+    reason: Milestone exit evidence is maintainer-only material.
+  - {
+      source: OBSERVABILITY_AUDIT_AND_ALERTING.md,
+      wiki: Observability-Audit-and-Alerting,
+      visibility: public,
+      order: 430,
+    }
+  - source: OFFLINE_SCORING_AND_SYNC_DECISION.md
+    visibility: restricted
+    reason: Deferred offline-conflict design is not an active public capability.
+  - {
+      source: OPERATIONS_AND_SECURITY.md,
+      wiki: Operations-and-Security,
+      visibility: public,
+      order: 440,
+    }
+  - {
+      source: OUTBOUND_NOTIFICATIONS.md,
+      wiki: Outbound-Notifications,
+      visibility: public,
+      order: 450,
+    }
+  - {
+      source: PERFORMANCE_AND_LOAD_BUDGETS.md,
+      wiki: Performance-and-Load-Budgets,
+      visibility: public,
+      order: 460,
+    }
+  - {
+      source: PERSISTENCE_AND_TENANCY.md,
+      wiki: Persistence-and-Tenancy,
+      visibility: public,
+      order: 470,
+    }
+  - {
+      source: PRINTABLE_REPORTS.md,
+      wiki: Printable-Reports,
+      visibility: public,
+      order: 480,
+    }
+  - {
+      source: PRIVACY_AND_THREAT_MODEL.md,
+      wiki: Privacy-and-Threat-Model,
+      visibility: public,
+      order: 490,
+    }
+  - {
+      source: PRIVACY_LIFECYCLE.md,
+      wiki: Privacy-Lifecycle,
+      visibility: public,
+      order: 500,
+    }
+  - {
+      source: PRODUCTION_AUTHENTICATION_AND_TEAM_ISOLATION.md,
+      wiki: Production-Authentication-and-Team-Isolation,
+      visibility: public,
+      order: 510,
+    }
+  - {
+      source: PRODUCTION_COMPOSE.md,
+      wiki: Production-Docker-Compose,
+      visibility: public,
+      order: 520,
+    }
+  - {
+      source: PRODUCTION_RELIABILITY.md,
+      wiki: Production-Reliability,
+      visibility: public,
+      order: 530,
+    }
+  - {
+      source: PRODUCT_ANALYTICS_AND_PRIVACY.md,
+      wiki: Product-Analytics-and-Privacy,
+      visibility: public,
+      order: 540,
+    }
+  - {
+      source: PRODUCT_GUIDES.md,
+      wiki: Product-Guides,
+      visibility: public,
+      order: 550,
+    }
+  - {
+      source: PRODUCT_SCOPE.md,
+      wiki: Product-Scope,
+      visibility: public,
+      order: 560,
+    }
+  - {
+      source: PWA_APPLICATION_EXPERIENCE.md,
+      wiki: Progressive-Web-App,
+      visibility: public,
+      order: 570,
+    }
+  - {
+      source: RATE_LIMITS_AND_ABUSE_PREVENTION.md,
+      wiki: Rate-Limits-and-Abuse-Prevention,
+      visibility: public,
+      order: 580,
+    }
+  - {
+      source: RELATIONAL_DOMAIN_SCHEMA.md,
+      wiki: Relational-Domain-Schema,
+      visibility: public,
+      order: 590,
+    }
+  - {
+      source: RELEASE_AND_WORKFLOW_SECURITY.md,
+      wiki: Release-and-Workflow-Security,
+      visibility: public,
+      order: 600,
+    }
+  - source: REPOSITORY_HYGIENE_AUDIT.md
+    visibility: internal
+    reason: Repository audit evidence and removal history are maintainer-only material.
+  - {
+      source: REPOSITORY_OPERATIONS_CHECKLIST.md,
+      wiki: Repository-Operations-Checklist,
+      visibility: public,
+      order: 610,
+    }
+  - {
+      source: RESPONSIVE_PERFORMANCE_AND_ACCESSIBILITY.md,
+      wiki: Responsive-Performance-and-Accessibility,
+      visibility: public,
+      order: 620,
+    }
+  - { source: ROADMAP.md, wiki: Roadmap, visibility: public, order: 630 }
+  - source: RULESET_CONTRACT.md
+    visibility: internal
+    reason: Future ruleset activation design remains implementation-planning material.
+  - {
+      source: RULES_AND_CALCULATIONS.md,
+      wiki: Rules-and-Calculations,
+      visibility: public,
+      order: 640,
+    }
+  - {
+      source: RUNNER_AND_BASE_OUT_INTERACTIONS.md,
+      wiki: Runner-and-Base-Out-Interactions,
+      visibility: public,
+      order: 650,
+    }
+  - {
+      source: SCOREKEEPING_USABILITY_AND_ACCESSIBILITY.md,
+      wiki: Scorekeeping-Usability-and-Accessibility,
+      visibility: public,
+      order: 660,
+    }
+  - {
+      source: SCORING_AUTOSAVE_AND_RECOVERY.md,
+      wiki: Scoring-Autosave-and-Recovery,
+      visibility: public,
+      order: 670,
+    }
+  - {
+      source: SCORING_CORRECTION_UX.md,
+      wiki: Scoring-Correction-UX,
+      visibility: public,
+      order: 680,
+    }
+  - {
+      source: SCORING_FIXTURES.md,
+      wiki: Scoring-Fixtures,
+      visibility: public,
+      order: 690,
+    }
+  - {
+      source: SCORING_SEMANTICS.md,
+      wiki: Scoring-Semantics,
+      visibility: public,
+      order: 700,
+    }
+  - {
+      source: SEASON_DASHBOARD_AND_LEADERBOARDS.md,
+      wiki: Season-Dashboard-and-Leaderboards,
+      visibility: public,
+      order: 710,
+    }
+  - source: SECURITY_AUDIT.md
+    visibility: restricted
+    reason: Raw security findings, baselines, and remediation evidence are not published.
+  - {
+      source: SPRAY_AND_PITCH_CHART_DISCOVERY.md,
+      wiki: Spray-and-Pitch-Chart-Discovery,
+      visibility: public,
+      order: 720,
+    }
+  - { source: START_HERE.md, wiki: Start-Here, visibility: public, order: 730 }
+  - {
+      source: STATISTICS_API_V1.md,
+      wiki: Statistics-API-v1,
+      visibility: public,
+      order: 740,
+    }
+  - {
+      source: STATISTIC_DERIVATION.md,
+      wiki: Statistic-Derivation,
+      visibility: public,
+      order: 750,
+    }
+  - {
+      source: TEAM_SEASON_ROSTER_MANAGEMENT.md,
+      wiki: Team-Season-and-Roster-Management,
+      visibility: public,
+      order: 760,
+    }
+  - { source: WEBHOOKS.md, wiki: Webhooks, visibility: public, order: 770 }
+  - {
+      source: WIKI_PUBLISHING_GUIDE.md,
+      wiki: Wiki-Publishing-Guide,
+      visibility: public,
+      order: 780,
+    }
+  - source: decisions/**
+    visibility: internal
+    reason: Architecture decision records remain repository review material.
+  - source: api/**
+    visibility: internal
+    reason: Machine-readable API contracts and examples remain versioned repository assets.
+  - source: wiki-manifest.yaml
+    visibility: internal
+    reason: Publication control metadata is repository-only source material.
+
+navigation:
+  - title: Start Here
+    description: Understand the product, its current scope, and where it is headed.
+    pages:
+      - Start-Here
+  - title: Use the Application
+    description: Follow scorekeeping, roster, reporting, recovery, and fantasy workflows.
+    pages:
+      - Product-Guides
+  - title: Rules and Calculations
+    description: See exactly how plays, statistics, corrections, analytics, and fantasy results are determined.
+    pages:
+      - Rules-and-Calculations
+  - title: Install and Develop
+    description: Set up a local workspace, deploy the stack, and follow the contributor workflow.
+    pages:
+      - Installation-and-Development
+  - title: Integrations
+    description: Connect data providers, APIs, notifications, calendars, webhooks, and Discord.
+    pages:
+      - Integrations-Guide
+  - title: Operate Securely
+    description: Run, protect, observe, back up, and recover a production deployment.
+    pages:
+      - Operations-and-Security

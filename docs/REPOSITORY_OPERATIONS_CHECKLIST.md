@@ -37,7 +37,7 @@ is maintained in `.github/branch-protection.md`.
 Treat `docs/` as the only authoritative documentation source. The generated
 wiki, manifest, visibility classifications, reserved namespace, credential
 rotation, dry-run, publication, and recovery rules are maintained in
-[Documentation Wiki Publishing](DOCUMENTATION_WIKI_PUBLISHING.md). Never edit a
+[GitHub Wiki publishing guide](WIKI_PUBLISHING_GUIDE.md). Never edit a
 generated wiki page as a source change. Before a controlled publication, run
 `npm run docs:wiki:dry-run` against a temporary wiki checkout and preserve the
 source SHA and prospective diff in the operation record.

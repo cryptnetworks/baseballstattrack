@@ -4,9 +4,13 @@
 
 Do not open an issue or pull request for a suspected vulnerability. This includes suspected authentication bypass, secret or token exposure, cross-Account access, exploitable injection, youth-data exposure, backup exposure, active abuse, or unpublished vulnerability details.
 
-This repository is private. As of July 29, 2026, GitHub private vulnerability reporting and repository security advisories cannot be relied on for this repository, and the repository API does not expose an enabled private-reporting form. The previous `/security/advisories/new` issue-template link was therefore not a usable reporter path.
+Use GitHub's private vulnerability reporting form on the repository Security
+tab. Do not include credentials, production data, or private youth data in the
+initial report.
 
-Use the **Email me!** link on the repository owner's maintainer-controlled site at [mdesocio.com](https://mdesocio.com/#hero). In the first message:
+If GitHub's private reporting form is unavailable, use the **Email me!** link
+on the repository owner's maintainer-controlled site at
+[mdesocio.com](https://mdesocio.com/#hero). In the first message:
 
 - use a neutral subject such as `Baseball Stat Track security report`;
 - include your GitHub username and a safe way to continue privately;
@@ -14,7 +18,10 @@ Use the **Email me!** link on the repository owner's maintainer-controlled site 
 - use synthetic or redacted data;
 - omit real credentials, tokens, cookies, database URLs, production dumps, private event payloads, and real youth or other personal data.
 
-Do not test against production, access another Account, retain data, or broaden testing without explicit authorization. If the site or email link is unavailable, do not disclose details publicly or invent another contact. Wait until the repository owner restores or publishes a private channel.
+Do not test against production, access another Account, retain data, or broaden
+testing without explicit authorization. If both private channels are
+unavailable, do not disclose details publicly or invent another contact. Wait
+until the repository owner restores or publishes a private channel.
 
 The maintainer will acknowledge and coordinate when reasonably able. No fixed response or remediation time is promised. The report may be moved to another mutually agreed private channel before detailed evidence is exchanged.
 
@@ -31,6 +38,7 @@ The project will require:
 - server-side validation for all persisted input;
 - tenant/team isolation before multi-team release;
 - dependency and workflow security scanning;
+- GitHub secret scanning and push protection;
 - backups and tested restore procedures before production data is accepted;
 - auditability for scoring corrections and privileged actions.
 

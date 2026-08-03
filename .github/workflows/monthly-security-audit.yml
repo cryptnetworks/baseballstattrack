@@ -1,0 +1,143 @@
+name: Monthly security audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/dependabot.yml"
+      - ".github/workflows/monthly-security-audit.yml"
+      - ".github/workflows/security-sast.yml"
+      - "Dockerfile"
+      - "package-lock.json"
+      - "package.json"
+      - "services/discord-bot/Dockerfile"
+      - "services/discord-bot/requirements.lock"
+  schedule:
+    - cron: "17 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monthly-security-audit
+  cancel-in-progress: false
+
+jobs:
+  sast:
+    name: SAST
+    uses: ./.github/workflows/security-sast.yml
+    permissions:
+      contents: read
+      security-events: write
+
+  dependencies:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/discord-bot/requirements.lock
+
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
+
+      - name: Audit Python dependencies
+        run: |
+          set -Eeuo pipefail
+          python -m pip install --disable-pip-version-check pip-audit==2.10.1
+          python -m pip_audit --strict --require-hashes --requirement services/discord-bot/requirements.lock
+
+  repository-scan:
+    name: Repository and secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout complete history
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Install Trivy 0.73.0
+        run: |
+          set -Eeuo pipefail
+          archive=trivy_0.73.0_Linux-64bit.tar.gz
+          root=https://github.com/aquasecurity/trivy/releases/download/v0.73.0
+          curl --fail --location --proto '=https' --tlsv1.2 --output "${RUNNER_TEMP}/${archive}" "${root}/${archive}"
+          curl --fail --location --proto '=https' --tlsv1.2 --output "${RUNNER_TEMP}/trivy-checksums.txt" "${root}/trivy_0.73.0_checksums.txt"
+          grep " ${archive}$" "${RUNNER_TEMP}/trivy-checksums.txt" | (cd "${RUNNER_TEMP}" && sha256sum --check)
+          mkdir "${RUNNER_TEMP}/trivy"
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}/trivy" trivy
+          echo "${RUNNER_TEMP}/trivy" >> "${GITHUB_PATH}"
+
+      - name: Scan repository dependencies, configuration, and current-tree secrets
+        run: trivy filesystem --scanners vuln,misconfig,secret --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 --skip-dirs node_modules --skip-dirs .next .
+
+      - name: Install TruffleHog 3.96.0
+        run: |
+          set -Eeuo pipefail
+          archive=trufflehog_3.96.0_linux_amd64.tar.gz
+          root=https://github.com/trufflesecurity/trufflehog/releases/download/v3.96.0
+          curl --fail --location --proto '=https' --tlsv1.2 --output "${RUNNER_TEMP}/${archive}" "${root}/${archive}"
+          curl --fail --location --proto '=https' --tlsv1.2 --output "${RUNNER_TEMP}/trufflehog-checksums.txt" "${root}/trufflehog_3.96.0_checksums.txt"
+          grep " ${archive}$" "${RUNNER_TEMP}/trufflehog-checksums.txt" | (cd "${RUNNER_TEMP}" && sha256sum --check)
+          mkdir "${RUNNER_TEMP}/trufflehog"
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}/trufflehog" trufflehog
+          echo "${RUNNER_TEMP}/trufflehog" >> "${GITHUB_PATH}"
+
+      - name: Scan complete Git history for verified secrets
+        run: trufflehog git file://. --only-verified --fail --no-update
+
+  containers:
+    name: Container audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install Trivy 0.73.0
+        run: |
+          set -Eeuo pipefail
+          archive=trivy_0.73.0_Linux-64bit.tar.gz
+          root=https://github.com/aquasecurity/trivy/releases/download/v0.73.0
+          curl --fail --location --proto '=https' --tlsv1.2 --output "${RUNNER_TEMP}/${archive}" "${root}/${archive}"
+          curl --fail --location --proto '=https' --tlsv1.2 --output "${RUNNER_TEMP}/trivy-checksums.txt" "${root}/trivy_0.73.0_checksums.txt"
+          grep " ${archive}$" "${RUNNER_TEMP}/trivy-checksums.txt" | (cd "${RUNNER_TEMP}" && sha256sum --check)
+          mkdir "${RUNNER_TEMP}/trivy"
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}/trivy" trivy
+          echo "${RUNNER_TEMP}/trivy" >> "${GITHUB_PATH}"
+
+      - name: Build production images
+        run: |
+          set -Eeuo pipefail
+          docker build --target runtime --tag baseballstattrack:security .
+          docker build --target migration --tag baseballstattrack-migration:security .
+          docker build --tag baseballstattrack-discord:security services/discord-bot
+
+      - name: Block fixable high and critical container findings
+        run: |
+          set -Eeuo pipefail
+          for image in baseballstattrack:security baseballstattrack-migration:security baseballstattrack-discord:security; do
+            trivy image --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 "${image}"
+          done
+
+      - name: Report pinned infrastructure-image findings
+        run: |
+          set -Eeuo pipefail
+          trivy image --severity HIGH,CRITICAL --exit-code 0 postgres:17-bookworm@sha256:4f736ae292687621d4dbe0d499ffd024a36bd2ee7d8ca6f2ccd4c800f047b394
+          trivy image --severity HIGH,CRITICAL --exit-code 0 cloudflare/cloudflared:latest@sha256:e39ee8da81ad5e05d77f38d2f51c60ca51bf2a8450ac3abab50c17fdb91d91bf

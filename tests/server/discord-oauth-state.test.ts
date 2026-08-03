@@ -68,4 +68,15 @@ describe("Discord OAuth state", () => {
       }),
     ).toThrow();
   });
+
+  it("rejects an undersized signing key", () => {
+    expect(() =>
+      issueDiscordOAuthState({
+        accountId: "account-a",
+        actorUserId: "user-a",
+        secret: "too-short",
+        now,
+      }),
+    ).toThrow("Discord OAuth state is unavailable.");
+  });
 });

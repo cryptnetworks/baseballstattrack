@@ -183,7 +183,7 @@ The canonical local/CI quality contract, required `verify` branch-protection che
 Repository documentation is authoritative in `docs/`. The generated GitHub Wiki
 publication pipeline, manifest, visibility policy, dry-run commands, credential
 boundary, and recovery procedure are documented in
-[Documentation Wiki Publishing](docs/DOCUMENTATION_WIKI_PUBLISHING.md). Direct
+[GitHub Wiki publishing guide](docs/WIKI_PUBLISHING_GUIDE.md). Direct
 wiki edits are not authoritative. The public wiki's focused entry points begin
 at [Start here](docs/START_HERE.md); detailed rules and formulas are indexed in
 [Rules and calculations](docs/RULES_AND_CALCULATIONS.md), while setup and

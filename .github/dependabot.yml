@@ -46,3 +46,16 @@ updates:
       container-images:
         patterns:
           - "*"
+  - package-ecosystem: "pip"
+    directory: "/services/discord-bot"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "area:security"
+      - "type:task"
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"

@@ -1,4 +1,9 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createHmac,
+  createSecretKey,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 
 import { z } from "zod";
 
@@ -27,7 +32,11 @@ export class DiscordOAuthStateError extends Error {
 }
 
 function signature(encodedPayload: string, secret: string) {
-  return createHmac("sha256", secret)
+  if (Buffer.byteLength(secret, "utf8") < 32) {
+    throw new DiscordOAuthStateError();
+  }
+  const signingKey = createSecretKey(Buffer.from(secret, "utf8"));
+  return createHmac("sha256", signingKey)
     .update(encodedPayload)
     .digest("base64url");
 }

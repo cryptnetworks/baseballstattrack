@@ -50,6 +50,8 @@ export function deploymentConfiguration(environment?: Environment) {
     authenticationEnabledProviders:
       value.AUTHENTICATION_ENABLED_PROVIDERS ?? "",
     oauthCallbackUrl: value.OAUTH_CALLBACK_URL,
+    externalDataProviderAllowedOrigin:
+      value.EXTERNAL_DATA_PROVIDER_ALLOWED_ORIGIN,
     authentikIssuerUrl: value.AUTHENTIK_ISSUER_URL,
     authentikClientId: value.AUTHENTIK_OAUTH_CLIENT_ID,
     googleOauthClientId: value.GOOGLE_OAUTH_CLIENT_ID,

@@ -4,7 +4,7 @@ Baseball Stat Track is a scorekeeping and statistics platform for coaches and
 scorekeepers. It records the events that happened in a game and derives player,
 team, game, and season results from those events.
 
-## Choose your path
+## Choose what you want to do
 
 - To install the application or contribute code, use
   [Installation and development](INSTALLATION_AND_DEVELOPMENT.md).
@@ -24,5 +24,11 @@ team, game, and season results from those events.
 - [Product roadmap](ROADMAP.md) shows completed milestones and planned product
   direction.
 
-Documentation is maintained in the repository's `docs/` directory. The public
-wiki is generated from those files; direct wiki edits are overwritten.
+## How this Wiki is organized
+
+The sidebar stays intentionally small. Each section above is a curated hub that
+links to focused reference pages. Use the page search when you already know a
+specific topic.
+
+Documentation is maintained in the repository `docs/` directory. The public
+Wiki is generated from those files; direct Wiki edits are not authoritative.
