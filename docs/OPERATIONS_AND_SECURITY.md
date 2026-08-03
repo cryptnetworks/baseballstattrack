@@ -23,10 +23,15 @@ Stat Track. Installation commands are collected in
 
 ## Release and service quality
 
-- [Repository hygiene audit](REPOSITORY_HYGIENE_AUDIT.md)
-- [Repository security audit](SECURITY_AUDIT.md)
 - [Release and workflow security](RELEASE_AND_WORKFLOW_SECURITY.md)
 - [Performance and load budgets](PERFORMANCE_AND_LOAD_BUDGETS.md)
+- [CI quality gates](CI_QUALITY_GATES.md)
+- [Repository operations checklist](REPOSITORY_OPERATIONS_CHECKLIST.md)
+- [GitHub Wiki publishing](WIKI_PUBLISHING_GUIDE.md)
+
+Raw repository and security audit evidence remains repository-only. The public
+Wiki contains supported controls and operating guidance, not sensitive finding
+detail.
 
 Treat credentials, player information, account data, exports, backups, logs,
 and integration payloads according to these controls. Report suspected
