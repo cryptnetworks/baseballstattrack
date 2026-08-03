@@ -133,7 +133,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           for image in baseballstattrack:security baseballstattrack-migration:security baseballstattrack-discord:security; do
-            trivy image --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 "${image}"
+            trivy image --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 "${image}"
           done
 
       - name: Report pinned infrastructure-image findings

@@ -9,7 +9,8 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN apk add --no-cache ca-certificates openssl \
-    && npm install --global npm@12.0.2
+    && npm install --global npm@12.0.2 \
+    && npm cache clean --force
 
 FROM base AS dependencies
 
@@ -52,9 +53,12 @@ LABEL org.opencontainers.image.title="Baseball Stat Track migration runner" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.licenses="MIT"
 
+RUN rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
+
 USER node
 
-ENTRYPOINT ["npm", "run", "db:migrate:deploy"]
+ENTRYPOINT ["./node_modules/.bin/prisma", "migrate", "deploy"]
 
 FROM base AS runtime
 
@@ -76,6 +80,9 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/container/start.mjs ./container/start.mjs
 COPY --from=builder /app/container/discord-update-scheduler.mjs ./container/discord-update-scheduler.mjs
+
+RUN rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
 
 USER node
 

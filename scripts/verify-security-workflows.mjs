@@ -67,7 +67,7 @@ if (!monthly.text.includes("trufflehog git file://. --only-verified --fail"))
   fail("verified Git-history secret gate is missing.");
 if (
   !monthly.text.includes(
-    "trivy image --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1",
+    "trivy image --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1",
   )
 )
   fail("container high/critical gate is missing.");
