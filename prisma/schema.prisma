@@ -215,6 +215,9 @@ enum WebhookEventName {
   GAME_CORRECTED
   REPORT_READY
   SEASON_REPORT_UPDATED
+  FANTASY_TRANSACTION_UPDATED
+  FANTASY_SCORING_UPDATED
+  FANTASY_MATCHUP_FINAL
   OPERATIONAL_FAILURE
 }
 
@@ -257,6 +260,37 @@ enum NotificationAttemptOutcome {
   RETRYABLE_FAILURE
   TERMINAL_FAILURE
   CANCELLED
+}
+
+enum NotificationDigestMode {
+  IMMEDIATE
+  DAILY_DIGEST
+}
+
+enum FantasyWorkspaceStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+  PENDING_DELETION
+}
+
+enum FantasyWorkspaceVisibility {
+  PRIVATE
+  LEAGUE_MEMBERS
+  PUBLIC_METADATA_ONLY
+}
+
+enum FantasyLeagueEventType {
+  LEAGUE_CREATED
+  TRANSACTION_RECORDED
+  CONTROL_RECORDED
+  NOTIFICATION_SETTINGS_UPDATED
+}
+
+enum FantasyResultKind {
+  TEAM_PERIOD
+  MATCHUP
+  STANDINGS
 }
 
 enum DiscordInstallationStatus {
@@ -474,6 +508,9 @@ model Account {
   analyticsObservations    AnalyticsObservation[]
   calendarConnections      CalendarConnection[]
   calendarEventLinks       CalendarEventLink[]
+  fantasyLeagueWorkspaces  FantasyLeagueWorkspace[]
+  fantasyLeagueEvents      FantasyLeagueEvent[]
+  fantasyResultSnapshots   FantasyResultSnapshot[]
 }
 
 model AppUser {
@@ -494,6 +531,7 @@ model AppUser {
   auditRecords            SecurityAuditRecord[]    @relation("AuditActor")
   privacyOverlays         PrivacyOverlay[]         @relation("PrivacyOverlayActor")
   productAnalyticsConsent ProductAnalyticsConsent?
+  fantasyLeagueEvents     FantasyLeagueEvent[]     @relation("FantasyLeagueEventActor")
 
   @@unique([provider, providerSubject])
 }
@@ -645,6 +683,7 @@ model AccountMembership {
   roleAssignments         MembershipRoleAssignment[]
   capabilityGrants        CapabilityGrant[]
   notificationPreferences NotificationPreference[]
+  ownedFantasyLeagues     FantasyLeagueWorkspace[]   @relation("FantasyLeagueOwner")
   acceptedInvitation      MembershipInvitation?
 
   @@unique([accountId, id])
@@ -765,6 +804,7 @@ model Season {
   roleAssignments       MembershipRoleAssignment[] @relation("RoleAssignmentSeason")
   capabilityGrants      CapabilityGrant[]          @relation("CapabilityGrantSeason")
   projectionCheckpoints ProjectionCheckpoint[]
+  fantasyLeagues        FantasyLeagueWorkspace[]
 
   @@unique([accountId, id])
   @@unique([accountId, externalId])
@@ -1506,27 +1546,132 @@ model NotificationPreference {
   accountId            String
   membershipId         String
   teamId               String?
+  fantasyLeagueId      String?
   scopeKey             String
   channel              NotificationChannel
   destinationReference String
   subscribedEvents     WebhookEventName[]
   status               NotificationPreferenceStatus @default(ACTIVE)
   sensitiveContent     Boolean                      @default(false)
+  recipientEnabled     Boolean                      @default(true)
+  digestMode           NotificationDigestMode       @default(IMMEDIATE)
+  digestMinute         Int                          @default(540)
+  timeZone             String                       @default("UTC")
+  quietHoursEnabled    Boolean                      @default(false)
+  quietStartMinute     Int                          @default(1320)
+  quietEndMinute       Int                          @default(420)
   optedOutAt           DateTime?
   disabledAt           DateTime?
   createdAt            DateTime                     @default(now())
   updatedAt            DateTime                     @updatedAt
 
-  account    Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  membership AccountMembership      @relation(fields: [accountId, membershipId], references: [accountId, id], onDelete: Restrict)
-  team       Team?                  @relation(fields: [accountId, teamId], references: [accountId, id], onDelete: Restrict)
-  deliveries NotificationDelivery[]
+  account       Account                 @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  membership    AccountMembership       @relation(fields: [accountId, membershipId], references: [accountId, id], onDelete: Restrict)
+  team          Team?                   @relation(fields: [accountId, teamId], references: [accountId, id], onDelete: Restrict)
+  fantasyLeague FantasyLeagueWorkspace? @relation(fields: [accountId, fantasyLeagueId], references: [accountId, id], onDelete: Restrict)
+  deliveries    NotificationDelivery[]
 
   @@unique([accountId, id])
   @@unique([accountId, externalId])
   @@unique([accountId, membershipId, scopeKey, channel])
   @@index([accountId, status, channel])
   @@index([accountId, teamId, status])
+  @@index([accountId, fantasyLeagueId, status])
+}
+
+model FantasyLeagueWorkspace {
+  id                  String                     @id @default(cuid())
+  externalId          String                     @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId           String
+  seasonId            String
+  ownerMembershipId   String
+  name                String
+  status              FantasyWorkspaceStatus     @default(ACTIVE)
+  visibility          FantasyWorkspaceVisibility @default(LEAGUE_MEMBERS)
+  rulesModelVersionId String
+  rulesModelDigest    String
+  revision            Int                        @default(0)
+  lineupDeadlineAt    DateTime                   @db.Timestamptz(3)
+  snapshot            Json
+  pausedAt            DateTime?                  @db.Timestamptz(3)
+  archivedAt          DateTime?                  @db.Timestamptz(3)
+  deletionRequestedAt DateTime?                  @db.Timestamptz(3)
+  createdAt           DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime                   @updatedAt @db.Timestamptz(3)
+
+  account                 Account                  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  season                  Season                   @relation(fields: [accountId, seasonId], references: [accountId, id], onDelete: Restrict)
+  ownerMembership         AccountMembership        @relation("FantasyLeagueOwner", fields: [accountId, ownerMembershipId], references: [accountId, id], onDelete: Restrict)
+  events                  FantasyLeagueEvent[]
+  results                 FantasyResultSnapshot[]
+  notificationPreferences NotificationPreference[]
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@index([accountId, status, updatedAt])
+  @@index([accountId, ownerMembershipId, status])
+  @@index([accountId, seasonId, status])
+}
+
+model FantasyLeagueEvent {
+  id              String                 @id @default(cuid())
+  externalId      String                 @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId       String
+  fantasyLeagueId String
+  operationId     String
+  type            FantasyLeagueEventType
+  payloadDigest   String
+  payload         Json
+  actorId         String
+  actorUserId     String?
+  acceptedAt      DateTime               @db.Timestamptz(3)
+  createdAt       DateTime               @default(now()) @db.Timestamptz(3)
+
+  account       Account                @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  fantasyLeague FantasyLeagueWorkspace @relation(fields: [accountId, fantasyLeagueId], references: [accountId, id], onDelete: Restrict)
+  actorUser     AppUser?               @relation("FantasyLeagueEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, id])
+  @@unique([accountId, externalId])
+  @@unique([fantasyLeagueId, operationId])
+  @@index([accountId, fantasyLeagueId, acceptedAt, id])
+  @@index([actorUserId, acceptedAt])
+}
+
+model FantasyResultSnapshot {
+  id                          String            @id @default(cuid())
+  externalId                  String            @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId                   String
+  fantasyLeagueId             String
+  kind                        FantasyResultKind
+  logicalId                   String
+  revision                    Int
+  previousSnapshotId          String?
+  resultStatus                String
+  periodSequence              Int?
+  fantasyModelVersionId       String
+  fantasyModelDigest          String
+  baseballRulesetVersionIds   String[]
+  statisticDerivationVersions Int[]
+  sourceRevisions             Int[]
+  payload                     Json
+  sourceDigest                String
+  resultDigest                String
+  calculatedAt                DateTime          @db.Timestamptz(3)
+  finalizedAt                 DateTime?         @db.Timestamptz(3)
+  createdAt                   DateTime          @default(now()) @db.Timestamptz(3)
+
+  account          Account                 @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  fantasyLeague    FantasyLeagueWorkspace  @relation(fields: [accountId, fantasyLeagueId], references: [accountId, id], onDelete: Restrict)
+  previousSnapshot FantasyResultSnapshot?  @relation("FantasyResultRevision", fields: [accountId, fantasyLeagueId, previousSnapshotId], references: [accountId, fantasyLeagueId, id], onDelete: Restrict)
+  nextSnapshots    FantasyResultSnapshot[] @relation("FantasyResultRevision")
+
+  @@unique([accountId, id])
+  @@unique([accountId, fantasyLeagueId, id])
+  @@unique([fantasyLeagueId, kind, logicalId, revision])
+  @@index([accountId, fantasyLeagueId, kind, calculatedAt])
+  @@index([accountId, fantasyLeagueId, periodSequence, kind])
+  @@index([accountId, fantasyLeagueId, previousSnapshotId])
 }
 
 model NotificationDelivery {

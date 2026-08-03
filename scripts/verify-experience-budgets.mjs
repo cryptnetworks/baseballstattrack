@@ -56,6 +56,12 @@ const routes = [
     rawBudget: 400_000,
     gzipBudget: 110_000,
   },
+  {
+    route: "Fantasy league manager",
+    manifest: "fantasy/[[...section]]/page",
+    rawBudget: 150_000,
+    gzipBudget: 45_000,
+  },
 ];
 
 function manifestFor(path) {

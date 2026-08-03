@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  notificationDeliveryAt,
   notificationPreferenceInputSchema,
   notificationRetryAt,
   renderNotificationMessage,
@@ -88,5 +89,34 @@ describe("outbound notification contract", () => {
       "2026-08-02T00:00:00.000Z",
     );
     expect(notificationRetryAt(8, completedAt)).toBeNull();
+  });
+
+  it("renders privacy-minimized fantasy updates and schedules consented delivery", () => {
+    const message = renderNotificationMessage("FANTASY_SCORING_UPDATED", {
+      fantasyLeagueId: "00000000-0000-4000-8000-000000000127",
+      fantasyTeamId: "00000000-0000-4000-8000-000000000128",
+      resultId: "00000000-0000-4000-8000-000000000129",
+      resultRevision: 2,
+      periodSequence: 4,
+      status: "AWAITING_FINAL_DATA",
+      totalMilliPoints: 12_500,
+    });
+    expect(message.text.toLowerCase()).toContain("uncertainty remains visible");
+    expect(JSON.stringify(message)).not.toMatch(
+      /player|email|contact|medical/i,
+    );
+
+    const scheduled = notificationDeliveryAt(
+      new Date("2026-08-03T12:00:00.000Z"),
+      {
+        digestMode: "DAILY_DIGEST",
+        digestMinute: 540,
+        timeZone: "UTC",
+        quietHoursEnabled: true,
+        quietStartMinute: 1_320,
+        quietEndMinute: 420,
+      },
+    );
+    expect(scheduled.toISOString()).toBe("2026-08-04T09:00:00.000Z");
   });
 });

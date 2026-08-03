@@ -9,6 +9,9 @@ export const webhookEventNames = [
   "GAME_CORRECTED",
   "REPORT_READY",
   "SEASON_REPORT_UPDATED",
+  "FANTASY_TRANSACTION_UPDATED",
+  "FANTASY_SCORING_UPDATED",
+  "FANTASY_MATCHUP_FINAL",
   "OPERATIONAL_FAILURE",
 ] as const;
 export type WebhookEventName = (typeof webhookEventNames)[number];
@@ -19,6 +22,9 @@ export const webhookPublicEventNames = {
   GAME_CORRECTED: "game.corrected",
   REPORT_READY: "report.ready",
   SEASON_REPORT_UPDATED: "season.report.updated",
+  FANTASY_TRANSACTION_UPDATED: "fantasy.transaction.updated",
+  FANTASY_SCORING_UPDATED: "fantasy.scoring.updated",
+  FANTASY_MATCHUP_FINAL: "fantasy.matchup.final",
   OPERATIONAL_FAILURE: "operational.failure",
 } as const satisfies Record<WebhookEventName, string>;
 
@@ -74,6 +80,47 @@ export const webhookPayloadSchemas = {
       sourceGameId: externalId,
       sourceRevision: z.int().nonnegative(),
       reason: z.enum(["GAME_VERIFIED", "GAME_CORRECTED"]),
+    })
+    .strict(),
+  FANTASY_TRANSACTION_UPDATED: z
+    .object({
+      fantasyLeagueId: externalId,
+      fantasyTeamId: externalId,
+      operationId: externalId,
+      action: z.enum([
+        "ADD_PLAYER",
+        "DROP_PLAYER",
+        "TRADE",
+        "LINEUP_CHANGE",
+        "SUBMIT_WAIVER_CLAIM",
+        "CANCEL_WAIVER_CLAIM",
+        "PROCESS_WAIVERS",
+      ]),
+      status: z.enum(["APPLIED", "QUEUED", "CANCELLED", "DENIED"]),
+      revision: z.int().nonnegative(),
+    })
+    .strict(),
+  FANTASY_SCORING_UPDATED: z
+    .object({
+      fantasyLeagueId: externalId,
+      fantasyTeamId: externalId,
+      resultId: externalId,
+      resultRevision: z.int().nonnegative(),
+      periodSequence: z.int().positive(),
+      status: z.enum(["IN_PROGRESS", "AWAITING_FINAL_DATA", "READY", "FINAL"]),
+      totalMilliPoints: z.int().safe(),
+    })
+    .strict(),
+  FANTASY_MATCHUP_FINAL: z
+    .object({
+      fantasyLeagueId: externalId,
+      matchupId: externalId,
+      periodSequence: z.int().positive(),
+      firstFantasyTeamId: externalId,
+      secondFantasyTeamId: externalId,
+      winnerFantasyTeamId: externalId.nullable(),
+      outcome: z.enum(["FIRST_WIN", "SECOND_WIN", "TIE"]),
+      resultRevision: z.int().nonnegative(),
     })
     .strict(),
   OPERATIONAL_FAILURE: z

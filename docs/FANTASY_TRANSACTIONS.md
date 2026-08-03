@@ -342,7 +342,10 @@ per-claim resolution audit, and frozen append-only history.
 - #126 implements scoring-period identities, lineup-to-result binding, the pure
   scoring engine, matchups, standings, playoff/championship results, uncertainty,
   and append-only corrections.
-- #127: draft, waiver, trade, roster, lineup, audit, and correction UI.
+- #127 persists and presents roster, lineup, waiver, audit, and correction state
+  in the Account-authorized
+  [fantasy experience](FANTASY_USER_INTERFACE_AND_NOTIFICATIONS.md). Broader
+  multi-manager draft/trade negotiation remains deferred.
 - Production fantasy persistence, API routes, scheduler, and worker ship only
   with the complete reviewed relational/operational design.
 - Offline fantasy transactions and conflict synchronization remain out of scope.

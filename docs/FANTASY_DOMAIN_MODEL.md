@@ -301,5 +301,7 @@ identity prevention, immutable ordered snapshots, and completed-history denial.
 - #126 implements scoring periods, locked-roster scoring, matchups, standings,
   playoff/championship results, corrections, and immutable result identities in
   [Fantasy scoring and matchups](FANTASY_SCORING_AND_MATCHUPS.md).
-- #127: league/team/roster UI and public presentation.
+- #127: league/team/roster UI is now provided by the Account-authorized
+  [fantasy experience](FANTASY_USER_INTERFACE_AND_NOTIFICATIONS.md). Public
+  presentation remains deferred.
 - Offline fantasy behavior and synchronization remain out of scope.

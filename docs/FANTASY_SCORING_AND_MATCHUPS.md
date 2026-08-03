@@ -308,8 +308,9 @@ isolation, safe integer behavior, and immutable outputs.
 
 ## Deferred downstream work
 
-- #127: league, lineup, uncertainty, matchup, standings, playoff, correction,
-  and notification UI.
+- #127 presents league, lineup, uncertainty, matchup, standings, correction,
+  and notification state through the Account-authorized
+  [fantasy experience](FANTASY_USER_INTERFACE_AND_NOTIFICATIONS.md).
 - Production persistence, result APIs, background calculation workers, and
   scheduling require a separate reviewed implementation using the boundary
   above.

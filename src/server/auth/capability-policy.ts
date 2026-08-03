@@ -17,6 +17,9 @@ const viewer = [
   "roster.view",
   "game.view",
   "report.view",
+  "fantasy.league.view",
+  "fantasy.roster.manage",
+  "fantasy.scoring.view",
 ] satisfies Capability[];
 
 const scorekeeper = [
@@ -63,6 +66,9 @@ const administrator = [
   "privacy.request",
   "ruleset.view",
   "ruleset.manage",
+  "fantasy.league.manage",
+  "fantasy.league.activate",
+  "fantasy.scoring.calculate",
 ] satisfies Capability[];
 
 const owner = [
@@ -133,6 +139,12 @@ const exactGrantScopes: Readonly<
   "privacy.manage": ["ACCOUNT"],
   "ruleset.view": ["ACCOUNT"],
   "ruleset.manage": ["ACCOUNT"],
+  "fantasy.league.view": ["ACCOUNT"],
+  "fantasy.league.manage": ["ACCOUNT"],
+  "fantasy.league.activate": ["ACCOUNT"],
+  "fantasy.roster.manage": ["ACCOUNT"],
+  "fantasy.scoring.calculate": ["ACCOUNT"],
+  "fantasy.scoring.view": ["ACCOUNT"],
 };
 
 function scopeMatches(

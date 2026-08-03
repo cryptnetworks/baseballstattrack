@@ -73,6 +73,11 @@ export function ApplicationShell({ children }: ApplicationShellProps) {
             />
             <NavigationLink href="/data" label="Data" pathname={pathname} />
             <NavigationLink
+              href="/fantasy"
+              label="Fantasy"
+              pathname={pathname}
+            />
+            <NavigationLink
               href="/discord"
               label="Discord"
               pathname={pathname}
