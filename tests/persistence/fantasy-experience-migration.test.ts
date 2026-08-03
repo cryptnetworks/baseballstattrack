@@ -20,6 +20,9 @@ describe("fantasy experience migration", () => {
     expect(migration).toContain(
       'CREATE UNIQUE INDEX "FantasyLeagueWorkspace_accountId_externalId_key"',
     );
+    expect(migration).toContain(
+      'CREATE UNIQUE INDEX "FantasyResultSnapshot_fantasyLeagueId_kind_logicalId_revision_k"',
+    );
     expect(migration).toContain("prevent_fantasy_history_mutation");
   });
 

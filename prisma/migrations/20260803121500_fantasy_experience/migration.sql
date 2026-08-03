@@ -126,8 +126,8 @@ CREATE INDEX "FantasyLeagueEvent_actorUserId_acceptedAt_idx" ON "FantasyLeagueEv
 
 CREATE UNIQUE INDEX "FantasyResultSnapshot_accountId_id_key" ON "FantasyResultSnapshot"("accountId", "id");
 CREATE UNIQUE INDEX "FantasyResultSnapshot_accountId_fantasyLeagueId_id_key" ON "FantasyResultSnapshot"("accountId", "fantasyLeagueId", "id");
-CREATE UNIQUE INDEX "FantasyResultSnapshot_fantasyLeagueId_kind_logicalId_revision_key" ON "FantasyResultSnapshot"("fantasyLeagueId", "kind", "logicalId", "revision");
-CREATE INDEX "FantasyResultSnapshot_accountId_fantasyLeagueId_kind_calculatedAt_idx" ON "FantasyResultSnapshot"("accountId", "fantasyLeagueId", "kind", "calculatedAt");
+CREATE UNIQUE INDEX "FantasyResultSnapshot_fantasyLeagueId_kind_logicalId_revision_k" ON "FantasyResultSnapshot"("fantasyLeagueId", "kind", "logicalId", "revision");
+CREATE INDEX "FantasyResultSnapshot_accountId_fantasyLeagueId_kind_calculated" ON "FantasyResultSnapshot"("accountId", "fantasyLeagueId", "kind", "calculatedAt");
 CREATE INDEX "FantasyResultSnapshot_accountId_fantasyLeagueId_periodSequence_kind_idx" ON "FantasyResultSnapshot"("accountId", "fantasyLeagueId", "periodSequence", "kind");
 CREATE INDEX "FantasyResultSnapshot_accountId_fantasyLeagueId_previousSnapshotId_idx" ON "FantasyResultSnapshot"("accountId", "fantasyLeagueId", "previousSnapshotId");
 

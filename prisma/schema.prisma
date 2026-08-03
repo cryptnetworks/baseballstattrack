@@ -1668,8 +1668,8 @@ model FantasyResultSnapshot {
 
   @@unique([accountId, id])
   @@unique([accountId, fantasyLeagueId, id])
-  @@unique([fantasyLeagueId, kind, logicalId, revision])
-  @@index([accountId, fantasyLeagueId, kind, calculatedAt])
+  @@unique([fantasyLeagueId, kind, logicalId, revision], map: "FantasyResultSnapshot_fantasyLeagueId_kind_logicalId_revision_k")
+  @@index([accountId, fantasyLeagueId, kind, calculatedAt], map: "FantasyResultSnapshot_accountId_fantasyLeagueId_kind_calculated")
   @@index([accountId, fantasyLeagueId, periodSequence, kind])
   @@index([accountId, fantasyLeagueId, previousSnapshotId])
 }

@@ -116,7 +116,7 @@ const expectedConstraints = [
   "FantasyLeagueEvent_values_check",
   "FantasyResultSnapshot_accountId_fantasyLeagueId_id_key",
   "FantasyResultSnapshot_fantasyLeagueId_kind_logicalId_revision_k",
-  "FantasyResultSnapshot_accountId_fantasyLeagueId_kind_calculatedAt_idx",
+  "FantasyResultSnapshot_accountId_fantasyLeagueId_kind_calculated",
   "FantasyResultSnapshot_values_check",
 ];
 
