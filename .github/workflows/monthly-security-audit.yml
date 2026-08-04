@@ -188,5 +188,5 @@ jobs:
       - name: Report pinned infrastructure-image findings
         run: |
           set -Eeuo pipefail
-          trivy image --severity HIGH,CRITICAL --exit-code 0 postgres:17-bookworm@sha256:4f736ae292687621d4dbe0d499ffd024a36bd2ee7d8ca6f2ccd4c800f047b394
-          trivy image --severity HIGH,CRITICAL --exit-code 0 cloudflare/cloudflared:latest@sha256:e39ee8da81ad5e05d77f38d2f51c60ca51bf2a8450ac3abab50c17fdb91d91bf
+          trivy image --scanners vuln --severity HIGH,CRITICAL --exit-code 0 postgres:17-bookworm@sha256:4f736ae292687621d4dbe0d499ffd024a36bd2ee7d8ca6f2ccd4c800f047b394
+          trivy image --scanners vuln --severity HIGH,CRITICAL --exit-code 0 cloudflare/cloudflared:2026.7.3@sha256:e39ee8da81ad5e05d77f38d2f51c60ca51bf2a8450ac3abab50c17fdb91d91bf

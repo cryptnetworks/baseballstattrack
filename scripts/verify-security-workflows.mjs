@@ -8,6 +8,7 @@ const paths = {
   monthly: ".github/workflows/monthly-security-audit.yml",
   reusable: ".github/workflows/security-sast.yml",
 };
+const composePath = "docker-compose.yml";
 
 function fail(message) {
   throw new Error(`Security workflow contract failed: ${message}`);
@@ -26,6 +27,8 @@ function includesMain(value) {
 
 const entries = await Promise.all(Object.values(paths).map(workflow));
 const [main, monthly, reusable] = entries;
+const compose = await workflow(composePath);
+const ci = await workflow(".github/workflows/ci.yml");
 
 if (!includesMain(main.value.on?.push)) fail("main push trigger is missing.");
 if (!includesMain(main.value.on?.pull_request))
@@ -108,5 +111,29 @@ if (
   )
 )
   fail("container high/critical gate is missing.");
+
+const postgresImage = compose.value.services?.db?.image;
+const cloudflaredImage = compose.value.services?.["cloudflare-tunnel"]?.image;
+if (!/^postgres:17-bookworm@sha256:[a-f0-9]{64}$/u.test(postgresImage))
+  fail("PostgreSQL is not pinned to the reviewed major, suite, and digest.");
+const ciPostgresImage = ci.value.jobs?.application?.services?.postgres?.image;
+if (
+  !/^postgres:17\.\d+-alpine3\.\d+@sha256:[a-f0-9]{64}$/u.test(ciPostgresImage)
+)
+  fail("CI PostgreSQL is not pinned to an exact version, suite, and digest.");
+if (
+  !/^cloudflare\/cloudflared:\d{4}\.\d+\.\d+@sha256:[a-f0-9]{64}$/u.test(
+    cloudflaredImage,
+  )
+)
+  fail("cloudflared is not pinned to an exact version and digest.");
+for (const image of [postgresImage, cloudflaredImage]) {
+  if (
+    !monthly.text.includes(
+      `trivy image --scanners vuln --severity HIGH,CRITICAL --exit-code 0 ${image}`,
+    )
+  )
+    fail(`monthly vulnerability monitoring is missing for ${image}.`);
+}
 
 console.log("Security workflow contract passed.");
