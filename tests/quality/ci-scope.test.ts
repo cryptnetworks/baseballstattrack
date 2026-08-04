@@ -26,6 +26,14 @@ describe("CI scope planner", () => {
     });
   });
 
+  it("runs application, container, and operational gates for the installer", () => {
+    expect(planCiScopes(["scripts/deploy/install.ts"])).toMatchObject({
+      application: true,
+      containers: true,
+      operations: true,
+    });
+  });
+
   it("runs database, operational, and container proofs for migrations", () => {
     expect(
       planCiScopes(["prisma/migrations/20260802000000_example/migration.sql"]),

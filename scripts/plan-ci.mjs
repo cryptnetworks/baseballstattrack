@@ -140,6 +140,13 @@ export function planCiScopes(files, { forceFull = false } = {}) {
       continue;
     }
 
+    if (file.startsWith("scripts/deploy/")) {
+      plan.application = true;
+      plan.containers = true;
+      plan.operations = true;
+      continue;
+    }
+
     if (containerPaths.has(file) || file.startsWith("container/")) {
       plan.containers = true;
       if (applicationConfigurationPaths.has(file)) {

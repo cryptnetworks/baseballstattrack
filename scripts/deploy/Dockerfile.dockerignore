@@ -1,0 +1,5 @@
+**
+!docker-compose.yml
+!scripts/
+!scripts/deploy/
+!scripts/deploy/*.ts
