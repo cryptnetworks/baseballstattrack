@@ -117,7 +117,7 @@ sudo install -d -m 755 /opt/baseballstattrack
 sudo install -d -m 700 /etc/baseballstattrack
 sudo install -m 644 docker-compose.yml /opt/baseballstattrack/docker-compose.yml
 sudo install -m 600 compose.production.env.example /etc/baseballstattrack/production.env
-sudo install -m 600 app.production.env.example /etc/baseballstattrack/app.env
+sudo install -m 600 .env.production.example /etc/baseballstattrack/app.env
 
 docker compose --file /opt/baseballstattrack/docker-compose.yml --env-file /etc/baseballstattrack/production.env config --quiet
 docker compose --file /opt/baseballstattrack/docker-compose.yml --env-file /etc/baseballstattrack/production.env pull
@@ -127,6 +127,11 @@ docker compose --file /opt/baseballstattrack/docker-compose.yml --env-file /etc/
 Follow [Production installation](docs/PRODUCTION_INSTALLATION.md) before using
 the service. It covers secrets, TLS, authentication callbacks, migrations,
 readiness, authorization checks, monitoring, backups, upgrades, and rollback.
+After the first administrator signs in, seed and review each Account at
+**Settings → Application configuration**. Subsequent feature, notification,
+integration, and policy changes belong there—not in deployment environment
+files. See [Configuration management](docs/CONFIGURATION_MANAGEMENT.md) for the
+complete ownership inventory and migration procedure.
 The detailed runtime references are:
 
 - [Production Docker Compose deployment](docs/PRODUCTION_COMPOSE.md)

@@ -48,7 +48,7 @@ credential. PostgreSQL has no host port.
 
 Use two mode-0600 files outside the checkout:
 
-- `app.env`, based on `app.production.env.example`, is injected only into the
+- `app.env`, based on `.env.production.example`, is injected only into the
   application.
 - `production.env`, based on `compose.production.env.example`, is read by
   Compose and supplies image coordinates, database bootstrap values, and

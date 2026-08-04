@@ -66,6 +66,17 @@ describe("CI scope planner", () => {
     });
   });
 
+  it("validates application and container ownership for environment templates", () => {
+    expect(planCiScopes([".env.local.example"])).toMatchObject({
+      application: true,
+      containers: false,
+    });
+    expect(planCiScopes([".env.production.example"])).toMatchObject({
+      application: true,
+      containers: true,
+    });
+  });
+
   it("validates workflow policy without exercising unrelated runtimes", () => {
     expect(planCiScopes([".github/workflows/main-push-sast.yml"])).toEqual({
       application: false,
