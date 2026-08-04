@@ -140,7 +140,11 @@ export function planCiScopes(files, { forceFull = false } = {}) {
       continue;
     }
 
-    if (file.startsWith("scripts/deploy/")) {
+    if (
+      file.startsWith("scripts/deploy/") ||
+      file === "install.sh" ||
+      file === "install.ps1"
+    ) {
       plan.application = true;
       plan.containers = true;
       plan.operations = true;
