@@ -172,8 +172,8 @@ access and use a separately reviewed forward correction that preserves history.
 ## Operational configuration
 
 Register the exact callback at each provider and in the app. Production must
-use HTTPS and normally uses `<NEXT_PUBLIC_SITE_URL>/auth/callback`. Loopback
-HTTP is accepted only for local development.
+use HTTPS and normally uses `<NEXT_PUBLIC_SITE_URL>/auth/callback`. Loopback or
+plain-HTTP callbacks are not supported by the production deployment.
 
 | Classification                | Variables                                                                                                                                                                                                                                                            |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

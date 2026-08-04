@@ -51,6 +51,8 @@ The player boundary permits only display name, batting side, and throwing hand. 
 
 Existing roster starts are backfilled from `createdAt`. Existing inactive or archived rows receive a deterministic end after their start using archived/update time. The migration does not rewrite accepted setup or event history. Preflight should check invalid status/end combinations and overlapping historical periods. Deployment is forward-only; if populated-data validation fails, stop and ship a reviewed repair migration rather than editing the applied migration or dropping history constraints.
 
-CI applies the complete migration chain to disposable PostgreSQL, verifies the catalog and representability proof, runs unit and integration tests, builds the application, and smoke-tests the migration-aware container.
+Production release evidence applies the complete migration chain to isolated
+PostgreSQL, verifies the catalog and representability proof, and exercises the
+migration-aware container before deployment.
 
 Issue #14 consumes roster periods through bounded candidate reads and snapshots exact player/roster lineage at readiness. A roster period referenced by a currently ready setup cannot end or be replaced until that setup is superseded or scoring starts.

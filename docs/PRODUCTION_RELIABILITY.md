@@ -132,19 +132,14 @@ appropriate advisers, not by this document.
    The review is blameless but decisions and ownership remain explicit.
 
 Follow-up defects remain open through merged-commit verification under
-`docs/DEFECT_TRIAGE_AND_REGRESSION_POLICY.md`. Review thresholds after every
+the repository's private post-incident process. Review thresholds after every
 incident and at least quarterly.
 
 ## Representative stale-projection drill
 
-Run locally or in CI with Docker, Node 24+, npm 11+, and exact dependencies:
-
-```sh
-npm run reliability:drill
-```
-
-The drill creates isolated PostgreSQL, applies the full migration chain, and
-loads the same synthetic two-Account fixture used by restore verification: one
+Run the approved recovery drill in an isolated, production-shaped environment
+with no production credentials or personal data. The drill applies the full
+migration chain and loads a synthetic two-Account scenario: one
 corrected game, four immutable source events, a correction edge, security audit
 evidence, and a current projection. It deliberately marks only the derived
 checkpoint stale, proves freshness detection, republishes the same current
@@ -153,6 +148,5 @@ audit record, and tenant fixture remain unchanged. Output records detection and
 recovery seconds and representative counts.
 
 The drill must fail closed on missing detection, failed recovery, history
-change, or invariant loss. It uses no production data or credentials, makes no
-claim about provider-scale RTO, and does not test backup disaster recovery;
-that independent proof remains `npm run db:restore:verify`.
+change, or invariant loss. It makes no claim about provider-scale RTO and does
+not replace the independent backup disaster-recovery exercise.

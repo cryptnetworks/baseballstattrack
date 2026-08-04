@@ -99,24 +99,6 @@ an explicit reached-on-error body. Assertions prove:
 
 Corrections never update or delete accepted source events.
 
-## Pure and persistence layers
-
-Pure-domain fixtures run on every `npm test` invocation without network,
-database, clock, locale, or random dependencies. They are the fast source for
-scoring failures and meaningful intermediate-state output.
-
-The focused PostgreSQL fixture runs only when `DATABASE_URL` points to the
-explicit disposable test database, as in CI. It accepts events through
-`PrismaGameEventRepository`, reloads the accepted setup and events through the
-same repository, verifies replay evidence, derives statistics from reloaded
-history, and checks the final box score. It does not contact Supabase or any
-production service. Vitest executes test files serially because independent
-integration files use serializable event-acceptance transactions against the
-same disposable database; file-level concurrency can create unrelated
-serialization pivots and obscure the behavior under test. Domain assertions
-remain fast, and concurrency is exercised explicitly inside the focused
-repository test.
-
 ## Synthetic-data and privacy policy
 
 Fixtures may contain only obvious synthetic identifiers and labels. They must
@@ -125,24 +107,6 @@ notes, production exports, or copied youth-player records. Account context must
 be explicit in every setup, command, read, and persistence relationship.
 Database fixtures are disposable test data; no reusable development or
 production seed is created.
-
-## Adding a fixture
-
-1. Confirm the scoring fact is defined by the canonical contracts and supported
-   event vocabulary. If not, defer it to the issue that owns the vocabulary or
-   ruleset change.
-2. Start with a fresh `createScoringSetup` or a purpose-specific override. Never
-   mutate exported constants or another fixture's setup/history.
-3. Express each action as a typed event body with explicit runner movements,
-   pitcher responsibility, earned-run judgment, and fielding attribution.
-4. Add named checkpoints at decisions a scorekeeper would inspect.
-5. Assert the smallest useful state, player, team, and box-score facts.
-6. Hand-check expected values and explain non-obvious scoring in the test name
-   or local assertion structure.
-7. Add a persistence case only when relational acceptance/reload behavior is
-   material; keep ordinary scoring permutations pure and fast.
-8. Run the fixture file independently, repeated deterministic runs, the full
-   suite, database migration/representability checks, and `npm run verify`.
 
 ## Deferred cases
 

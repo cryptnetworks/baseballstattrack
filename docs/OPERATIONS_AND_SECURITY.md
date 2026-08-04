@@ -2,7 +2,7 @@
 
 Use this section to deploy, protect, observe, recover, and maintain Baseball
 Stat Track. Installation commands are collected in
-[Installation and development](INSTALLATION_AND_DEVELOPMENT.md).
+[Production installation](PRODUCTION_INSTALLATION.md).
 
 ## Identity, authorization, and privacy
 
@@ -21,17 +21,17 @@ Stat Track. Installation commands are collected in
 - [Production reliability and incident response](PRODUCTION_RELIABILITY.md)
 - [Observability, audit, and alerting](OBSERVABILITY_AUDIT_AND_ALERTING.md)
 
-## Release and service quality
+## Production service quality
 
-- [Release and workflow security](RELEASE_AND_WORKFLOW_SECURITY.md)
 - [Performance and load budgets](PERFORMANCE_AND_LOAD_BUDGETS.md)
-- [CI quality gates](CI_QUALITY_GATES.md)
-- [Repository operations checklist](REPOSITORY_OPERATIONS_CHECKLIST.md)
-- [GitHub Wiki publishing](WIKI_PUBLISHING_GUIDE.md)
+- [Production reliability and incident response](PRODUCTION_RELIABILITY.md)
+- [Container operations](CONTAINER_OPERATIONS.md)
+- [Production Docker Compose deployment](PRODUCTION_COMPOSE.md)
 
-Raw repository and security audit evidence remains repository-only. The public
-Wiki contains supported controls and operating guidance, not sensitive finding
-detail.
+Raw repository audits, source-release procedures, development quality gates,
+and security finding evidence remain repository-only. The public Wiki contains
+supported controls and operating guidance, not development workflow or
+sensitive finding detail.
 
 Treat credentials, player information, account data, exports, backups, logs,
 and integration payloads according to these controls. Report suspected

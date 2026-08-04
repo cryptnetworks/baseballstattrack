@@ -36,25 +36,15 @@ the final removal date must be published in the replacement contract. Removal
 occurs only in a new major version; v1 clients continue receiving the v1 shape
 during its support window.
 
-## Contract verification
+## Contract integrity
 
 Canonical examples cover authorization failure, empty results, incomplete
 pagination, corrected data, and rate limiting. The Discord integration consumes
 the same corrected report examples in its command tests, pinning it to the v1
 response contract rather than a second handwritten fixture.
 
-Run `npm run api:contract` to parse the OpenAPI document, validate every
-canonical example, reject internal fields, and compare the document with its
-committed digest. Pull-request CI additionally compares the candidate contract
-with the target branch and rejects removal or narrowing of the supported v1
-surface.
-
-For an intentional compatible contract change:
-
-1. update implementation, OpenAPI schemas, examples, and consumer tests;
-2. run `npm run api:contract:write` to refresh the reviewed digest;
-3. run `npm run verify`; and
-4. call out the compatibility impact in the pull request.
-
-Do not refresh the digest to conceal a breaking change. Design and publish a
-new API version instead.
+The OpenAPI document, canonical examples, consumer contract, and reviewed
+digest form one release boundary. A supported release must reject internal
+fields and any removal or narrowing of the v1 surface. A digest change cannot
+authorize a breaking change; breaking behavior requires a newly designed and
+published API version.

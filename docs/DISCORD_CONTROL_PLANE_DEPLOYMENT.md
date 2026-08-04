@@ -83,7 +83,7 @@ initiating Account operation, and held in an HTTP-only callback cookie.
 
 | Variable                               | Service         | Purpose                                                                     |
 | -------------------------------------- | --------------- | --------------------------------------------------------------------------- |
-| `DISCORD_PROVIDER_MODE`                | bot             | `gateway` in production; explicit `stub` only for local/CI proof            |
+| `DISCORD_PROVIDER_MODE`                | bot             | Must be `gateway`; stub mode is unsupported in production                   |
 | `DISCORD_TOKEN`                        | bot             | Discord gateway token                                                       |
 | `BST_API_TOKEN`                        | bot             | Dedicated exact-team `report.view` identity                                 |
 | `BST_API_BASE_URL`, `BST_WEB_BASE_URL` | bot             | Public HTTPS application origins                                            |
@@ -175,37 +175,6 @@ post-rotation evidence. Never record secret values.
 If any credential may have leaked, disable its feature or affected service,
 rotate immediately, inspect safe audit/operational events, invalidate derived
 sessions when applicable, and use the private security-reporting route.
-
-## Credential-free development and CI
-
-The bot's stub is intentionally explicit; it never opens a Discord gateway or
-calls the statistics API:
-
-```sh
-DISCORD_PROVIDER_MODE=stub \
-DISCORD_TOKEN= \
-BST_API_TOKEN= \
-BST_API_BASE_URL=https://app.example.test \
-BST_WEB_BASE_URL=https://app.example.test \
-DISCORD_TEAM_BINDINGS='[]' \
-python -m baseballstattrack_discord.main
-```
-
-`/healthz` and `/readyz` both return 200 in this mode. Stub readiness proves
-configuration, process startup, health serving, logging, container security,
-and graceful shutdown; it does not claim Discord connectivity or permission
-coverage. Production must set `DISCORD_PROVIDER_MODE=gateway`.
-
-`npm run container:verify` builds the app, migration, and Python bot images,
-starts a disposable PostgreSQL 17 stack, runs migrations, starts the bot in
-stub mode, and starts the scheduler against the feature-disabled worker
-endpoint using a synthetic per-run token. It proves readiness, non-root and
-read-only execution, network/credential isolation, redacted logs, and SIGTERM
-shutdown without GitHub secrets, production data, or external provider calls.
-
-For content, delivery, authorization, and failure behavior, use the synthetic
-fixtures in [Discord end-to-end fixtures](DISCORD_END_TO_END_FIXTURES.md). They
-contain invented external IDs and an in-memory Discord transport.
 
 ## Deployment and rollback checklist
 

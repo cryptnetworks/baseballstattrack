@@ -150,25 +150,7 @@ already-applied migrations. Applied migrations are never reversed or edited;
 follow `docs/BACKUP_AND_RESTORE.md` for recovery and ship a roll-forward repair
 when schema compatibility is uncertain.
 
-## Build and publish
-
-Build all three local production images from one revision:
-
-```sh
-IMAGE_TAG=local VCS_REF="$(git rev-parse HEAD)" npm run container:production:build
-```
-
-The manually dispatched `Publish production containers` workflow performs the
-same build on `main`, logs in with its short-lived `GITHUB_TOKEN`, pushes the
-requested and exact-SHA tags, and retains each package's configured visibility.
-It does not receive application, Discord, Supabase, or database secrets.
-
-GitHub creates a new personal-account package as private and requires its owner
-to make the irreversible private-to-public change in the package settings UI;
-the Packages REST API does not expose that visibility operation. After the
-one-time change, later workflow publications remain public. Use **Package
-settings → Danger Zone → Change visibility → Public** for each package:
-
-- [Application package settings](https://github.com/users/cryptnetworks/packages/container/baseballstattrack/settings)
-- [Migration package settings](https://github.com/users/cryptnetworks/packages/container/baseballstattrack-migration/settings)
-- [Discord bot package settings](https://github.com/users/cryptnetworks/packages/container/baseballstattrack-discord-bot/settings)
+Production operators consume published images and do not build application
+artifacts on the deployment host. Pin every service to one matching immutable
+`sha-<full source SHA>` tag and record the resolved image digests with the
+deployment record.

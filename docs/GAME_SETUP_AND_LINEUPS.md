@@ -76,7 +76,9 @@ Successful mutations append an Account-scoped `SecurityAuditRecord` in the same 
 
 Preflight must identify operational games without snapshots and confirm the highest revision is the intended ready setup. The migration is forward-only. A bad attribution requires a reviewed repair migration; dropping the ready foreign key or rewriting accepted snapshots is not a safe rollback.
 
-The application/container readiness pin advances to this migration. CI validates a clean migration chain, catalog objects, representability, schema drift, the inherited event/statistic/scoring suites, PostgreSQL setup and concurrency tests, production build, and container restart/reset behavior.
+The application/container readiness pin advances to this migration. Production
+readiness requires a clean migration chain, expected catalog objects,
+representability, no schema drift, and successful container restart behavior.
 
 ## Correction boundary
 

@@ -614,9 +614,9 @@ function landingPage(manifest, navigation) {
   const lines = [
     "# Baseball Stat Track Documentation",
     "",
-    "Baseball Stat Track is an event-oriented scorekeeping and statistics platform for coaches, scorekeepers, developers, and operators.",
+    "Baseball Stat Track is an event-oriented scorekeeping and statistics platform for coaches, scorekeepers, league administrators, and production operators.",
     "",
-    "Choose a section below to install the application, score and review games, understand calculations, connect integrations, or operate the service securely. Detailed references remain available through these curated entry points without crowding the main navigation.",
+    "Choose a section below to deploy the production service, score and review games, understand design and calculations, connect integrations, or operate the service securely. Development workflow remains in the repository and is not published here.",
     "",
     "This wiki is generated from the repository's `docs/` directory. The repository documentation is authoritative; direct wiki edits are not.",
     "",
