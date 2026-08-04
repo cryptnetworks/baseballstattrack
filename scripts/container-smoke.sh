@@ -7,6 +7,7 @@ app_image="${project_name}-app:local"
 migration_image="${project_name}-migration:local"
 discord_bot_image="${project_name}-discord-bot:local"
 installer_image="${project_name}-installer:local"
+installer_bootstrap_directory="$(mktemp -d)"
 app_port="$((32000 + ($$ % 1000)))"
 unavailable_database_port="$((36000 + ($$ % 1000)))"
 unavailable_database_container="${project_name}-unavailable-database"
@@ -71,6 +72,9 @@ cleanup() {
     "${migration_image}" \
     "${discord_bot_image}" \
     "${installer_image}" >/dev/null 2>&1 || true
+  if [[ -n "${installer_bootstrap_directory}" && -d "${installer_bootstrap_directory}" ]]; then
+    rm -rf -- "${installer_bootstrap_directory}"
+  fi
 
   exit "${exit_code}"
 }
@@ -140,9 +144,18 @@ docker build \
   --tag "${installer_image}" \
   .
 
-installer_help="$(docker run --rm "${installer_image}" --help)"
+installer_help="$(
+  BST_DEPLOYMENT_DIRECTORY="${installer_bootstrap_directory}" \
+    BST_INSTALLER_IMAGE="${installer_image}" \
+    BST_INSTALLER_PULL_POLICY=never \
+    ./install.sh --help
+)"
 [[ "${installer_help}" == *"Docker deployment wizard"* ]] ||
-  fail "installer image did not expose its help entry point"
+  fail "Compose launcher did not expose the installer help entry point"
+[[ -f "${installer_bootstrap_directory}/compose.installer.yml" ]] ||
+  fail "launcher did not generate the installer Compose file"
+[[ -f "${installer_bootstrap_directory}/.env.installer" ]] ||
+  fail "launcher did not generate the installer environment file"
 docker run --rm --entrypoint sh "${installer_image}" -c '
   test -f /installer/assets/docker-compose.yml
   test ! -e /installer/.env.production

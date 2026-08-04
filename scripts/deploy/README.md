@@ -2,8 +2,9 @@
 
 The deployment wizard runs inside its own container so target hosts need only
 Docker Desktop or Docker Engine with Compose v2. The repository-root
-`install.sh` and `install.ps1` files are launchers; they do not install
-application or database dependencies.
+`install.sh` and `install.ps1` files generate a protected bootstrap Compose file
+and environment file, then invoke this container with `docker compose run`.
+They do not install application or database dependencies.
 
 The installer mounts the Docker socket and a protected deployment directory.
 Docker socket access is equivalent to control of the Docker host, so use only
