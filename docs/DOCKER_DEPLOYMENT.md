@@ -4,10 +4,12 @@ The interactive installer deploys Baseball Stat Track without installing
 Node.js, Python, PostgreSQL, or application packages on the host. A target host
 needs only Docker Desktop, or Docker Engine with the Compose v2 plugin.
 
-The installer itself is a short-lived container. It validates Docker, writes a
-protected deployment directory, controls the existing Compose stack, runs the
-one-shot migration service, and checks application, database, migration, and
-worker health.
+The launcher atomically creates a protected installer Compose file and
+environment file, then starts the short-lived installer with Docker Compose.
+The installer validates Docker, writes the application deployment files,
+controls the Compose stack, runs the one-shot migration service, and checks
+application, database, migration, and worker health. The launchers never call
+`docker run` directly.
 
 ## Supported hosts
 
@@ -23,18 +25,21 @@ remain subject to the larger limits in [Production installation](PRODUCTION_INST
 
 ## Security boundary
 
-The installer container mounts `/var/run/docker.sock`; access to that socket is
+The installer service mounts `/var/run/docker.sock`; access to that socket is
 equivalent to control of the Docker host. Run only the image published from
-this repository or build it from a reviewed checkout. The container is removed
-after each command. A Docker host-gateway alias lets the installer validate the
-application's host-published health port without joining application networks.
+this repository or build it from a reviewed checkout. Docker Compose removes
+the installer container and its temporary network after each command. A Docker
+host-gateway alias lets the installer validate the application's host-published
+health port without joining application networks.
 
-Generated `.env.production` and `app.env` files and installation metadata are
-created with mode `0600` inside a mode `0700` deployment directory where the
-host supports POSIX permissions. Protect that directory with host access
-controls on Docker Desktop. Secrets are generated with the operating system
-cryptographic random source, are never printed, and are redacted from command
-failures and installer log output.
+The launchers create `compose.installer.yml` and `.env.installer`; these contain
+only the installer image, detected platform, and bind-mount paths. The wizard
+then creates `docker-compose.yml`, `.env.production`, `app.env`, and installation
+metadata. These files use mode `0600` inside a mode `0700` deployment directory
+where the host supports POSIX permissions. Protect that directory with host
+access controls on Docker Desktop. Secrets are generated with the operating
+system cryptographic random source, are never printed, and are redacted from
+command failures and installer log output.
 
 The files contain only image coordinates, network/database bootstrap,
 authentication provider bootstrap, and runtime secrets. Feature flags,
@@ -60,7 +65,14 @@ $env:BST_INSTALLER_IMAGE = "ghcr.io/cryptnetworks/baseballstattrack-installer:sh
 ```
 
 Set `BST_DEPLOYMENT_DIRECTORY` to choose the protected host directory. The
-default is `baseballstattrack-deployment` below the current directory.
+default is `baseballstattrack-deployment` below the current directory. Each
+launcher refreshes its bootstrap Compose and environment files before invoking
+the installer, so moving the checkout or changing the pinned installer image
+does not leave stale bind mounts behind.
+
+`BST_INSTALLER_PULL_POLICY` defaults to `always`. The `missing` and `never`
+values are intended for reviewed offline caches and local image rehearsals;
+production operators should retain `always` with an immutable installer tag.
 
 The wizard asks only for:
 

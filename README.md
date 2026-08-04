@@ -34,10 +34,10 @@ v2. Use the launcher from the same reviewed release as the installer image:
 BST_INSTALLER_IMAGE=ghcr.io/cryptnetworks/baseballstattrack-installer:sha-<full-source-sha> ./install.sh install
 ```
 
-Windows administrators can run `install.ps1` from the repository root with the same
-`BST_INSTALLER_IMAGE` value. The wizard validates Docker, creates protected
-bootstrap configuration, starts PostgreSQL and the application, runs
-migrations, and checks readiness. See
+Windows administrators can run `install.ps1` from the repository root with the
+same `BST_INSTALLER_IMAGE` value. The wizard validates Docker, creates protected
+installer and application Compose/environment files, starts PostgreSQL and the
+application, runs migrations, and checks readiness. See
 [Docker-first deployment](docs/DOCKER_DEPLOYMENT.md) for installation, owner
 provisioning, updates, backups, recovery, and uninstall safety.
 
