@@ -22,17 +22,55 @@ audit workstation has no Docker daemon.
 
 ## Findings
 
-| ID      | Severity                    | Status                       | Finding and remediation                                                                                                                                                                                                                                                                                                                       |
-| ------- | --------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SEC-001 | High                        | Fixed                        | `fast-uri` 3.1.4 and `brace-expansion` 5.0.8 were present in the npm lockfile. The lockfile now resolves fixed releases; both full and production npm audits report zero findings.                                                                                                                                                            |
-| SEC-002 | High                        | Fixed                        | Documentation heading normalization removed nested HTML-like text in one pass. Repeated removal now reaches a stable value before the strict anchor allowlist runs, with a nested-markup regression test.                                                                                                                                     |
-| SEC-003 | High alert / false positive | Dismissed after confirmation | CodeQL classified the Discord OAuth-state HMAC as password hashing. The value is a random state integrity tag, not a password. Advanced CodeQL confirmed the trace ends at test-supplied signing keys; alert 1 is dismissed with that rationale. The implementation constructs an explicit secret key and rejects keys shorter than 32 bytes. |
-| SEC-004 | High                        | Fixed                        | An Account-managed feed URL could redirect a server-held provider API key to another HTTPS origin. A deployment-owned `EXTERNAL_DATA_PROVIDER_ALLOWED_ORIGIN` now binds that key to one exact origin. Redirects remain disabled.                                                                                                              |
-| SEC-005 | Critical/High               | Fixed                        | Debian application and Discord images inherited numerous operating-system CVEs. Both images now use digest-pinned Alpine 3.23 bases. The Node build tool upgrades npm, clears its cache, and removes npm from shipped images. CI builds and scans the final runtime, migration, and bot images, blocking fixable High or Critical findings.   |
-| SEC-006 | Medium                      | Fixed                        | Dependabot omitted the Discord service's Python dependencies. Weekly pip monitoring now covers its locked requirements.                                                                                                                                                                                                                       |
-| SEC-007 | Medium                      | Tracked                      | The public repository has no branch protection or ruleset on `main`. Add protection only after confirming the exact new SAST check names, so the rule does not lock out legitimate merges.                                                                                                                                                    |
-| SEC-008 | Low                         | Fixed                        | Security guidance still described a private repository without secret scanning or private vulnerability reporting. The documents now match live settings.                                                                                                                                                                                     |
-| SEC-009 | Medium                      | Tracked                      | Current digest-pinned PostgreSQL and optional Cloudflare images contain upstream Go binaries that scanners associate with High/Critical advisories. PostgreSQL invokes `gosu` only with local fixed startup arguments; Cloudflare is disabled unless its profile is selected. Dependabot and the monthly audit track both.                    |
+| ID      | Severity                    | Status                       | Finding and remediation                                                                                                                                                                                                                                                                                                                             |
+| ------- | --------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SEC-001 | High                        | Fixed                        | `fast-uri` 3.1.4 and `brace-expansion` 5.0.8 were present in the npm lockfile. The lockfile now resolves fixed releases; both full and production npm audits report zero findings.                                                                                                                                                                  |
+| SEC-002 | High                        | Fixed                        | Documentation heading normalization removed nested HTML-like text in one pass. Repeated removal now reaches a stable value before the strict anchor allowlist runs, with a nested-markup regression test.                                                                                                                                           |
+| SEC-003 | High alert / false positive | Dismissed after confirmation | CodeQL classified the Discord OAuth-state HMAC as password hashing. The value is a random state integrity tag, not a password. Advanced CodeQL confirmed the trace ends at test-supplied signing keys; alert 1 is dismissed with that rationale. The implementation constructs an explicit secret key and rejects keys shorter than 32 bytes.       |
+| SEC-004 | High                        | Fixed                        | An Account-managed feed URL could redirect a server-held provider API key to another HTTPS origin. A deployment-owned `EXTERNAL_DATA_PROVIDER_ALLOWED_ORIGIN` now binds that key to one exact origin. Redirects remain disabled.                                                                                                                    |
+| SEC-005 | Critical/High               | Fixed                        | Debian application and Discord images inherited numerous operating-system CVEs. Both images now use digest-pinned Alpine 3.23 bases. The Node build tool upgrades npm, clears its cache, and removes npm from shipped images. CI builds and scans the final runtime, migration, and bot images, blocking fixable High or Critical findings.         |
+| SEC-006 | Medium                      | Fixed                        | Dependabot omitted the Discord service's Python dependencies. Weekly pip monitoring now covers its locked requirements.                                                                                                                                                                                                                             |
+| SEC-007 | Medium                      | Fixed                        | Active repository rulesets protect `main` and `v*` release tags. `main` requires pull requests, resolved conversations, current branches, `verify`, and the stable `SAST required gate`; force pushes and deletion are blocked. The SAST gate plans CodeQL by changed path so non-source pull requests do not deadlock.                             |
+| SEC-008 | Low                         | Fixed                        | Security guidance still described a private repository without secret scanning or private vulnerability reporting. The documents now match live settings.                                                                                                                                                                                           |
+| SEC-009 | Medium                      | Mitigated and monitored      | No patched upstream image exists as of 2026-08-03. PostgreSQL still contains gosu 1.19 built with Go 1.24.6; cloudflared 2026.7.3 still contains Go 1.26.4 and gRPC 1.81.1. Both images remain digest-pinned, and an executable policy requires monthly vulnerability monitoring. Context, ownership, and reassessment triggers are recorded below. |
+
+### SEC-009 upstream image review
+
+Owner: repository security maintainer. Review cadence: weekly Dependabot image
+checks and the scheduled monthly security audit, with immediate reassessment on
+an upstream digest or exposure change.
+
+The current `postgres:17-bookworm` registry manifest is the already-pinned
+`sha256:4f736a…b394`, PostgreSQL 17.10 on Debian 12.15. The
+[Docker Official Image](https://github.com/docker-library/postgres/blob/4f9ced003ba58a854656ba150d146243d27ae3ac/17/bookworm/Dockerfile)
+still installs [gosu 1.19](https://github.com/tianon/gosu/releases/tag/1.19),
+whose latest vendor release was built with Go 1.24.6. Trivy 0.73.0 reports one
+Critical and 14 High fixed-upstream Go findings in `/usr/local/bin/gosu`. It
+separately reports 31 High and 19 Critical Debian findings that have no
+installable fixed package in this image. A scan with `--ignore-unfixed` removes
+the OS findings and retains all 15 gosu findings.
+
+The pinned cloudflared digest is Cloudflare's current
+[`2026.7.3` image](https://github.com/cloudflare/cloudflared/releases/tag/2026.7.3).
+The tag was changed from `latest` to `2026.7.3` without changing the digest.
+Its binary still uses Go 1.26.4 and gRPC 1.81.1. Trivy reports
+`CVE-2026-39822` and `GHSA-hrxh-6v49-42gf` as High, with fixed versions Go
+1.26.5 and gRPC 1.82.1. Cloudflare's
+[release notes](https://github.com/cloudflare/cloudflared/blob/2026.7.3/RELEASE_NOTES)
+include other dependency security work but no build that contains both required
+versions.
+
+No digest was replaced because neither vendor has published a patched image.
+The ephemeral CI database was normalized from a floating major tag to the
+current exact `17.10-alpine3.24` version and digest from the same PostgreSQL
+source revision.
+Gosu is limited to fixed local privilege-drop arguments during PostgreSQL
+startup; the database has no host port and uses an internal network. The tunnel
+remains an optional profile and runs non-root, read-only, without capabilities
+or autoupdate. These are compensating controls, not vulnerability fixes. The
+full operational status, source links, owner, upgrade procedure, and exposure
+triggers are maintained in
+[`CONTAINER_OPERATIONS.md`](CONTAINER_OPERATIONS.md#upstream-infrastructure-image-monitoring).
 
 ## Application review
 
@@ -131,12 +169,13 @@ should use protected devices and browser profiles.
 
 ### Main and pull-request SAST
 
-`.github/workflows/main-push-sast.yml` runs on pull requests, merge queues, and
-pushes to `main`, with manual dispatch available. It calls the reusable CodeQL
-workflow for Actions, JavaScript/TypeScript, and Python using the
-`security-extended` suite. It also runs the focused authentication,
-authorization, integration, privacy, and Account-isolation regressions plus a
-high-severity npm audit.
+`.github/workflows/main-push-sast.yml` provides a stable required gate for pull
+requests and merge queues, with source-scoped pushes to `main` and manual
+dispatch available. Its fail-safe planner calls the reusable CodeQL workflow
+for Actions, JavaScript/TypeScript, and Python using the `security-extended`
+suite when analyzable source or workflows change. Documentation-only changes
+receive the gate without running an unnecessary CodeQL matrix. Focused security
+regressions and the high-severity production npm audit remain in `verify`.
 
 ### Monthly audit
 
@@ -152,11 +191,13 @@ requests also exercise it before merge. It runs:
 - builds of the application runtime, migration runner, and Discord bot; and
 - Trivy final-image scans that block fixable High and Critical findings.
 
-The same job reports all High/Critical findings from the pinned PostgreSQL and
-optional Cloudflare infrastructure images. These are observation-only because
-the repository cannot patch vendor binaries: reachability is reviewed under
-SEC-009, image digests prevent silent changes, and Dependabot supplies the
-upgrade path.
+The same job reports all High/Critical vulnerabilities from the pinned
+PostgreSQL and optional Cloudflare infrastructure images. The scan explicitly
+selects the vulnerability scanner, so it does not inspect or print packaged
+test-key material. These findings are observation-only because the repository
+cannot patch vendor binaries: reachability is reviewed under SEC-009, exact
+version-plus-digest references prevent silent changes, and Dependabot supplies
+the upgrade path.
 
 Third-party scanner binaries are pinned to explicit versions and verified with
 vendor-published SHA-256 checksums. GitHub Actions are GitHub-owned and pinned
@@ -189,18 +230,16 @@ and TruffleHog fill the configuration, image, and history-secret gaps.
 
 ## Residual risk and follow-up
 
-1. Track SEC-007 and add a repository ruleset after the SAST check names are
-   stable. Require pull requests, resolved conversations, no force-push/delete,
-   `verify`, and security checks.
-2. This review did not include dynamic production testing, provider-side
+1. This review did not include dynamic production testing, provider-side
    configuration inspection, cloud IAM review, or an external penetration
    test. Complete those before accepting production youth data.
-3. Trivy blocks fixable High/Critical image findings. Unfixed upstream findings
+2. Trivy blocks fixable High/Critical image findings. Unfixed upstream findings
    remain visible in reports and require monthly review rather than an
    impossible build gate.
-4. Rotate scanner versions deliberately and verify their checksums; Dependabot
+3. Rotate scanner versions deliberately and verify their checksums; Dependabot
    updates action SHAs and image digests but cannot update inline scanner
    binaries.
-5. Track SEC-009. Upgrade PostgreSQL and Cloudflare image digests as soon as
-   vendor rebuilds use patched Go toolchains; reassess immediately if either
-   container's startup or network exposure changes.
+4. Keep SEC-009 under the documented monthly and Dependabot monitoring policy.
+   Upgrade only when vendor rebuilds use the fixed Go and gRPC versions, and
+   reassess immediately if either container's startup or network exposure
+   changes.

@@ -8,6 +8,7 @@ const paths = {
   monthly: ".github/workflows/monthly-security-audit.yml",
   reusable: ".github/workflows/security-sast.yml",
 };
+const composePath = "docker-compose.yml";
 
 function fail(message) {
   throw new Error(`Security workflow contract failed: ${message}`);
@@ -26,6 +27,8 @@ function includesMain(value) {
 
 const entries = await Promise.all(Object.values(paths).map(workflow));
 const [main, monthly, reusable] = entries;
+const compose = await workflow(composePath);
+const ci = await workflow(".github/workflows/ci.yml");
 
 if (!includesMain(main.value.on?.push)) fail("main push trigger is missing.");
 if (!includesMain(main.value.on?.pull_request))
@@ -38,6 +41,24 @@ if (!("workflow_dispatch" in monthly.value.on))
   fail("monthly audit cannot be dispatched manually.");
 if (!("workflow_call" in reusable.value.on))
   fail("SAST workflow is not reusable.");
+
+if ("paths" in main.value.on.pull_request)
+  fail(
+    "pull-request SAST uses path filters and may leave its required gate pending.",
+  );
+const pushPaths = main.value.on?.push?.paths;
+if (!Array.isArray(pushPaths) || !pushPaths.includes("**/*.ts"))
+  fail("main-push SAST is not scoped to analyzable paths.");
+if (pushPaths.includes("docs/**") || pushPaths.includes("package-lock.json"))
+  fail("main-push SAST includes non-source-only changes.");
+if (!main.value.on?.merge_group?.types?.includes("checks_requested"))
+  fail("merge-queue SAST is not scoped to checks_requested.");
+if (main.value.jobs?.required?.name !== "SAST required gate")
+  fail("stable SAST required gate is missing.");
+if (main.value.jobs?.required?.if !== "${{ always() && !cancelled() }}")
+  fail("SAST required gate does not always evaluate completed plans.");
+if (main.value.jobs?.sast?.if !== "needs.scope.outputs.sast == 'true'")
+  fail("SAST execution is not controlled by the fail-safe path plan.");
 
 for (const [name, entry] of Object.entries({ main, monthly, reusable })) {
   if (entry.value.permissions?.contents !== "read")
@@ -57,6 +78,25 @@ for (const language of ["actions", "javascript-typescript", "python"]) {
 }
 if (!reusable.text.includes("queries: security-extended"))
   fail("CodeQL security-extended queries are not enabled.");
+if (
+  main.text.includes("npm run security:test") ||
+  main.text.includes("npm audit")
+)
+  fail(
+    "main SAST duplicates checks already enforced by CI or dependency audit.",
+  );
+if (monthly.value.jobs?.sast?.if !== "github.event_name != 'pull_request'")
+  fail("pull requests duplicate the scheduled SAST suite.");
+if (
+  monthly.value.jobs?.["repository-scan"]?.if !==
+  "github.event_name != 'pull_request'"
+)
+  fail("pull requests duplicate the scheduled repository history scan.");
+if (
+  !monthly.value.jobs?.["node-dependencies"] ||
+  !monthly.value.jobs?.["python-dependencies"]
+)
+  fail("Node and Python dependency audits are not independently scoped.");
 if (!monthly.text.includes("npm audit --audit-level=high"))
   fail("npm high-severity gate is missing.");
 if (!monthly.text.includes("python -m pip_audit --strict"))
@@ -71,5 +111,29 @@ if (
   )
 )
   fail("container high/critical gate is missing.");
+
+const postgresImage = compose.value.services?.db?.image;
+const cloudflaredImage = compose.value.services?.["cloudflare-tunnel"]?.image;
+if (!/^postgres:17-bookworm@sha256:[a-f0-9]{64}$/u.test(postgresImage))
+  fail("PostgreSQL is not pinned to the reviewed major, suite, and digest.");
+const ciPostgresImage = ci.value.jobs?.application?.services?.postgres?.image;
+if (
+  !/^postgres:17\.\d+-alpine3\.\d+@sha256:[a-f0-9]{64}$/u.test(ciPostgresImage)
+)
+  fail("CI PostgreSQL is not pinned to an exact version, suite, and digest.");
+if (
+  !/^cloudflare\/cloudflared:\d{4}\.\d+\.\d+@sha256:[a-f0-9]{64}$/u.test(
+    cloudflaredImage,
+  )
+)
+  fail("cloudflared is not pinned to an exact version and digest.");
+for (const image of [postgresImage, cloudflaredImage]) {
+  if (
+    !monthly.text.includes(
+      `trivy image --scanners vuln --severity HIGH,CRITICAL --exit-code 0 ${image}`,
+    )
+  )
+    fail(`monthly vulnerability monitoring is missing for ${image}.`);
+}
 
 console.log("Security workflow contract passed.");

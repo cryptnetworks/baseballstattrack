@@ -43,14 +43,62 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
-    name: Validate and publish documentation wiki
+  scope:
+    name: Check for publishable documentation changes
     if: >-
       github.event_name == 'pull_request' ||
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main')
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - name: Select publication scope
+        id: plan
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" || "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            echo "publish=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if ! changed_files="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/commits/${SOURCE_SHA}" --jq '.files[]?.filename')"; then
+            echo "The trusted commit could not be inspected; publishing fail-safe."
+            echo "publish=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          publish=false
+          while IFS= read -r file; do
+            case "${file}" in
+              docs/*|scripts/publish-docs-wiki.*|scripts/wiki-git-askpass.sh|.github/workflows/publish-docs-wiki.yml)
+                publish=true
+                break
+                ;;
+            esac
+          done <<< "${changed_files}"
+          echo "publish=${publish}" >> "${GITHUB_OUTPUT}"
+
+  publish:
+    name: Validate and publish documentation wiki
+    needs: scope
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      needs.scope.outputs.publish == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

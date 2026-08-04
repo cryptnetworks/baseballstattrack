@@ -20,6 +20,13 @@ documented upstream tag, read upstream release notes, inspect permission/input
 changes, and require `verify` before merge. Repository Actions settings should
 allow GitHub-owned actions only and require full-length SHA pins.
 
+The `main` ruleset requires pull requests, resolved conversations, current
+branches, `verify`, and `SAST required gate`; it blocks deletion and force
+pushes. The release-tag ruleset blocks deletion and non-fast-forward updates to
+`v*` while allowing new immutable version tags. Both retain the documented
+administrator emergency bypass so a sole maintainer can recover a broken
+required workflow without weakening routine merges.
+
 `npm run verify` runs the high-severity production dependency audit on every
 pull request and main push. Dependabot vulnerability alerts and automated
 security updates remain enabled. Docker base images use exact digests; review
@@ -67,7 +74,8 @@ silently create either.
 
 ## Staging, production, and migrations
 
-1. Confirm the source is current `main` and exact-main `verify` is green.
+1. Confirm the source is current `main` and exact-main `verify` and
+   `SAST required gate` are green when both apply to the source change.
 2. Review dependency alerts, migration SQL, data checks, privacy impact,
    observability, and the release notes. Applied migrations are immutable.
 3. Dispatch a staging candidate with a unique prerelease version and
@@ -81,7 +89,10 @@ silently create either.
 6. Take or verify the provider backup, record its restore evidence, run the
    migration artifact from the same revision, then deploy the application
    artifact by digest. Readiness must pass before traffic is shifted.
-7. Monitor safe operational events and alerts from
+7. Create the unique `v*` tag only after the accepted source and artifact are
+   known. Never move or reuse it; the release-tag ruleset blocks those unsafe
+   updates.
+8. Monitor safe operational events and alerts from
    `docs/OBSERVABILITY_AUDIT_AND_ALERTING.md`. Record the release outcome.
 
 Database changes use expand-and-contract and `prisma migrate deploy`. The

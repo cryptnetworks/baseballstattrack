@@ -33,6 +33,63 @@ The root `Dockerfile` provides two production targets:
 The trusted image publisher builds all three from one source revision and tags
 each with both the requested tag and `sha-<full source SHA>`. Production hosts
 consume those images and never build from a checkout.
+The publication workflow builds all three from one source revision and tags
+each with both the requested tag and `sha-<full source SHA>`.
+
+## Upstream infrastructure image monitoring
+
+The database and optional tunnel use vendor images pinned by both meaningful
+version and manifest digest. The repository security maintainer owns their
+review. Dependabot checks image metadata weekly, and the monthly security audit
+reports High and Critical vulnerabilities without scanning image files for
+credentials or packaged test keys.
+
+| Image             | Reviewed identity                                            | Upstream status on 2026-08-03                                                                                                                                                                                                                                                                                                                                        |
+| ----------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL        | `postgres:17-bookworm@sha256:4f736a…b394` (`17.10-bookworm`) | The current tag still resolves to this digest. The [vendor Dockerfile](https://github.com/docker-library/postgres/blob/4f9ced003ba58a854656ba150d146243d27ae3ac/17/bookworm/Dockerfile) contains [gosu 1.19](https://github.com/tianon/gosu/releases/tag/1.19), built with Go 1.24.6; no newer gosu release or rebuilt PostgreSQL image uses a patched Go toolchain. |
+| Cloudflare Tunnel | `cloudflare/cloudflared:2026.7.3@sha256:e39ee8…d91d`         | [`2026.7.3`](https://github.com/cloudflare/cloudflared/releases/tag/2026.7.3) and `latest` resolve to this same digest. The binary uses Go 1.26.4 and gRPC 1.81.1; the [vendor notes](https://github.com/cloudflare/cloudflared/blob/2026.7.3/RELEASE_NOTES) do not identify an image with both affected dependencies fixed.                                         |
+
+The ephemeral CI database is also pinned to the current
+`postgres:17.10-alpine3.24` manifest. It comes from the same reviewed PostgreSQL
+source revision as the production image and cannot drift between workflow runs.
+
+Trivy 0.73.0 reports one Critical and 14 High Go-standard-library findings in
+`/usr/local/bin/gosu`. The same scan reports 31 High and 19 Critical Debian
+advisories with no currently installable fix in the image; `--ignore-unfixed`
+removes those OS findings but retains every gosu finding. Gosu runs only during
+local container startup to drop from root to the `postgres` user using the
+vendor entrypoint's fixed arguments. PostgreSQL has no host port and remains on
+the internal database network.
+
+The cloudflared binary has two High findings: `CVE-2026-39822` in Go 1.26.4 and
+`GHSA-hrxh-6v49-42gf` in gRPC 1.81.1. The tunnel is disabled unless its Compose
+profile is selected. When enabled it runs non-root with a read-only filesystem,
+no Linux capabilities, no privilege escalation, and autoupdate disabled. Its
+token is injected only at runtime and is not available to image scans.
+
+These controls reduce exposure but do not mark the findings fixed. Reassess
+immediately when any of the following occurs:
+
+- the PostgreSQL or cloudflared registry tag resolves to a new digest;
+- gosu is released with Go 1.24.13 or later, or cloudflared is released with Go
+  1.26.5 or later and gRPC 1.82.1 or later;
+- Trivy changes a finding, severity, fix version, or reachability assessment;
+- the PostgreSQL entrypoint arguments or network exposure change; or
+- the Cloudflare profile is enabled in a new environment or its permissions,
+  token handling, command, or network boundary changes.
+
+An upgrade uses a focused pull request: verify vendor release notes and the
+multi-platform manifest, replace every matching digest and validation fixture,
+run vulnerability scans with and without `--ignore-unfixed`, run
+`npm run container:verify`, and preserve startup, health, migration, backup, and
+credential-exposure evidence. Never rebuild or replace a vendor binary inside
+the image as an unreviewed workaround.
+
+Build the images locally without changing the Compose image-only contract:
+
+```sh
+IMAGE_TAG=local VCS_REF="$(git rev-parse HEAD)" npm run container:production:build
+```
 
 ## Configure and start
 
