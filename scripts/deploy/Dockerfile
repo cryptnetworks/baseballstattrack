@@ -9,7 +9,9 @@ RUN apk add --no-cache \
     ca-certificates \
     docker-cli \
     docker-cli-buildx \
-    docker-cli-compose
+    docker-cli-compose \
+    && rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
 
 WORKDIR /installer
 COPY scripts/deploy/*.ts ./

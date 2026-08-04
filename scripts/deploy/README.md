@@ -16,4 +16,6 @@ construction and the help entry point.
 
 The installer image includes the Docker CLI, Compose v2, and Buildx. These are
 container tools used to control the mounted host daemon; they are not installed
-on the target host.
+on the target host. npm and npx are removed from the final image because the
+wizard uses Node's built-in TypeScript execution and has no package-install
+path.

@@ -147,6 +147,9 @@ docker run --rm --entrypoint sh "${installer_image}" -c '
   test -f /installer/assets/docker-compose.yml
   test ! -e /installer/.env.production
   test ! -e /installer/node_modules
+  test ! -e /usr/local/lib/node_modules/npm
+  ! command -v npm
+  ! command -v npx
   docker buildx version
 '
 
