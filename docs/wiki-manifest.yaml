@@ -185,6 +185,12 @@ pages:
       order: 270,
     }
   - {
+      source: DOCKER_DEPLOYMENT.md,
+      wiki: Docker-First-Deployment,
+      visibility: public,
+      order: 275,
+    }
+  - {
       source: DISCORD_UPDATE_WORKER.md,
       wiki: Discord-Update-Worker,
       visibility: public,
@@ -531,6 +537,7 @@ navigation:
   - title: Install in Production
     description: Prepare, deploy, verify, upgrade, and recover the supported production stack.
     pages:
+      - Docker-First-Deployment
       - Production-Installation
   - title: Integrations
     description: Connect data providers, APIs, notifications, calendars, webhooks, and Discord.

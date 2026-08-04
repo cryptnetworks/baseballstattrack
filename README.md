@@ -21,22 +21,39 @@ Corrections append history, and replay binds to the rules and derivation
 versions that were active for the original game.
 
 Start with [Start here](docs/START_HERE.md) for a role-based documentation
-index or [Production installation](docs/PRODUCTION_INSTALLATION.md) to deploy
-the supported production stack.
+index or [Docker-first deployment](docs/DOCKER_DEPLOYMENT.md) to deploy the
+supported stack without installing application dependencies on the host.
+
+## Docker quick start
+
+The interactive installer supports macOS, Windows with WSL2, NixOS, and other
+Linux hosts. The host needs only Docker Desktop, or Docker Engine with Compose
+v2. Use the launcher from the same reviewed release as the installer image:
+
+```sh
+BST_INSTALLER_IMAGE=ghcr.io/cryptnetworks/baseballstattrack-installer:sha-<full-source-sha> ./scripts/deploy/install.sh install
+```
+
+Windows administrators can run `scripts/deploy/install.ps1` with the same
+`BST_INSTALLER_IMAGE` value. The wizard validates Docker, creates protected
+bootstrap configuration, starts PostgreSQL and the application, runs
+migrations, and checks readiness. See
+[Docker-first deployment](docs/DOCKER_DEPLOYMENT.md) for installation, owner
+provisioning, updates, backups, recovery, and uninstall safety.
 
 ## Documentation map
 
-| Area                    | Primary references                                                                                                                                                                                  |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Product scope           | [Product scope](docs/PRODUCT_SCOPE.md)                                                                                                                                                              |
-| Scoring and statistics  | [Scoring semantics](docs/SCORING_SEMANTICS.md), [immutable events](docs/IMMUTABLE_GAME_EVENT_MODEL.md), [statistic derivation](docs/STATISTIC_DERIVATION.md), [fixtures](docs/SCORING_FIXTURES.md)  |
-| Teams and game setup    | [Roster management](docs/TEAM_SEASON_ROSTER_MANAGEMENT.md), [game setup and lineups](docs/GAME_SETUP_AND_LINEUPS.md), [setup workflow](docs/GAME_SETUP_WORKFLOW.md)                                 |
-| Results and portability | [Season dashboards](docs/SEASON_DASHBOARD_AND_LEADERBOARDS.md), [printable reports](docs/PRINTABLE_REPORTS.md), [export and import](docs/DATA_EXPORT_AND_IMPORT.md)                                 |
-| Persistence             | [Persistence and tenancy](docs/PERSISTENCE_AND_TENANCY.md), [relational schema](docs/RELATIONAL_DOMAIN_SCHEMA.md)                                                                                   |
-| Identity and security   | [Authentication and authorization](docs/AUTHENTICATION_AND_AUTHORIZATION.md), [provider operations](docs/AUTHENTICATION_PROVIDERS.md), [privacy and threat model](docs/PRIVACY_AND_THREAT_MODEL.md) |
-| Integrations            | [Integrations guide](docs/INTEGRATIONS_GUIDE.md), [partner API program](docs/INTEGRATIONS_AND_PARTNER_API_PROGRAM.md), [calendar synchronization](docs/CALENDAR_SYNCHRONIZATION.md)                 |
-| Application experience  | [Product guides](docs/PRODUCT_GUIDES.md), [PWA experience](docs/PWA_APPLICATION_EXPERIENCE.md)                                                                                                      |
-| Operations              | [Operations and security](docs/OPERATIONS_AND_SECURITY.md), [container operations](docs/CONTAINER_OPERATIONS.md), [backup and restore](docs/BACKUP_AND_RESTORE.md)                                  |
+| Area                    | Primary references                                                                                                                                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Product scope           | [Product scope](docs/PRODUCT_SCOPE.md)                                                                                                                                                                                   |
+| Scoring and statistics  | [Scoring semantics](docs/SCORING_SEMANTICS.md), [immutable events](docs/IMMUTABLE_GAME_EVENT_MODEL.md), [statistic derivation](docs/STATISTIC_DERIVATION.md), [fixtures](docs/SCORING_FIXTURES.md)                       |
+| Teams and game setup    | [Roster management](docs/TEAM_SEASON_ROSTER_MANAGEMENT.md), [game setup and lineups](docs/GAME_SETUP_AND_LINEUPS.md), [setup workflow](docs/GAME_SETUP_WORKFLOW.md)                                                      |
+| Results and portability | [Season dashboards](docs/SEASON_DASHBOARD_AND_LEADERBOARDS.md), [printable reports](docs/PRINTABLE_REPORTS.md), [export and import](docs/DATA_EXPORT_AND_IMPORT.md)                                                      |
+| Persistence             | [Persistence and tenancy](docs/PERSISTENCE_AND_TENANCY.md), [relational schema](docs/RELATIONAL_DOMAIN_SCHEMA.md)                                                                                                        |
+| Identity and security   | [Authentication and authorization](docs/AUTHENTICATION_AND_AUTHORIZATION.md), [provider operations](docs/AUTHENTICATION_PROVIDERS.md), [privacy and threat model](docs/PRIVACY_AND_THREAT_MODEL.md)                      |
+| Integrations            | [Integrations guide](docs/INTEGRATIONS_GUIDE.md), [partner API program](docs/INTEGRATIONS_AND_PARTNER_API_PROGRAM.md), [calendar synchronization](docs/CALENDAR_SYNCHRONIZATION.md)                                      |
+| Application experience  | [Product guides](docs/PRODUCT_GUIDES.md), [PWA experience](docs/PWA_APPLICATION_EXPERIENCE.md)                                                                                                                           |
+| Operations              | [Docker-first deployment](docs/DOCKER_DEPLOYMENT.md), [operations and security](docs/OPERATIONS_AND_SECURITY.md), [container operations](docs/CONTAINER_OPERATIONS.md), [backup and restore](docs/BACKUP_AND_RESTORE.md) |
 
 Report suspected vulnerabilities through the private process in
 [SECURITY.md](SECURITY.md), never through a public issue.

@@ -27,3 +27,9 @@ docker build \
   --build-arg "VCS_REF=${vcs_ref}" \
   --tag "${image_prefix}-discord-bot:${image_tag}" \
   services/discord-bot
+
+docker build \
+  --file scripts/deploy/Dockerfile \
+  --build-arg "VCS_REF=${vcs_ref}" \
+  --tag "${image_prefix}-installer:${image_tag}" \
+  .

@@ -29,6 +29,9 @@ describe("security audit scope planner", () => {
       pythonDependencies: false,
       sast: false,
     });
+    expect(
+      planSecurityAuditScopes(["scripts/deploy/Dockerfile"]).containers,
+    ).toBe(true);
   });
 
   it("enables the complete scheduled audit", () => {

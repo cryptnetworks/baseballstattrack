@@ -1,5 +1,9 @@
 # Operations and security
 
+For a guided installation that leaves application dependencies inside
+containers, start with [Docker-first deployment](DOCKER_DEPLOYMENT.md). This
+document remains the authoritative day-two security and operations checklist.
+
 Use this section to deploy, protect, observe, recover, and maintain Baseball
 Stat Track. Installation commands are collected in
 [Production installation](PRODUCTION_INSTALLATION.md).

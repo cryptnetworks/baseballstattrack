@@ -21,7 +21,8 @@ export function planSecurityAuditScopes(files, { forceFull = false } = {}) {
     nodeDependencies ||
     pythonDependencies ||
     normalizedFiles.has("Dockerfile") ||
-    normalizedFiles.has("services/discord-bot/Dockerfile");
+    normalizedFiles.has("services/discord-bot/Dockerfile") ||
+    normalizedFiles.has("scripts/deploy/Dockerfile");
   const sast = [...normalizedFiles].some(
     (file) =>
       file.startsWith(".github/actions/") ||

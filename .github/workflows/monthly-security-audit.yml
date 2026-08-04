@@ -10,6 +10,7 @@ on:
       - "package.json"
       - "services/discord-bot/Dockerfile"
       - "services/discord-bot/requirements.lock"
+      - "scripts/deploy/Dockerfile"
   schedule:
     - cron: "17 6 1 * *"
   workflow_dispatch:
@@ -177,11 +178,12 @@ jobs:
           docker build --target runtime --tag baseballstattrack:security .
           docker build --target migration --tag baseballstattrack-migration:security .
           docker build --tag baseballstattrack-discord:security services/discord-bot
+          docker build --file scripts/deploy/Dockerfile --tag baseballstattrack-installer:security .
 
       - name: Block fixable high and critical container findings
         run: |
           set -Eeuo pipefail
-          for image in baseballstattrack:security baseballstattrack-migration:security baseballstattrack-discord:security; do
+          for image in baseballstattrack:security baseballstattrack-migration:security baseballstattrack-discord:security baseballstattrack-installer:security; do
             trivy image --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL --exit-code 1 "${image}"
           done
 

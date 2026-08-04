@@ -6,6 +6,7 @@ project_name="bst-container-$$_${RANDOM}"
 app_image="${project_name}-app:local"
 migration_image="${project_name}-migration:local"
 discord_bot_image="${project_name}-discord-bot:local"
+installer_image="${project_name}-installer:local"
 app_port="$((32000 + ($$ % 1000)))"
 unavailable_database_port="$((36000 + ($$ % 1000)))"
 unavailable_database_container="${project_name}-unavailable-database"
@@ -68,7 +69,8 @@ cleanup() {
   docker image rm \
     "${app_image}" \
     "${migration_image}" \
-    "${discord_bot_image}" >/dev/null 2>&1 || true
+    "${discord_bot_image}" \
+    "${installer_image}" >/dev/null 2>&1 || true
 
   exit "${exit_code}"
 }
@@ -132,6 +134,24 @@ docker build \
   --build-arg "VCS_REF=${VCS_REF}" \
   --tag "${discord_bot_image}" \
   services/discord-bot
+docker build \
+  --file scripts/deploy/Dockerfile \
+  --build-arg "VCS_REF=${VCS_REF}" \
+  --tag "${installer_image}" \
+  .
+
+installer_help="$(docker run --rm "${installer_image}" --help)"
+[[ "${installer_help}" == *"Docker deployment wizard"* ]] ||
+  fail "installer image did not expose its help entry point"
+docker run --rm --entrypoint sh "${installer_image}" -c '
+  test -f /installer/assets/docker-compose.yml
+  test ! -e /installer/.env.production
+  test ! -e /installer/node_modules
+  test ! -e /usr/local/lib/node_modules/npm
+  ! command -v npm
+  ! command -v npx
+  docker buildx version
+'
 
 image_configuration="$(
   docker image inspect "${app_image}" \

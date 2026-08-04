@@ -58,7 +58,8 @@ jobs:
           for image in \
             "${IMAGE_PREFIX}" \
             "${IMAGE_PREFIX}-migration" \
-            "${IMAGE_PREFIX}-discord-bot"; do
+            "${IMAGE_PREFIX}-discord-bot" \
+            "${IMAGE_PREFIX}-installer"; do
             docker tag "${image}:${IMAGE_TAG}" "${image}:sha-${GITHUB_SHA}"
           done
 
@@ -67,7 +68,8 @@ jobs:
           for image in \
             "${IMAGE_PREFIX}" \
             "${IMAGE_PREFIX}-migration" \
-            "${IMAGE_PREFIX}-discord-bot"; do
+            "${IMAGE_PREFIX}-discord-bot" \
+            "${IMAGE_PREFIX}-installer"; do
             docker push "${image}:${IMAGE_TAG}"
             docker push "${image}:sha-${GITHUB_SHA}"
           done
@@ -79,7 +81,8 @@ jobs:
             for image in \
               "${IMAGE_PREFIX}" \
               "${IMAGE_PREFIX}-migration" \
-              "${IMAGE_PREFIX}-discord-bot"; do
+              "${IMAGE_PREFIX}-discord-bot" \
+              "${IMAGE_PREFIX}-installer"; do
               digest="$(docker image inspect "${image}:${IMAGE_TAG}" --format '{{index .RepoDigests 0}}')"
               echo "- \`${digest}\`"
             done
