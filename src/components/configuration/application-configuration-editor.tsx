@@ -92,11 +92,13 @@ export function ApplicationConfigurationEditor({
     <div className="mt-8 grid gap-8">
       {!configured ? (
         <section className="rounded-xl border border-amber-300 bg-amber-50 p-5">
-          <h2 className="text-xl font-semibold">Initial migration required</h2>
+          <h2 className="text-xl font-semibold">
+            Initial configuration required
+          </h2>
           <p className="mt-2 max-w-3xl text-sm text-amber-950">
-            This Account is using safe disabled defaults. Seed the legacy
-            non-secret environment values once; existing environment settings
-            are copied, validated, versioned, and retained in revision history.
+            This Account is using safe disabled defaults. Create revision 1 from
+            those defaults, or import reviewed legacy non-secret environment
+            values when migrating an existing deployment.
           </p>
           {canManage ? (
             <form
@@ -112,11 +114,11 @@ export function ApplicationConfigurationEditor({
                   required
                   minLength={8}
                   maxLength={240}
-                  defaultValue="Initial migration from reviewed environment values"
+                  defaultValue="Create initial reviewed application configuration"
                 />
               </label>
               <button className="min-h-11 w-fit rounded-lg bg-[var(--accent-strong)] px-4 font-semibold text-white">
-                Seed reviewed environment values
+                Create initial revision
               </button>
             </form>
           ) : null}

@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { DEFAULT_APPLICATION_CONFIGURATION } from "@/domain/application-configuration";
+import { ApplicationConfigurationService } from "@/server/app/application-configuration-service";
 import { PrismaApplicationConfigurationRepository } from "@/server/data/application-configuration-repository";
 import { trustedActorForTest } from "../fixtures/trusted-actor";
 
@@ -94,6 +95,21 @@ integration("application configuration persistence boundary", () => {
     });
     expect(updated).toMatchObject({ currentRevision: 2 });
 
+    const restartedPrisma = new PrismaClient({
+      adapter: new PrismaPg({ connectionString: databaseUrl! }),
+    });
+    const restartedService = new ApplicationConfigurationService(
+      new PrismaApplicationConfigurationRepository(restartedPrisma),
+    );
+    try {
+      await expect(restartedService.runtime(accountA)).resolves.toMatchObject({
+        revision: 2,
+        values: changed,
+      });
+    } finally {
+      await restartedPrisma.$disconnect();
+    }
+
     const rolledBack = await repository.rollback({
       accountId: accountA,
       expectedRevision: 2,
@@ -127,6 +143,11 @@ integration("application configuration persistence boundary", () => {
         ({ metadata }) => !JSON.stringify(metadata).includes("values"),
       ),
     ).toBe(true);
+    expect(audit.map(({ metadata }) => metadata)).toEqual([
+      expect.objectContaining({ previousRevision: null, newRevision: 1 }),
+      expect.objectContaining({ previousRevision: 1, newRevision: 2 }),
+      expect.objectContaining({ previousRevision: 2, newRevision: 3 }),
+    ]);
   });
 
   it("does not permit revision history mutation", async () => {

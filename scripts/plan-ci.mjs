@@ -15,6 +15,8 @@ const repositoryPolicyPaths = new Set([
 
 const applicationConfigurationPaths = new Set([
   ".env.example",
+  ".env.local.example",
+  ".env.production.example",
   ".prettierignore",
   ".prettierrc.json",
   "eslint.config.mjs",
@@ -29,7 +31,7 @@ const applicationConfigurationPaths = new Set([
 const containerPaths = new Set([
   ".dockerignore",
   "Dockerfile",
-  "app.production.env.example",
+  ".env.production.example",
   "compose.production.env.example",
   "docker-compose.yml",
 ]);
@@ -140,6 +142,9 @@ export function planCiScopes(files, { forceFull = false } = {}) {
 
     if (containerPaths.has(file) || file.startsWith("container/")) {
       plan.containers = true;
+      if (applicationConfigurationPaths.has(file)) {
+        plan.application = true;
+      }
       continue;
     }
 

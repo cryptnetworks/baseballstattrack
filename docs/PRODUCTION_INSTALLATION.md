@@ -33,7 +33,7 @@ database volume and alert thresholds.
 ## 2. Install the deployment manifest and configuration
 
 Obtain `docker-compose.yml`, `compose.production.env.example`, and
-`app.production.env.example` from one reviewed source revision. Verify the
+`.env.production.example` from one reviewed source revision. Verify the
 revision before copying those files to the host; do not combine a Compose file
 from one revision with images from another.
 
@@ -44,7 +44,7 @@ sudo install -d -m 755 /opt/baseballstattrack
 sudo install -d -m 700 /etc/baseballstattrack
 sudo install -m 644 docker-compose.yml /opt/baseballstattrack/docker-compose.yml
 sudo install -m 600 compose.production.env.example /etc/baseballstattrack/production.env
-sudo install -m 600 app.production.env.example /etc/baseballstattrack/app.env
+sudo install -m 600 .env.production.example /etc/baseballstattrack/app.env
 ```
 
 Set `APP_ENV_FILE=/etc/baseballstattrack/app.env` in `production.env`, then
@@ -59,6 +59,14 @@ replace every placeholder. At minimum, configure:
 - signing keys and provider credentials for enabled integrations; and
 - optional Discord and Cloudflare credentials only when those profiles are
   enabled.
+
+Do not add feature flags, notification destinations, provider API URLs, rate
+limits, or other Account behavior to these files. After the first
+administrator signs in, use **Settings → Application configuration** to create
+and review the Account's initial database revision. Existing deployments may
+use the one-time legacy environment seed described in
+[Configuration management](CONFIGURATION_MANAGEMENT.md); new deployments seed
+the safe defaults and configure behavior in the portal.
 
 Use independently generated high-entropy values. Never commit production
 configuration, copy it into an image, place it in a command-line URL, or expose

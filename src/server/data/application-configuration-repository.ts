@@ -176,6 +176,7 @@ export class PrismaApplicationConfigurationRepository {
         configurationId,
         action: "application_configuration.seed",
         actor: input.actor,
+        previousRevision: null,
         revision: 1,
         digest,
         categories: applicationConfigurationCategories,
@@ -312,6 +313,7 @@ export class PrismaApplicationConfigurationRepository {
         configurationId: current.id,
         action: input.action,
         actor: input.actor,
+        previousRevision: current.currentRevision,
         revision,
         digest,
         categories,
@@ -332,6 +334,7 @@ export class PrismaApplicationConfigurationRepository {
       configurationId: string;
       action: string;
       actor: TrustedActorContext;
+      previousRevision: number | null;
       revision: number;
       digest: string;
       categories: readonly string[];
@@ -352,7 +355,8 @@ export class PrismaApplicationConfigurationRepository {
         outcome: AuditOutcome.SUCCEEDED,
         metadata: {
           schemaVersion: APPLICATION_CONFIGURATION_SCHEMA_VERSION,
-          revision: input.revision,
+          previousRevision: input.previousRevision,
+          newRevision: input.revision,
           digest: input.digest,
           changedCategories: [...input.categories],
           ...(input.rolledBackFromRevision

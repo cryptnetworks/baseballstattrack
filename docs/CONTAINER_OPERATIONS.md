@@ -98,10 +98,16 @@ placeholder:
 
 ```sh
 install -m 600 compose.production.env.example /etc/baseballstattrack/production.env
-install -m 600 app.production.env.example /etc/baseballstattrack/app.env
+install -m 600 .env.production.example /etc/baseballstattrack/app.env
 ```
 
 Set `APP_ENV_FILE=/etc/baseballstattrack/app.env` in `production.env`.
+
+The application environment file contains only bootstrap topology and secret
+material. Account behavior survives container replacement in PostgreSQL and is
+managed at **Settings → Application configuration**. Restarting or replacing
+the app container does not require copying operational settings back into the
+environment.
 
 Use the same immutable source tag for all three application images. The moving
 `latest` tag is appropriate only for initial evaluation. `POSTGRES_PASSWORD`

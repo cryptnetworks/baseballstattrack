@@ -38,7 +38,7 @@ their permissions, and replace every placeholder:
 
 ```sh
 install -m 600 compose.production.env.example /etc/baseballstattrack/production.env
-install -m 600 app.production.env.example /etc/baseballstattrack/app.env
+install -m 600 .env.production.example /etc/baseballstattrack/app.env
 ```
 
 Set `APP_ENV_FILE=/etc/baseballstattrack/app.env` in `production.env`. Compose

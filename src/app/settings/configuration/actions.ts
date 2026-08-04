@@ -142,7 +142,7 @@ export async function seedApplicationConfiguration(
       );
     redirect(
       result.created
-        ? "/settings/configuration?notice=Legacy%20configuration%20seeded."
+        ? "/settings/configuration?notice=Initial%20configuration%20created."
         : "/settings/configuration?notice=Configuration%20was%20already%20seeded.",
     );
   } catch (error) {

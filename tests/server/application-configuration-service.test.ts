@@ -107,6 +107,32 @@ describe("application configuration service", () => {
     expect(store.save).not.toHaveBeenCalled();
   });
 
+  it("allows an Account administrator to commit a validated revision", async () => {
+    const store = repository();
+    const service = new ApplicationConfigurationService(store as never);
+    const values = {
+      ...DEFAULT_APPLICATION_CONFIGURATION,
+      features: {
+        ...DEFAULT_APPLICATION_CONFIGURATION.features,
+        calendarFeeds: true,
+      },
+    };
+    await expect(
+      service.save(
+        {
+          accountId: ACCOUNT_A,
+          expectedRevision: 1,
+          reason: "Enable reviewed calendar feeds",
+          values,
+        },
+        actor(),
+      ),
+    ).resolves.toMatchObject({ currentRevision: 2 });
+    expect(store.save).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: ACCOUNT_A, values }),
+    );
+  });
+
   it("caches reads, invalidates explicitly, and refreshes without restart", async () => {
     const store = repository();
     const service = new ApplicationConfigurationService(
@@ -118,6 +144,38 @@ describe("application configuration service", () => {
     expect(store.current).toHaveBeenCalledTimes(1);
     await service.refresh(ACCOUNT_A);
     expect(store.current).toHaveBeenCalledTimes(2);
+  });
+
+  it("reloads a persisted revision after restart and bounded scale-out cache expiry", async () => {
+    let time = NOW.getTime();
+    let persisted = current(1);
+    const store = repository({
+      current: vi.fn().mockImplementation(async () => persisted),
+    });
+    const firstInstance = new ApplicationConfigurationService(
+      store as never,
+      () => new Date(time),
+    );
+    await expect(firstInstance.runtime(ACCOUNT_A)).resolves.toMatchObject({
+      revision: 1,
+    });
+
+    persisted = current(2);
+    const restartedInstance = new ApplicationConfigurationService(
+      store as never,
+      () => new Date(time),
+    );
+    await expect(restartedInstance.runtime(ACCOUNT_A)).resolves.toMatchObject({
+      revision: 2,
+    });
+    await expect(firstInstance.runtime(ACCOUNT_A)).resolves.toMatchObject({
+      revision: 1,
+    });
+
+    time += 30_001;
+    await expect(firstInstance.runtime(ACCOUNT_A)).resolves.toMatchObject({
+      revision: 2,
+    });
   });
 
   it("coalesces startup preloads and bounds readiness refreshes", async () => {
