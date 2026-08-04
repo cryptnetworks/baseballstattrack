@@ -31,10 +31,10 @@ Linux hosts. The host needs only Docker Desktop, or Docker Engine with Compose
 v2. Use the launcher from the same reviewed release as the installer image:
 
 ```sh
-BST_INSTALLER_IMAGE=ghcr.io/cryptnetworks/baseballstattrack-installer:sha-<full-source-sha> ./scripts/deploy/install.sh install
+BST_INSTALLER_IMAGE=ghcr.io/cryptnetworks/baseballstattrack-installer:sha-<full-source-sha> ./install.sh install
 ```
 
-Windows administrators can run `scripts/deploy/install.ps1` with the same
+Windows administrators can run `install.ps1` from the repository root with the same
 `BST_INSTALLER_IMAGE` value. The wizard validates Docker, creates protected
 bootstrap configuration, starts PostgreSQL and the application, runs
 migrations, and checks readiness. See

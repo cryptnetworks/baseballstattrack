@@ -32,6 +32,11 @@ describe("CI scope planner", () => {
       containers: true,
       operations: true,
     });
+    expect(planCiScopes(["install.sh", "install.ps1"])).toMatchObject({
+      application: true,
+      containers: true,
+      operations: true,
+    });
   });
 
   it("runs database, operational, and container proofs for migrations", () => {
