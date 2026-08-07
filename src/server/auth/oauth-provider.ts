@@ -1,4 +1,5 @@
 export const authenticationProviderKeys = [
+  "local",
   "authentik",
   "google",
   "discord",

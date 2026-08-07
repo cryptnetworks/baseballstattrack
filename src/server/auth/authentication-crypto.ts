@@ -43,6 +43,28 @@ function derivedKey(root: Buffer, purpose: string): Buffer {
     .digest();
 }
 
+export function localPasswordMatches(
+  password: string,
+  expectedPassword: string,
+  root = loadAuthenticationKey(),
+) {
+  const key = derivedKey(root, "local-password");
+  const candidate = createHmac("sha256", key).update(password, "utf8").digest();
+  const expected = createHmac("sha256", key)
+    .update(expectedPassword, "utf8")
+    .digest();
+  return timingSafeEqual(candidate, expected);
+}
+
+export function localPasswordDigest(
+  password: string,
+  root = loadAuthenticationKey(),
+) {
+  return createHmac("sha256", derivedKey(root, "local-password"))
+    .update(password, "utf8")
+    .digest("hex");
+}
+
 export function randomOpaque(bytes = 32): string {
   return randomBytes(bytes).toString("base64url");
 }

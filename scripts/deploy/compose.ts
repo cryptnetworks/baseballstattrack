@@ -6,8 +6,7 @@ import type { CommandResult, CommandRunner } from "./contracts.ts";
 import { redactSensitive } from "./config.ts";
 import { runCommand } from "./process.ts";
 
-export const REQUIRED_MIGRATION =
-  "20260803163000_provider_neutral_authentication";
+export const REQUIRED_MIGRATION = "20260806000000_local_authentication";
 
 type ComposePaths = Readonly<{
   directory: string;

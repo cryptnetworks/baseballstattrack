@@ -35,6 +35,7 @@ const configuration: AuthenticationProviderConfiguration = {
     keyId: "apple-key",
     privateKey: "not-used-to-create-an-authorization-url",
   },
+  local: null,
 };
 
 const authorizationInput = {
@@ -59,7 +60,7 @@ describe("OAuth authentication adapters", () => {
       discord: "https://discord.com/oauth2/authorize",
       facebook: "https://www.facebook.com/dialog/oauth",
       apple: "https://appleid.apple.com/auth/authorize",
-    } satisfies Record<AuthenticationProviderKey, string>;
+    } satisfies Record<Exclude<AuthenticationProviderKey, "local">, string>;
     for (const [provider, endpoint] of Object.entries(expected)) {
       const url = adapters
         .get(provider as AuthenticationProviderKey)!

@@ -42,6 +42,12 @@ export type AuthenticationProviderConfiguration = Readonly<{
     keyId: string;
     privateKey: string;
   }> | null;
+  local: Readonly<{
+    username: string;
+    password: string;
+    accountName: string;
+    accountSlug: string;
+  }> | null;
 }>;
 
 function enabledProviders(value: string) {
@@ -49,7 +55,7 @@ function enabledProviders(value: string) {
     .split(",")
     .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean);
-  return z.array(z.enum(authenticationProviderKeys)).max(5).parse(entries);
+  return z.array(z.enum(authenticationProviderKeys)).max(6).parse(entries);
 }
 
 function requiredWhenEnabled<T>(
@@ -71,6 +77,25 @@ export function loadAuthenticationProviderConfiguration(
       (deployment.siteUrl
         ? new URL("/auth/callback", deployment.siteUrl).toString()
         : undefined),
+  );
+  if (enabled.includes("local") && deployment.appEnvironment !== "local") {
+    throw new Error(
+      "The local authentication provider is only available in local mode.",
+    );
+  }
+  const local = requiredWhenEnabled(enabled, "local", () =>
+    Object.freeze({
+      username: nonempty.parse(deployment.localAuthUsername).toLowerCase(),
+      password: secret.parse(secrets.localAuthPassword),
+      accountName: nonempty.parse(deployment.localAccountName),
+      accountSlug: z
+        .string()
+        .trim()
+        .min(1)
+        .max(64)
+        .regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?[a-z0-9]$/u)
+        .parse(deployment.localAccountSlug),
+    }),
   );
   return Object.freeze({
     enabled: Object.freeze([...new Set(enabled)]),
@@ -110,5 +135,6 @@ export function loadAuthenticationProviderConfiguration(
           .replaceAll("\\n", "\n"),
       }),
     ),
+    local,
   });
 }

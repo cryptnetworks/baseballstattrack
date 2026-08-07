@@ -87,11 +87,12 @@ export function parseModeChoice(value: string): DeploymentMode {
 }
 
 const providerChoices: Record<string, AuthenticationProvider> = {
-  "1": "authentik",
-  "2": "google",
-  "3": "discord",
-  "4": "facebook",
-  "5": "apple",
+  "1": "local",
+  "2": "authentik",
+  "3": "google",
+  "4": "discord",
+  "5": "facebook",
+  "6": "apple",
 };
 
 function defaultSlug(name: string) {
@@ -111,11 +112,27 @@ export async function confirm(io: WizardIO, question: string) {
 async function providerBootstrap(
   io: WizardIO,
   deploymentDirectory: string,
+  mode: DeploymentMode,
 ): Promise<ProviderBootstrap> {
   io.write("\nChoose the initial administrator sign-in provider:");
-  io.write("1. Authentik\n2. Google\n3. Discord\n4. Facebook\n5. Apple");
+  io.write(
+    "1. Local username/password (local development)\n2. Authentik\n3. Google\n4. Discord\n5. Facebook\n6. Apple",
+  );
   const provider = providerChoices[(await io.ask("Choice: ")).trim()];
   if (!provider) throw new Error("Choose a supported authentication provider.");
+  if (provider === "local") {
+    if (mode !== "local")
+      throw new Error(
+        "Local authentication is only available for local development.",
+      );
+    const username =
+      (await io.ask("Local username [admin]: ")).trim() || "admin";
+    const password = await io.ask(
+      "Local password (hidden, min 16 characters): ",
+      { secret: true },
+    );
+    return { provider, clientId: "local", username, password };
+  }
   const clientId = (await io.ask("OAuth client ID: ")).trim();
   if (provider === "apple") {
     const teamId = (await io.ask("Apple team ID: ")).trim();
@@ -175,7 +192,7 @@ export async function collectInstallerAnswers(input: {
   const suggestedSlug = defaultSlug(accountDisplayName);
   const accountSlug =
     (await io.ask(`Account slug [${suggestedSlug}]: `)).trim() || suggestedSlug;
-  const provider = await providerBootstrap(io, input.deploymentDirectory);
+  const provider = await providerBootstrap(io, input.deploymentDirectory, mode);
   if (
     !(await confirm(
       io,

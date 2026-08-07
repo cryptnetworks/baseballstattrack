@@ -3,6 +3,7 @@ export type AuthorizationErrorCode =
   | "INVALID_SESSION"
   | "SESSION_EXPIRED"
   | "INVALID_OAUTH_CALLBACK"
+  | "INVALID_LOCAL_CREDENTIALS"
   | "IDENTITY_ALREADY_LINKED"
   | "PROVIDER_FAILURE"
   | "USER_PROVISIONING_FAILURE"
@@ -33,7 +34,8 @@ export function safeAuthorizationStatus(error: unknown): 401 | 403 | 500 {
     error.code === "AUTHENTICATION_REQUIRED" ||
     error.code === "INVALID_SESSION" ||
     error.code === "SESSION_EXPIRED" ||
-    error.code === "INVALID_OAUTH_CALLBACK"
+    error.code === "INVALID_OAUTH_CALLBACK" ||
+    error.code === "INVALID_LOCAL_CREDENTIALS"
   ) {
     return 401;
   }
