@@ -4,6 +4,7 @@ import {
   createHash,
   createHmac,
   randomBytes,
+  scryptSync,
   timingSafeEqual,
 } from "node:crypto";
 
@@ -43,16 +44,29 @@ function derivedKey(root: Buffer, purpose: string): Buffer {
     .digest();
 }
 
+const LOCAL_PASSWORD_SCRYPT_OPTIONS = {
+  N: 16_384,
+  r: 8,
+  p: 1,
+  maxmem: 32 * 1024 * 1024,
+} as const;
+
+function localPasswordHash(password: string, root: Buffer): Buffer {
+  return scryptSync(
+    password,
+    derivedKey(root, "local-password-salt"),
+    32,
+    LOCAL_PASSWORD_SCRYPT_OPTIONS,
+  );
+}
+
 export function localPasswordMatches(
   password: string,
   expectedPassword: string,
   root = loadAuthenticationKey(),
 ) {
-  const key = derivedKey(root, "local-password");
-  const candidate = createHmac("sha256", key).update(password, "utf8").digest();
-  const expected = createHmac("sha256", key)
-    .update(expectedPassword, "utf8")
-    .digest();
+  const candidate = localPasswordHash(password, root);
+  const expected = localPasswordHash(expectedPassword, root);
   return timingSafeEqual(candidate, expected);
 }
 
@@ -60,9 +74,7 @@ export function localPasswordDigest(
   password: string,
   root = loadAuthenticationKey(),
 ) {
-  return createHmac("sha256", derivedKey(root, "local-password"))
-    .update(password, "utf8")
-    .digest("hex");
+  return `scrypt-sha256:v1:${localPasswordHash(password, root).toString("hex")}`;
 }
 
 export function randomOpaque(bytes = 32): string {

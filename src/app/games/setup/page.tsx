@@ -4,6 +4,13 @@ import { redirect } from "next/navigation";
 
 import { CreateGameForm } from "@/components/game-setup/create-game-form";
 import { ApplicationShell } from "@/components/app/application-shell";
+import {
+  ActionLink,
+  EmptyState,
+  PageShell,
+  SectionHeader,
+  Surface,
+} from "@/components/ui/product-primitives";
 import { getGameSetupService } from "@/server/app/game-setup-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import { AuthorizationError } from "@/server/auth/errors";
@@ -44,41 +51,25 @@ export default async function GameSetupIndexPage() {
   const { accountId, context } = await loadGameSetupIndex();
   return (
     <ApplicationShell>
-      <main
-        className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6"
-        id="main-content"
-        tabIndex={-1}
-      >
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-[var(--accent-strong)]">
-              Pregame
-            </p>
-            <h1 className="mt-1 text-3xl font-semibold">Game setup</h1>
-            <p className="mt-2 max-w-2xl text-[var(--muted)]">
-              Create a draft, resume it from any device, and make the accepted
-              setup ready before first pitch.
-            </p>
-          </div>
-          <Link
-            className="inline-flex min-h-12 items-center rounded-lg border border-[var(--line)] bg-white px-4 font-medium"
-            href="/accounts"
-          >
-            Change account
-          </Link>
-        </div>
+      <PageShell>
+        <SectionHeader
+          eyebrow="Scorekeeping · pregame"
+          title="Game setup"
+          description="Create a draft, resume it from any device, and make the accepted setup ready before first pitch."
+          actions={<ActionLink href="/accounts">Change account</ActionLink>}
+        />
 
-        <section
-          aria-labelledby="resume-heading"
-          className="mt-8 rounded-xl border border-[var(--line)] bg-white p-5"
-        >
+        <Surface labelledBy="resume-heading" className="mt-8">
           <h2 className="text-xl font-semibold" id="resume-heading">
             Resume a saved setup
           </h2>
           {context.games.length === 0 ? (
-            <p className="mt-3 text-sm text-[var(--muted)]">
-              No unstarted drafts are available.
-            </p>
+            <div className="mt-4">
+              <EmptyState
+                title="No saved setups"
+                description="Create a game below when the teams and season are ready."
+              />
+            </div>
           ) : (
             <ul className="mt-4 grid gap-3 sm:grid-cols-2">
               {context.games.map((game) => {
@@ -104,12 +95,9 @@ export default async function GameSetupIndexPage() {
               })}
             </ul>
           )}
-        </section>
+        </Surface>
 
-        <section
-          aria-labelledby="create-heading"
-          className="mt-6 rounded-xl border border-[var(--line)] bg-white p-5"
-        >
+        <Surface labelledBy="create-heading" className="mt-6">
           <h2 className="text-xl font-semibold" id="create-heading">
             Create a new game
           </h2>
@@ -129,8 +117,8 @@ export default async function GameSetupIndexPage() {
               }))}
             />
           )}
-        </section>
-      </main>
+        </Surface>
+      </PageShell>
     </ApplicationShell>
   );
 }

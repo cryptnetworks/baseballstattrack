@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { ApplicationShell } from "@/components/app/application-shell";
 import { ApplicationConfigurationEditor } from "@/components/configuration/application-configuration-editor";
+import { PageShell, SectionHeader } from "@/components/ui/product-primitives";
 import { getApplicationConfigurationService } from "@/server/app/application-configuration-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import { AuthorizationError } from "@/server/auth/errors";
@@ -59,22 +60,12 @@ export default async function ApplicationConfigurationPage({
   const current = workspace.current;
   return (
     <ApplicationShell>
-      <main
-        className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6"
-        id="main-content"
-        tabIndex={-1}
-      >
-        <p className="text-sm font-semibold text-[var(--accent-strong)]">
-          Administration
-        </p>
-        <h1 className="mt-1 text-3xl font-semibold">
-          Application configuration
-        </h1>
-        <p className="mt-2 max-w-3xl text-[var(--muted)]">
-          Manage non-secret Account behavior through validated, versioned
-          revisions. Credentials and infrastructure settings never appear in
-          this portal.
-        </p>
+      <PageShell id="main-content" tabIndex={-1}>
+        <SectionHeader
+          eyebrow="Administration"
+          title="Application configuration"
+          description="Manage non-secret Account behavior through validated, versioned revisions. Credentials and infrastructure settings never appear in this portal."
+        />
         {search.notice ? (
           <p
             className="mt-5 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-950"
@@ -114,7 +105,7 @@ export default async function ApplicationConfigurationPage({
             createdAt: entry.createdAt.toISOString(),
           }))}
         />
-      </main>
+      </PageShell>
     </ApplicationShell>
   );
 }

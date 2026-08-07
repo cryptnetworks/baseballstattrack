@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { ApplicationShell } from "@/components/app/application-shell";
+import { PageShell } from "@/components/ui/product-primitives";
 import { formatExactRate, formatInningsPitched } from "@/domain/statistics";
 import { getSeasonDashboardService } from "@/server/app/season-dashboard-service";
 import { getAuthorizationService } from "@/server/auth/application";
@@ -63,11 +64,7 @@ export default async function PlayerSeasonSummaryPage({
 
   return (
     <ApplicationShell>
-      <main
-        className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6"
-        id="main-content"
-        tabIndex={-1}
-      >
+      <PageShell className="max-w-4xl">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
             className="inline-flex min-h-11 items-center rounded-lg underline"
@@ -230,7 +227,7 @@ export default async function PlayerSeasonSummaryPage({
             {player.sourceGames.length}
           </p>
         </section>
-      </main>
+      </PageShell>
     </ApplicationShell>
   );
 }

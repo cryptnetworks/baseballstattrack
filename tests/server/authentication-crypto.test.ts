@@ -8,6 +8,8 @@ import {
   hashesEqual,
   issueSessionToken,
   loadAuthenticationKey,
+  localPasswordDigest,
+  localPasswordMatches,
   opaqueHash,
   parseSessionToken,
   pkceChallenge,
@@ -62,5 +64,24 @@ describe("authentication cryptography", () => {
         expect.objectContaining({ code: "CONFIGURATION_ERROR" }),
       );
     }
+  });
+
+  it("uses a memory-hard password verifier with constant-time comparison", () => {
+    const digest = localPasswordDigest("correct horse battery staple", key);
+    expect(digest).toMatch(/^scrypt-sha256:v1:[a-f0-9]{64}$/u);
+    expect(digest).not.toContain("correct");
+    expect(
+      localPasswordMatches(
+        "correct horse battery staple",
+        "correct horse battery staple",
+        key,
+      ),
+    ).toBe(true);
+    expect(
+      localPasswordMatches("incorrect", "correct horse battery staple", key),
+    ).toBe(false);
+    expect(
+      localPasswordDigest("correct horse battery staple", randomBytes(32)),
+    ).not.toBe(digest);
   });
 });

@@ -509,6 +509,18 @@ pages:
       visibility: public,
       order: 760,
     }
+  - {
+      source: UI_DESIGN_SYSTEM.md,
+      wiki: UI-Design-System,
+      visibility: public,
+      order: 765,
+    }
+  - {
+      source: UI_PRODUCT_QUALITY_AUDIT.md,
+      wiki: UI-Product-Quality-Audit,
+      visibility: public,
+      order: 768,
+    }
   - { source: WEBHOOKS.md, wiki: Webhooks, visibility: public, order: 770 }
   - source: WIKI_PUBLISHING_GUIDE.md
     visibility: internal
@@ -532,6 +544,8 @@ navigation:
     description: Follow scorekeeping, roster, reporting, recovery, and fantasy workflows.
     pages:
       - Product-Guides
+      - UI-Design-System
+      - UI-Product-Quality-Audit
   - title: Rules and Calculations
     description: See exactly how plays, statistics, corrections, analytics, and fantasy results are determined.
     pages:
