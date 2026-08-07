@@ -52,6 +52,111 @@ export class AuthenticationUserInactiveError extends Error {
 export class PrismaAuthenticationRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  async resolveOrCreateLocalIdentity(input: {
+    username: string;
+    accountName: string;
+    accountSlug: string;
+    authenticatedAt: Date;
+  }) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT 1::integer
+        FROM pg_advisory_xact_lock(hashtextextended(${`local-auth:${input.username}`}, 0))
+      `;
+      const existing = await tx.authenticationIdentity.findUnique({
+        where: {
+          provider_providerSubject: {
+            provider: "local",
+            providerSubject: input.username,
+          },
+        },
+        include: { appUser: { select: { id: true, status: true } } },
+      });
+      let appUserId: string;
+      let identityId: string;
+      if (existing) {
+        if (existing.appUser.status !== "ACTIVE")
+          throw new AuthenticationUserInactiveError();
+        const updated = await tx.authenticationIdentity.update({
+          where: { id: existing.id },
+          data: { lastAuthenticatedAt: input.authenticatedAt },
+        });
+        appUserId = updated.appUserId;
+        identityId = updated.id;
+      } else {
+        const appUser = await tx.appUser.create({
+          data: { provider: "local", providerSubject: input.username },
+          select: { id: true },
+        });
+        const identity = await tx.authenticationIdentity.create({
+          data: {
+            appUserId: appUser.id,
+            provider: "local",
+            providerSubject: input.username,
+            emailVerified: false,
+            source: AuthenticationIdentitySource.LOCAL_SIGN_IN,
+            lastAuthenticatedAt: input.authenticatedAt,
+          },
+          select: { id: true },
+        });
+        appUserId = appUser.id;
+        identityId = identity.id;
+      }
+      const account = await tx.account.upsert({
+        where: { slug: input.accountSlug },
+        create: { slug: input.accountSlug, displayName: input.accountName },
+        update: {},
+        select: { id: true },
+      });
+      const foundMembership = await tx.accountMembership.findFirst({
+        where: { accountId: account.id, userId: appUserId },
+        select: { id: true },
+      });
+      const membership = foundMembership
+        ? await tx.accountMembership.update({
+            where: { id: foundMembership.id },
+            data: {
+              status: "ACTIVE",
+              activatedAt: input.authenticatedAt,
+              disabledAt: null,
+              removedAt: null,
+            },
+            select: { id: true },
+          })
+        : await tx.accountMembership.create({
+            data: {
+              accountId: account.id,
+              userId: appUserId,
+              status: "ACTIVE",
+              activatedAt: input.authenticatedAt,
+            },
+            select: { id: true },
+          });
+      const ownerId = `${membership.id}-owner`;
+      const foundOwner = await tx.membershipRoleAssignment.findFirst({
+        where: {
+          accountId: account.id,
+          membershipId: membership.id,
+          role: "OWNER",
+          scope: "ACCOUNT",
+        },
+        select: { id: true },
+      });
+      if (!foundOwner) {
+        await tx.membershipRoleAssignment.create({
+          data: {
+            id: ownerId,
+            accountId: account.id,
+            membershipId: membership.id,
+            role: "OWNER",
+            scope: "ACCOUNT",
+          },
+        });
+      }
+      return { appUserId, identityId };
+    });
+  }
+
   async resolveOrCreateIdentity(
     identity: OAuthProviderIdentity,
     authenticatedAt: Date,

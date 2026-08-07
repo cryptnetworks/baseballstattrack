@@ -162,9 +162,40 @@ enum ConfigurationRevisionSource {
   ROLLBACK
 }
 
+enum ConfigurationCategory {
+  FEATURES
+  CALENDAR
+  NOTIFICATIONS
+  INTEGRATIONS
+  RATE_LIMITS
+  AUTHENTICATION
+  DISCORD
+  EXTERNAL_API
+}
+
+enum ConfigurationScope {
+  GLOBAL
+  ACCOUNT
+}
+
+enum ConfigurationVisibility {
+  ADMIN
+  INTERNAL
+  PUBLIC
+}
+
+enum SecretReferenceProvider {
+  AWS_SECRETS_MANAGER
+  VAULT
+  DOCKER_SECRET
+  KUBERNETES_SECRET
+  ENVIRONMENT
+}
+
 enum AuthenticationIdentitySource {
   LEGACY_BACKFILL
   OAUTH_SIGN_IN
+  LOCAL_SIGN_IN
   EXPLICIT_LINK
   REVIEWED_MIGRATION
 }
@@ -537,6 +568,7 @@ model Account {
   fantasyLeagueEvents      FantasyLeagueEvent[]
   fantasyResultSnapshots   FantasyResultSnapshot[]
   applicationConfiguration ApplicationConfiguration?
+  configurationEntries     ConfigurationEntry[]
   configurationRevisions   ApplicationConfigurationRevision[]
 }
 
@@ -562,6 +594,7 @@ model AppUser {
   configurationsCreated    ApplicationConfiguration[]         @relation("ApplicationConfigurationCreatedBy")
   configurationsUpdated    ApplicationConfiguration[]         @relation("ApplicationConfigurationUpdatedBy")
   configurationRevisions   ApplicationConfigurationRevision[] @relation("ApplicationConfigurationRevisionActor")
+  configurationEntriesOwned ConfigurationEntry[]              @relation("ConfigurationEntryOwner")
   authenticationIdentities AuthenticationIdentity[]           @relation("AuthenticationIdentityOwner")
   authenticationLinks      AuthenticationIdentity[]           @relation("AuthenticationIdentityLinkActor")
   authenticationSessions   AuthenticationSession[]
@@ -1440,6 +1473,46 @@ model ApplicationConfigurationRevision {
   @@unique([configurationId, revision])
   @@index([accountId, configurationId, createdAt], map: "AppConfigRevision_account_config_created_idx")
   @@index([actorUserId, createdAt])
+}
+
+model SecretReference {
+  id                  String                   @id @default(cuid())
+  externalId          String                   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider            SecretReferenceProvider
+  referenceIdentifier String
+  environment         String
+  rotationMetadata    Json?
+  lastRotatedAt       DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  entries ConfigurationEntry[]
+
+  @@unique([provider, referenceIdentifier, environment])
+  @@index([environment, updatedAt])
+}
+
+model ConfigurationEntry {
+  id                String                   @id @default(cuid())
+  externalId        String                   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key               String
+  category          ConfigurationCategory
+  scope             ConfigurationScope
+  accountId         String?
+  ownerId           String?
+  visibility        ConfigurationVisibility @default(ADMIN)
+  value             Json?
+  secretReferenceId String?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  account         Account?         @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  owner           AppUser?         @relation("ConfigurationEntryOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  secretReference SecretReference? @relation(fields: [secretReferenceId], references: [id], onDelete: Restrict)
+
+  @@unique([scope, accountId, key])
+  @@index([category, scope, visibility])
+  @@index([accountId, category, updatedAt])
 }
 
 model PrivacyOverlay {

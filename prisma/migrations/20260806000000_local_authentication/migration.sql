@@ -1,0 +1,1 @@
+ALTER TYPE "AuthenticationIdentitySource" ADD VALUE IF NOT EXISTS 'LOCAL_SIGN_IN';

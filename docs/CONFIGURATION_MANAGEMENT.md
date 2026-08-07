@@ -1,5 +1,8 @@
 # Application configuration management
 
+For the ownership model, secret-reference contract, and migration phases, see
+[Configuration architecture](CONFIGURATION_ARCHITECTURE.md).
+
 Baseball Stat Track stores non-secret, Account-scoped operational behavior in
 the application database. Account administrators manage it at
 `/settings/configuration`; normal changes do not require a deployment or

@@ -15,6 +15,7 @@ export function runtimeSecretConfiguration(environment?: Environment) {
     databaseUrl: value.DATABASE_URL,
     directDatabaseUrl: value.DIRECT_URL,
     authenticationEncryptionKey: value.AUTHENTICATION_ENCRYPTION_KEY,
+    localAuthPassword: value.LOCAL_AUTH_PASSWORD,
     authentikClientSecret: value.AUTHENTIK_OAUTH_CLIENT_SECRET,
     googleOauthClientSecret: value.GOOGLE_OAUTH_CLIENT_SECRET,
     discordLoginClientSecret: value.DISCORD_LOGIN_CLIENT_SECRET,
@@ -49,6 +50,9 @@ export function deploymentConfiguration(environment?: Environment) {
     siteUrl: value.NEXT_PUBLIC_SITE_URL,
     authenticationEnabledProviders:
       value.AUTHENTICATION_ENABLED_PROVIDERS ?? "",
+    localAuthUsername: value.LOCAL_AUTH_USERNAME,
+    localAccountName: value.LOCAL_ACCOUNT_NAME,
+    localAccountSlug: value.LOCAL_ACCOUNT_SLUG,
     oauthCallbackUrl: value.OAUTH_CALLBACK_URL,
     externalDataProviderAllowedOrigin:
       value.EXTERNAL_DATA_PROVIDER_ALLOWED_ORIGIN,

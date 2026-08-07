@@ -52,6 +52,14 @@ function secureSiteUrl(value: string, mode: InstallerAnswers["mode"]) {
 }
 
 function validateProvider(provider: ProviderBootstrap) {
+  if (provider.provider === "local") {
+    if (!provider.username?.trim() || (provider.password?.length ?? 0) < 16) {
+      throw new Error(
+        "Local authentication requires a username and a password of at least 16 characters.",
+      );
+    }
+    return;
+  }
   if (!provider.clientId.trim())
     throw new Error("The OAuth client ID is required.");
   if (
@@ -135,7 +143,10 @@ function providerEnvironment(provider: ProviderBootstrap) {
   const common: Record<string, string> = {
     AUTHENTICATION_ENABLED_PROVIDERS: provider.provider,
   };
-  if (provider.provider === "google") {
+  if (provider.provider === "local") {
+    common.LOCAL_AUTH_USERNAME = provider.username!.trim().toLowerCase();
+    common.LOCAL_AUTH_PASSWORD = provider.password!;
+  } else if (provider.provider === "google") {
     common.GOOGLE_OAUTH_CLIENT_ID = provider.clientId;
     common.GOOGLE_OAUTH_CLIENT_SECRET = provider.clientSecret!;
   } else if (provider.provider === "authentik") {
@@ -194,6 +205,12 @@ export function createDeploymentConfiguration(
     OAUTH_CALLBACK_URL: new URL("/auth/callback", siteUrl).toString(),
     AUTHENTICATION_ENCRYPTION_KEY: generated.authenticationEncryptionKey,
     ...providerEnvironment(answers.provider),
+    ...(answers.provider.provider === "local"
+      ? {
+          LOCAL_ACCOUNT_NAME: answers.accountDisplayName.trim(),
+          LOCAL_ACCOUNT_SLUG: answers.accountSlug,
+        }
+      : {}),
     WEBHOOK_SIGNING_MASTER_KEY: generated.webhookSigningMasterKey,
     WEBHOOK_WORKER_TOKEN: generated.webhookWorkerToken,
     EXTERNAL_INGESTION_WORKER_TOKEN: generated.externalIngestionWorkerToken,

@@ -229,7 +229,9 @@ async function install() {
   completeHealth();
   io.write(`\nInstallation complete. Open ${answers.siteUrl}`);
   io.write(
-    "Next: sign in with the configured provider, provision the exact provider subject as the initial Account owner through the reviewed authorization procedure, then create revision 1 in Settings → Application configuration.",
+    answers.provider.provider === "local"
+      ? "Next: open the site and sign in with the local username/password you just configured. The first successful sign-in creates the initial Account and owner membership."
+      : "Next: sign in with the configured provider, provision the exact provider subject as the initial Account owner through the reviewed authorization procedure, then create revision 1 in Settings → Application configuration.",
   );
   io.write(
     "The installer never grants ownership by email and does not configure feature flags, notifications, or integrations.",

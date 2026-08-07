@@ -3,11 +3,13 @@ export type HostPlatform = "macos" | "windows" | "nixos" | "linux";
 export type DeploymentMode = "local" | "team" | "production" | "recovery";
 
 export type AuthenticationProvider =
-  "authentik" | "google" | "discord" | "facebook" | "apple";
+  "local" | "authentik" | "google" | "discord" | "facebook" | "apple";
 
 export type ProviderBootstrap = Readonly<{
   provider: AuthenticationProvider;
   clientId: string;
+  username?: string;
+  password?: string;
   clientSecret?: string;
   issuerUrl?: string;
   teamId?: string;
