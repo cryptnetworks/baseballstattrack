@@ -77,6 +77,12 @@ pages:
       order: 90,
     }
   - {
+      source: CONFIGURATION_ARCHITECTURE.md,
+      wiki: Configuration-Architecture,
+      visibility: public,
+      order: 95,
+    }
+  - {
       source: CONTAINER_OPERATIONS.md,
       wiki: Container-Operations,
       visibility: public,
@@ -539,6 +545,7 @@ navigation:
     pages:
       - Docker-First-Deployment
       - Production-Installation
+      - Configuration-Architecture
   - title: Integrations
     description: Connect data providers, APIs, notifications, calendars, webhooks, and Discord.
     pages:
