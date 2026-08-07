@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { ApplicationShell } from "@/components/app/application-shell";
+import { PageShell } from "@/components/ui/product-primitives";
 import { LiveLineupChangesPanel } from "@/components/scoring/live-lineup-changes-panel";
 import { PlateAppearancePanel } from "@/components/scoring/plate-appearance-panel";
 import {
@@ -160,11 +161,7 @@ export default async function ScoreGamePage({
 
   return (
     <ApplicationShell>
-      <main
-        className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6"
-        id="main-content"
-        tabIndex={-1}
-      >
+      <PageShell className="max-w-6xl">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-[var(--accent-strong)]">
@@ -347,7 +344,7 @@ export default async function ScoreGamePage({
             </p>
           </section>
         )}
-      </main>
+      </PageShell>
     </ApplicationShell>
   );
 }

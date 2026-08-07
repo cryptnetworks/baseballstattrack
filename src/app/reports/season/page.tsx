@@ -3,6 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ApplicationShell } from "@/components/app/application-shell";
+import {
+  EmptyState,
+  PageShell,
+  SectionHeader,
+} from "@/components/ui/product-primitives";
 import type { SeasonDashboard, SeasonLeaderboardEntry } from "@/domain/reports";
 import { formatExactRate, formatInningsPitched } from "@/domain/statistics";
 import { getSeasonDashboardService } from "@/server/app/season-dashboard-service";
@@ -54,8 +59,8 @@ function Leaderboard({
       >
         {title}
       </h3>
-      <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--line)] bg-white">
-        <table className="w-full min-w-[28rem] border-collapse text-sm">
+      <div className="ui-table-wrap mt-3 overflow-x-auto">
+        <table className="ui-table min-w-[28rem]">
           <caption className="sr-only">
             Qualified {title.toLowerCase()} leaders
           </caption>
@@ -233,8 +238,8 @@ function Dashboard({ dashboard }: { dashboard: SeasonDashboard }) {
         <h2 className="text-2xl font-semibold" id="recent-games-heading">
           Recent games
         </h2>
-        <div className="mt-4 overflow-x-auto rounded-xl border border-[var(--line)] bg-white">
-          <table className="w-full min-w-[48rem] border-collapse text-sm">
+        <div className="ui-table-wrap mt-4 overflow-x-auto">
+          <table className="ui-table min-w-[48rem]">
             <caption className="sr-only">
               Current games ordered by scheduled date
             </caption>
@@ -576,25 +581,16 @@ export default async function SeasonDashboardPage({ searchParams }: PageProps) {
 
   return (
     <ApplicationShell>
-      <main
-        className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6"
-        id="main-content"
-        tabIndex={-1}
-      >
-        <p className="text-sm font-medium text-[var(--accent)]">
-          Season reports
-        </p>
-        <h1 className="mt-1 text-3xl font-semibold">
-          Season dashboard and leaderboards
-        </h1>
-        <p className="mt-2 max-w-3xl text-[var(--muted)]">
-          Official results are derived from current effective history for
-          verified games. Provisional and corrected games stay visibly separate.
-        </p>
+      <PageShell>
+        <SectionHeader
+          eyebrow="Reference · season reports"
+          title="Season dashboard and leaderboards"
+          description="Official results are derived from current effective history for verified games. Provisional and corrected games stay visibly separate."
+        />
 
         <form
           aria-label="Dashboard filters"
-          className="mt-6 grid gap-4 rounded-xl border border-[var(--line)] bg-white p-4 sm:grid-cols-2 lg:grid-cols-5"
+          className="ui-surface mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
           method="get"
         >
           <label className="grid gap-1 text-sm font-medium lg:col-span-2">
@@ -646,14 +642,14 @@ export default async function SeasonDashboardPage({ searchParams }: PageProps) {
         {dashboard ? (
           <Dashboard dashboard={dashboard} />
         ) : (
-          <p
-            className="mt-8 rounded-xl border border-[var(--line)] bg-white p-6"
-            role="status"
-          >
-            No active team-season is available for this Account.
-          </p>
+          <div className="mt-8">
+            <EmptyState
+              title="No active team-season"
+              description="An active team-season is required before reference reports can be generated."
+            />
+          </div>
         )}
-      </main>
+      </PageShell>
     </ApplicationShell>
   );
 }

@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { ApplicationShell } from "@/components/app/application-shell";
 import { BoxScoreVerificationPanel } from "@/components/reports/box-score-verification-panel";
+import { PageShell } from "@/components/ui/product-primitives";
 import type { GameBoxScore } from "@/domain/reports";
 import { formatExactRate, formatInningsPitched } from "@/domain/statistics";
 import { getGameBoxScoreService } from "@/server/app/game-box-score-service";
@@ -355,11 +356,7 @@ export default async function GameBoxScorePage({ params }: PageProps) {
 
   return (
     <ApplicationShell>
-      <main
-        className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 print:max-w-none print:p-0"
-        id="main-content"
-        tabIndex={-1}
-      >
+      <PageShell className="max-w-7xl print:max-w-none print:p-0">
         <div className="flex flex-wrap items-start justify-between gap-4 print:block">
           <div>
             <p className="text-sm font-semibold text-[var(--accent-strong)]">
@@ -574,7 +571,7 @@ export default async function GameBoxScorePage({ params }: PageProps) {
             ))}
           </ul>
         </section>
-      </main>
+      </PageShell>
     </ApplicationShell>
   );
 }

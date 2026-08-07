@@ -22,7 +22,7 @@ function NavigationLink({
 
   return (
     <Link
-      className={`inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 text-sm font-medium transition-colors ${active ? "bg-[var(--accent-soft)] text-[var(--accent-strong)]" : "text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)]"}`}
+      className={`app-nav__link min-h-11 ${active ? "app-nav__link--active" : ""}`.trim()}
       href={href}
       aria-current={active ? "page" : undefined}
     >
@@ -36,15 +36,9 @@ export function ApplicationShell({ children }: ApplicationShellProps) {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-[var(--line)] bg-white/95 shadow-[0_1px_0_rgba(22,32,24,0.03)] backdrop-blur">
-        <nav
-          aria-label="Primary"
-          className="mx-auto flex min-h-20 w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6"
-        >
-          <Link
-            className="inline-flex min-h-11 items-center gap-3 rounded-lg px-2 text-base font-semibold"
-            href="/"
-          >
+      <header className="app-header">
+        <nav aria-label="Primary" className="app-header__inner">
+          <Link className="app-brand" href="/">
             <Image
               src="/icons/icon-192.png"
               alt=""
@@ -54,16 +48,16 @@ export function ApplicationShell({ children }: ApplicationShellProps) {
               className="size-10 rounded-xl"
             />
             <span>
-              <span className="block leading-tight">Baseball Stat Track</span>
-              <span className="mt-1 block text-xs font-medium text-[var(--muted)]">
-                Online-first scorekeeping
+              <span className="app-brand__name">Baseball Stat Track</span>
+              <span className="app-brand__meta">
+                Scorekeeping · reference · operations
               </span>
             </span>
           </Link>
-          <div className="flex w-full items-center gap-1 overflow-x-auto pb-1 sm:w-auto sm:gap-2 sm:pb-0">
+          <div className="app-nav overflow-x-auto" aria-label="Workspaces">
             <NavigationLink
               href="/games/setup"
-              label="Games"
+              label="Scorekeeping"
               pathname={pathname}
             />
             <NavigationLink
@@ -79,15 +73,26 @@ export function ApplicationShell({ children }: ApplicationShellProps) {
             />
             <NavigationLink
               href="/discord"
-              label="Discord"
+              label="Operations"
               pathname={pathname}
             />
-            <NavigationLink
-              href="/settings/configuration"
-              label="Settings"
-              pathname={pathname}
-            />
-            <NavigationLink href="/status" label="Status" pathname={pathname} />
+            <div className="app-nav__utility">
+              <NavigationLink
+                href="/accounts"
+                label="Accounts"
+                pathname={pathname}
+              />
+              <NavigationLink
+                href="/settings/configuration"
+                label="Admin"
+                pathname={pathname}
+              />
+              <NavigationLink
+                href="/status"
+                label="Status"
+                pathname={pathname}
+              />
+            </div>
           </div>
         </nav>
       </header>

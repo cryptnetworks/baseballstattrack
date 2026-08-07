@@ -10,6 +10,7 @@ import {
   fantasySections,
   type FantasySection,
 } from "@/components/fantasy/fantasy-league-manager";
+import { PageShell, SectionHeader } from "@/components/ui/product-primitives";
 import { getFantasyExperienceService } from "@/server/app/fantasy-experience-service";
 import { getAuthorizationService } from "@/server/auth/application";
 import { AuthorizationError } from "@/server/auth/errors";
@@ -110,19 +111,12 @@ export default async function FantasyPage({
 
   return (
     <ApplicationShell>
-      <main
-        className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6"
-        id="main-content"
-        tabIndex={-1}
-      >
-        <p className="text-sm font-semibold text-[var(--accent-strong)]">
-          Fantasy baseball
-        </p>
-        <h1 className="mt-1 text-3xl font-semibold">Fantasy leagues</h1>
-        <p className="mt-2 max-w-3xl text-[var(--muted)]">
-          Manage derived fantasy competition without changing canonical games,
-          events, or statistics.
-        </p>
+      <PageShell id="main-content" tabIndex={-1}>
+        <SectionHeader
+          eyebrow="Fantasy baseball"
+          title="Fantasy leagues"
+          description="Manage derived fantasy competition without changing canonical games, events, or statistics."
+        />
         {search.error ? (
           <p
             className="mt-5 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -248,7 +242,7 @@ export default async function FantasyPage({
             )}
           </section>
         </div>
-      </main>
+      </PageShell>
     </ApplicationShell>
   );
 }
