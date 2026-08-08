@@ -8,9 +8,10 @@ import {
   rateLimitClasses,
 } from "@/domain/rate-limits";
 
-export const APPLICATION_CONFIGURATION_SCHEMA_VERSION = 1 as const;
+export const APPLICATION_CONFIGURATION_SCHEMA_VERSION = 2 as const;
 
 export const applicationConfigurationCategories = [
+  "IDENTITY",
   "FEATURES",
   "CALENDAR",
   "NOTIFICATIONS",
@@ -54,8 +55,28 @@ const rateLimitPolicySchema = z
     message: "The Account limit must not be lower than the actor limit.",
   });
 
+export const applicationIdentitySchema = z
+  .object({
+    installationName: z.string().trim().min(1).max(120),
+    organizationName: z.string().trim().min(1).max(160),
+    timezone: z.string().trim().min(1).max(64),
+    locale: z
+      .string()
+      .trim()
+      .regex(/^[a-z]{2,3}(?:-[A-Z][a-z]{3})?(?:-[A-Z]{2})?$/u),
+  })
+  .strict();
+
+export const DEFAULT_APPLICATION_IDENTITY = Object.freeze({
+  installationName: "Baseball Stat Track",
+  organizationName: "Baseball Stat Track",
+  timezone: "UTC",
+  locale: "en-US",
+});
+
 export const applicationConfigurationValuesSchema = z
   .object({
+    identity: applicationIdentitySchema.default(DEFAULT_APPLICATION_IDENTITY),
     features: z
       .object({
         calendarFeeds: z.boolean(),
@@ -125,6 +146,7 @@ export type ApplicationConfigurationValues = z.infer<
 
 export const DEFAULT_APPLICATION_CONFIGURATION: ApplicationConfigurationValues =
   Object.freeze({
+    identity: DEFAULT_APPLICATION_IDENTITY,
     features: Object.freeze({
       calendarFeeds: false,
       emailNotifications: false,
@@ -179,6 +201,7 @@ export function applicationConfigurationChangedCategories(
       keyof ApplicationConfigurationValues,
     ]
   > = [
+    ["IDENTITY", "identity"],
     ["FEATURES", "features"],
     ["CALENDAR", "calendar"],
     ["NOTIFICATIONS", "notifications"],

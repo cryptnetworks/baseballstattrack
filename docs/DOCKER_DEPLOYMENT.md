@@ -99,11 +99,12 @@ and `/api/ready`.
 
 OAuth email is mutable and is not an identity key. The installer therefore
 does not grant Account ownership by email or trust a client-supplied identity.
-After the intended administrator signs in, provision the exact provider and
-provider-subject pair as owner through the existing reviewed Account
-authorization procedure. Then create application-configuration revision 1 in
-the admin portal. Keep the intended Account metadata in
-`.bst-installation.json` for that handoff; it is not a grant.
+After installation, open `/setup` and authenticate with the configured local
+account or provider. The server resolves the exact provider and provider-subject
+pair through the existing authentication service, then the one-time bootstrap
+transaction creates the owner membership and initial application-configuration
+revision. See [First-launch setup](FIRST_LAUNCH_SETUP.md). Intended Account
+metadata in `.bst-installation.json` remains installer input; it is not a grant.
 
 ## Day-two commands
 
@@ -184,4 +185,5 @@ from removed local state without a valid backup.
   the procedures in [Operations and security](OPERATIONS_AND_SECURITY.md).
 
 The installer does not configure offline operation, native host services,
-automatic TLS, managed-database topologies, or automatic first-owner grants.
+automatic TLS, or managed-database topologies; the first-launch setup wizard
+handles first-owner provisioning after the application is live.

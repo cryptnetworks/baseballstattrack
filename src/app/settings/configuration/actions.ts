@@ -41,6 +41,7 @@ async function authorize(accountId: string) {
 function values(formData: FormData) {
   const service = getApplicationConfigurationService();
   return service.parseValues({
+    identity: JSON.parse(z.string().parse(formData.get("IDENTITY"))),
     features: JSON.parse(z.string().parse(formData.get("FEATURES"))),
     calendar: JSON.parse(z.string().parse(formData.get("CALENDAR"))),
     notifications: JSON.parse(z.string().parse(formData.get("NOTIFICATIONS"))),

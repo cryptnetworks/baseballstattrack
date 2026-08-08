@@ -6,8 +6,31 @@ import {
   type SessionCookieStore,
 } from "@/server/auth/application-session";
 import { AuthorizationError } from "@/server/auth/errors";
+import { getInstallationSetupService } from "@/server/app/installation-setup-service";
+
+const setupAllowedPaths = [
+  "/setup",
+  "/auth/callback",
+  "/api/health",
+  "/api/ready",
+];
+
+function allowedBeforeSetup(pathname: string) {
+  return setupAllowedPaths.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+}
 
 export async function proxy(request: NextRequest) {
+  if (!allowedBeforeSetup(request.nextUrl.pathname)) {
+    try {
+      if (!(await getInstallationSetupService().isReady())) {
+        return NextResponse.redirect(new URL("/setup", request.url));
+      }
+    } catch {
+      return NextResponse.redirect(new URL("/setup", request.url));
+    }
+  }
   const response = NextResponse.next({ request });
   response.headers.set("Cache-Control", "private, no-store");
   if (!request.cookies.has(applicationSessionCookie.name)) return response;

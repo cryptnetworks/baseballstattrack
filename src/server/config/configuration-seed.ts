@@ -38,6 +38,20 @@ export function configurationSeedFromEnvironment(
         "FEATURE_DISCORD_UPDATES_ENABLED",
       ),
     },
+    identity: {
+      installationName:
+        environment.APPLICATION_INSTALLATION_NAME?.trim() ||
+        DEFAULT_APPLICATION_CONFIGURATION.identity.installationName,
+      organizationName:
+        environment.APPLICATION_ORGANIZATION_NAME?.trim() ||
+        DEFAULT_APPLICATION_CONFIGURATION.identity.organizationName,
+      timezone:
+        environment.APPLICATION_TIMEZONE?.trim() ||
+        DEFAULT_APPLICATION_CONFIGURATION.identity.timezone,
+      locale:
+        environment.APPLICATION_LOCALE?.trim() ||
+        DEFAULT_APPLICATION_CONFIGURATION.identity.locale,
+    },
     calendar: {
       detailLevel:
         environment.ICS_FEED_DETAIL_LEVEL?.trim().toLowerCase() ??

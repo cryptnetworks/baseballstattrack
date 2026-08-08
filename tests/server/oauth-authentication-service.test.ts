@@ -92,6 +92,17 @@ describe("OAuth authentication orchestration", () => {
     expect(persisted.encryptedSecrets).not.toContain("codeVerifier");
   });
 
+  it("supports the bounded first-launch return path without changing providers", async () => {
+    repository.createOAuthAttempt.mockResolvedValue({});
+    await service().startSignIn("google", "/setup");
+    expect(repository.createOAuthAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ returnTo: "/setup" }),
+    );
+    expect(() =>
+      service().startSignIn("google", "https://evil.example.test"),
+    ).toThrow();
+  });
+
   it("rejects invalid, expired, mismatched, or replayed callback state", async () => {
     repository.consumeOAuthAttempt.mockResolvedValue(null);
     await expect(

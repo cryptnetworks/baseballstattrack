@@ -127,13 +127,13 @@ export class OAuthAuthenticationService {
     }));
   }
 
-  startSignIn(providerInput: string) {
+  startSignIn(providerInput: string, returnTo = "/accounts") {
     return this.start({
       provider: providerInput,
       purpose: OAuthAttemptPurpose.SIGN_IN,
       appUserId: null,
       initiatingSessionId: null,
-      returnTo: "/accounts",
+      returnTo: returnToSchema.parse(returnTo),
     });
   }
 
