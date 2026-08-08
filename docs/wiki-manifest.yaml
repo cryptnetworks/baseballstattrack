@@ -242,6 +242,12 @@ pages:
       order: 330,
     }
   - {
+      source: FIRST_LAUNCH_SETUP.md,
+      wiki: First-Launch-Setup,
+      visibility: public,
+      order: 335,
+    }
+  - {
       source: GAME_BOX_SCORE.md,
       wiki: Game-Box-Score,
       visibility: public,

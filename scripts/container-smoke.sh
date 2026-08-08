@@ -270,8 +270,12 @@ echo "Starting a clean database volume."
 echo "Applying the one-shot migration and waiting for application readiness."
 "${compose[@]}" up --detach --wait app
 wait_for_status "http://127.0.0.1:${app_port}/api/ready" "200"
-wait_for_status "http://127.0.0.1:${app_port}/" "200"
-wait_for_status "http://127.0.0.1:${app_port}/status" "200"
+wait_for_status "http://127.0.0.1:${app_port}/" "307"
+wait_for_status "http://127.0.0.1:${app_port}/setup" "200"
+wait_for_status "http://127.0.0.1:${app_port}/status" "307"
+setup_redirect="$(curl --silent --output /dev/null --write-out '%{redirect_url}' "http://127.0.0.1:${app_port}/")"
+[[ "${setup_redirect}" == "http://127.0.0.1:${app_port}/setup" ]] ||
+  fail "pre-READY application traffic did not redirect to first-launch setup"
 
 readiness_body="$(curl --silent --show-error "http://127.0.0.1:${app_port}/api/ready")"
 [[ "${readiness_body}" == *'"status":"ready"'* ]] ||
@@ -325,6 +329,8 @@ migration_count_before_restart="$(
 )"
 "${compose[@]}" restart app
 wait_for_status "http://127.0.0.1:${app_port}/api/ready" "200"
+wait_for_status "http://127.0.0.1:${app_port}/setup" "200"
+wait_for_status "http://127.0.0.1:${app_port}/" "307"
 migration_count_after_restart="$(
   database_query 'SELECT count(*) FROM "_prisma_migrations" WHERE finished_at IS NOT NULL;'
 )"

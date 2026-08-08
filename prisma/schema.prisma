@@ -162,6 +162,14 @@ enum ConfigurationRevisionSource {
   ROLLBACK
 }
 
+enum InstallationSetupStatus {
+  NOT_STARTED
+  BOOTSTRAP_IN_PROGRESS
+  ADMIN_CREATED
+  CONFIGURATION_REQUIRED
+  READY
+}
+
 enum ConfigurationCategory {
   FEATURES
   CALENDAR
@@ -570,6 +578,7 @@ model Account {
   applicationConfiguration ApplicationConfiguration?
   configurationEntries     ConfigurationEntry[]
   configurationRevisions   ApplicationConfigurationRevision[]
+  installationSetups       InstallationSetup[]
 }
 
 model AppUser {
@@ -581,24 +590,26 @@ model AppUser {
   updatedAt       DateTime   @updatedAt
   detachedAt      DateTime?
 
-  memberships              AccountMembership[]
-  invitationsReceived      MembershipInvitation[]             @relation("InvitationRecipient")
-  invitationsSent          MembershipInvitation[]             @relation("InvitationInviter")
-  recordedPlays            PlayTransaction[]                  @relation("PlayTransactionActor")
-  recordedEvents           SourceEvent[]                      @relation("SourceEventActor")
-  analyticsObservations    AnalyticsObservation[]             @relation("AnalyticsObservationActor")
-  auditRecords             SecurityAuditRecord[]              @relation("AuditActor")
-  privacyOverlays          PrivacyOverlay[]                   @relation("PrivacyOverlayActor")
-  productAnalyticsConsent  ProductAnalyticsConsent?
-  fantasyLeagueEvents      FantasyLeagueEvent[]               @relation("FantasyLeagueEventActor")
-  configurationsCreated    ApplicationConfiguration[]         @relation("ApplicationConfigurationCreatedBy")
-  configurationsUpdated    ApplicationConfiguration[]         @relation("ApplicationConfigurationUpdatedBy")
-  configurationRevisions   ApplicationConfigurationRevision[] @relation("ApplicationConfigurationRevisionActor")
-  configurationEntriesOwned ConfigurationEntry[]              @relation("ConfigurationEntryOwner")
-  authenticationIdentities AuthenticationIdentity[]           @relation("AuthenticationIdentityOwner")
-  authenticationLinks      AuthenticationIdentity[]           @relation("AuthenticationIdentityLinkActor")
-  authenticationSessions   AuthenticationSession[]
-  oauthLinkAttempts        OAuthLoginAttempt[]
+  memberships                 AccountMembership[]
+  invitationsReceived         MembershipInvitation[]             @relation("InvitationRecipient")
+  invitationsSent             MembershipInvitation[]             @relation("InvitationInviter")
+  recordedPlays               PlayTransaction[]                  @relation("PlayTransactionActor")
+  recordedEvents              SourceEvent[]                      @relation("SourceEventActor")
+  analyticsObservations       AnalyticsObservation[]             @relation("AnalyticsObservationActor")
+  auditRecords                SecurityAuditRecord[]              @relation("AuditActor")
+  privacyOverlays             PrivacyOverlay[]                   @relation("PrivacyOverlayActor")
+  productAnalyticsConsent     ProductAnalyticsConsent?
+  fantasyLeagueEvents         FantasyLeagueEvent[]               @relation("FantasyLeagueEventActor")
+  configurationsCreated       ApplicationConfiguration[]         @relation("ApplicationConfigurationCreatedBy")
+  configurationsUpdated       ApplicationConfiguration[]         @relation("ApplicationConfigurationUpdatedBy")
+  configurationRevisions      ApplicationConfigurationRevision[] @relation("ApplicationConfigurationRevisionActor")
+  configurationEntriesOwned   ConfigurationEntry[]               @relation("ConfigurationEntryOwner")
+  authenticationIdentities    AuthenticationIdentity[]           @relation("AuthenticationIdentityOwner")
+  authenticationLinks         AuthenticationIdentity[]           @relation("AuthenticationIdentityLinkActor")
+  authenticationSessions      AuthenticationSession[]
+  oauthLinkAttempts           OAuthLoginAttempt[]
+  bootstrapInstallationSetups InstallationSetup[]                @relation("InstallationSetupBootstrapUser")
+  completedInstallationSetups InstallationSetup[]                @relation("InstallationSetupCompletedBy")
 
   @@unique([provider, providerSubject])
 }
@@ -1424,6 +1435,23 @@ model SecurityAuditRecord {
   @@index([correlationId])
 }
 
+model InstallationSetup {
+  id              String                  @id
+  status          InstallationSetupStatus @default(NOT_STARTED)
+  accountId       String?
+  bootstrapUserId String?
+  completedAt     DateTime?
+  completedById   String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  account       Account? @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  bootstrapUser AppUser? @relation("InstallationSetupBootstrapUser", fields: [bootstrapUserId], references: [id], onDelete: Restrict)
+  completedBy   AppUser? @relation("InstallationSetupCompletedBy", fields: [completedById], references: [id], onDelete: Restrict)
+
+  @@index([status])
+}
+
 model ApplicationConfiguration {
   id              String   @id @default(cuid())
   externalId      String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -1476,15 +1504,15 @@ model ApplicationConfigurationRevision {
 }
 
 model SecretReference {
-  id                  String                   @id @default(cuid())
-  externalId          String                   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                  String                  @id @default(cuid())
+  externalId          String                  @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   provider            SecretReferenceProvider
   referenceIdentifier String
   environment         String
   rotationMetadata    Json?
   lastRotatedAt       DateTime?
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
 
   entries ConfigurationEntry[]
 
@@ -1493,8 +1521,8 @@ model SecretReference {
 }
 
 model ConfigurationEntry {
-  id                String                   @id @default(cuid())
-  externalId        String                   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                String                  @id @default(cuid())
+  externalId        String                  @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   key               String
   category          ConfigurationCategory
   scope             ConfigurationScope
@@ -1503,8 +1531,8 @@ model ConfigurationEntry {
   visibility        ConfigurationVisibility @default(ADMIN)
   value             Json?
   secretReferenceId String?
-  createdAt         DateTime                 @default(now())
-  updatedAt         DateTime                 @updatedAt
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
 
   account         Account?         @relation(fields: [accountId], references: [id], onDelete: Restrict)
   owner           AppUser?         @relation("ConfigurationEntryOwner", fields: [ownerId], references: [id], onDelete: Restrict)

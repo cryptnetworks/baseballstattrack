@@ -20,6 +20,11 @@ const initialPreview: ConfigurationPreviewState = {
 };
 
 const categoryCopy = {
+  IDENTITY: {
+    title: "Application identity",
+    description:
+      "Use this non-secret identity in the application shell and operational reports.",
+  },
   FEATURES: {
     title: "Feature availability",
     description: "Enable Account behavior without restarting the application.",
@@ -59,6 +64,7 @@ type HistoryEntry = Readonly<{
 
 function encodedCategories(values: ApplicationConfigurationValues) {
   return {
+    IDENTITY: JSON.stringify(values.identity, null, 2),
     FEATURES: JSON.stringify(values.features, null, 2),
     CALENDAR: JSON.stringify(values.calendar, null, 2),
     NOTIFICATIONS: JSON.stringify(values.notifications, null, 2),

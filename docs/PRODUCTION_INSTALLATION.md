@@ -61,12 +61,12 @@ replace every placeholder. At minimum, configure:
   enabled.
 
 Do not add feature flags, notification destinations, provider API URLs, rate
-limits, or other Account behavior to these files. After the first
-administrator signs in, use **Settings → Application configuration** to create
-and review the Account's initial database revision. Existing deployments may
-use the one-time legacy environment seed described in
-[Configuration management](CONFIGURATION_MANAGEMENT.md); new deployments seed
-the safe defaults and configure behavior in the portal.
+limits, or other Account behavior to these files. After deployment is healthy,
+open `/setup` and complete [First-launch setup](FIRST_LAUNCH_SETUP.md). The
+wizard uses the configured authentication provider, establishes the first
+Account owner, and creates the initial non-secret configuration revision.
+Existing deployments may use the one-time legacy environment seed described in
+[Configuration management](CONFIGURATION_MANAGEMENT.md).
 
 Use independently generated high-entropy values. Never commit production
 configuration, copy it into an image, place it in a command-line URL, or expose

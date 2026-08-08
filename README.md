@@ -144,8 +144,10 @@ docker compose --file /opt/baseballstattrack/docker-compose.yml --env-file /etc/
 Follow [Production installation](docs/PRODUCTION_INSTALLATION.md) before using
 the service. It covers secrets, TLS, authentication callbacks, migrations,
 readiness, authorization checks, monitoring, backups, upgrades, and rollback.
-After the first administrator signs in, seed and review each Account at
-**Settings → Application configuration**. Subsequent feature, notification,
+For a new installation: deploy the containers, open `/setup`, and complete the
+first-launch wizard. It verifies authentication, creates the initial Account
+owner, records application identity, and initializes Account configuration.
+See [First-launch setup](docs/FIRST_LAUNCH_SETUP.md). Subsequent feature, notification,
 integration, and policy changes belong there—not in deployment environment
 files. See [Configuration management](docs/CONFIGURATION_MANAGEMENT.md) for the
 complete ownership inventory and migration procedure.

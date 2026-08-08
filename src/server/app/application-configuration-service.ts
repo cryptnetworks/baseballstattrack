@@ -194,6 +194,29 @@ export class ApplicationConfigurationService {
     return result;
   }
 
+  async seedInitial(inputValue: unknown, actorInput: TrustedActorContext) {
+    const input = z
+      .object({
+        accountId: accountIdSchema,
+        reason: z.string().trim().min(8).max(240),
+        values: applicationConfigurationValuesSchema,
+      })
+      .strict()
+      .parse(inputValue);
+    const actor = administrator(
+      actorInput,
+      input.accountId,
+      "configuration.manage",
+    );
+    const result = await this.repository.seed({
+      ...input,
+      actor,
+      seededAt: this.now(),
+    });
+    this.invalidate(input.accountId);
+    return result;
+  }
+
   async save(inputValue: unknown, actorInput: TrustedActorContext) {
     const input = configurationWriteSchema.parse(inputValue);
     const actor = administrator(
