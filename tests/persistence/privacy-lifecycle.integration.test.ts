@@ -634,7 +634,7 @@ integration("privacy lifecycle persistence boundary", () => {
       },
       worker(),
     );
-    current = new Date("2026-08-10T00:00:00.000Z");
+    current = new Date(current.getTime() + 8 * 86_400_000);
     await expect(
       service.executeRequest(
         { accountId: ids.account, requestId: created.request.id },
@@ -648,7 +648,7 @@ integration("privacy lifecycle persistence boundary", () => {
         worker(),
       ),
     ).resolves.toMatchObject({ status: "RELEASED", releasedAt: current });
-    current = new Date("2026-08-12T00:00:00.000Z");
+    current = new Date(current.getTime() + 2 * 86_400_000);
     await expect(
       service.executeRequest(
         { accountId: ids.account, requestId: created.request.id },
