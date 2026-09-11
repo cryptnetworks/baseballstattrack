@@ -540,6 +540,8 @@ integration("privacy lifecycle persistence boundary", () => {
         eventId: webhookEvent.id,
         secretVersion: 1,
         retentionUntil: new Date(current.getTime() + 30 * 86_400_000),
+        createdAt: current,
+        updatedAt: current,
       },
     });
     await prisma.$transaction(async (tx) => {
