@@ -14,7 +14,10 @@ const prefix = `issue93-${process.pid}-${Date.now()}`;
 const GAME = "00000000-0000-4000-8000-000000000031";
 const SEASON = "00000000-0000-4000-8000-000000000032";
 const TEAM = "00000000-0000-4000-8000-000000000033";
-const scenarioStartedAt = new Date();
+// Keep this scenario ahead of no concurrently-created delivery. `claimDue` is
+// intentionally global, so a past fixture clock isolates its due work from
+// the other integration suites that enqueue deliveries at the database clock.
+const scenarioStartedAt = new Date(Date.now() - 86_400_000);
 
 integration("durable webhook persistence", () => {
   const prisma = new PrismaClient({
