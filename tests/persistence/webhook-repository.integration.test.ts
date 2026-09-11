@@ -92,6 +92,14 @@ integration("durable webhook persistence", () => {
     await prisma.$transaction((tx) => enqueueWebhookEvent(tx, eventInput(1)));
     await prisma.$transaction((tx) => enqueueWebhookEvent(tx, eventInput(2)));
 
+    // Webhook deliveries are normally scheduled at the database clock. Pin the
+    // fixture deliveries to this scenario's clock so the global claim operation
+    // cannot collect work concurrently created by another integration suite.
+    await prisma.webhookDelivery.updateMany({
+      where: { accountId: accountA },
+      data: { nextAttemptAt: scenarioStartedAt },
+    });
+
     expect(
       await prisma.webhookEvent.count({ where: { accountId: accountA } }),
     ).toBe(2);
