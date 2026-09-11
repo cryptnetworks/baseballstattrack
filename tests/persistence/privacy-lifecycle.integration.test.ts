@@ -454,7 +454,7 @@ integration("privacy lifecycle persistence boundary", () => {
   });
 
   it("honors holds and performs Account deletion without mutating accepted history", async () => {
-    current = new Date("2026-08-02T00:00:00.000Z");
+    current = new Date();
     const prepared = await service.prepareExport(
       { accountId: ids.account, clientRequestId: `${prefix}-revoked-export` },
       actor("report.export"),
