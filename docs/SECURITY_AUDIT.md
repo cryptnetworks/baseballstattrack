@@ -50,6 +50,9 @@ PCRE2 needs `10.42-1+deb12u1`; fixing the shipped image now would require
 maintaining a derived database image, and gosu would additionally require a
 vendor rebuild or a separately reviewed binary replacement. These changes are
 outside this dependency cleanup's existing vendor-image deployment contract.
+The full scan additionally reports 72 High and 16 Critical findings without an
+available fixed version, for 112 High/Critical findings in the PostgreSQL image
+overall. Counts are scanner package findings, not confirmed exploitable paths.
 
 Cloudflare Tunnel is upgraded from 2026.7.3 to
 [2026.9.1](https://github.com/cloudflare/cloudflared/releases/tag/2026.9.1),
