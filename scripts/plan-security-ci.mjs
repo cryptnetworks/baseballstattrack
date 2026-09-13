@@ -14,9 +14,12 @@ export function planSecurityAuditScopes(files, { forceFull = false } = {}) {
   const nodeDependencies =
     normalizedFiles.has("package.json") ||
     normalizedFiles.has("package-lock.json");
-  const pythonDependencies = normalizedFiles.has(
+  const pythonDependencies = [
+    "services/discord-bot/pyproject.toml",
+    "services/discord-bot/uv.lock",
     "services/discord-bot/requirements.lock",
-  );
+    "services/discord-bot/requirements-dev.lock",
+  ].some((file) => normalizedFiles.has(file));
   const containers =
     nodeDependencies ||
     pythonDependencies ||
