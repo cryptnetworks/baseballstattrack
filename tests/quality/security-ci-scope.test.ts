@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { planSecurityAuditScopes } from "../../scripts/plan-security-ci.mjs";
 
 describe("security audit scope planner", () => {
-  it("separates Node and Python dependency audits", () => {
+  it("runs SAST with Node and Python dependency audits", () => {
     expect(planSecurityAuditScopes(["package-lock.json"])).toEqual({
       containers: true,
       nodeDependencies: true,
       pythonDependencies: false,
-      sast: false,
+      sast: true,
     });
     expect(
       planSecurityAuditScopes(["services/discord-bot/requirements.lock"]),
@@ -16,7 +16,7 @@ describe("security audit scope planner", () => {
       containers: true,
       nodeDependencies: false,
       pythonDependencies: true,
-      sast: false,
+      sast: true,
     });
   });
 

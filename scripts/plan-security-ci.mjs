@@ -23,12 +23,15 @@ export function planSecurityAuditScopes(files, { forceFull = false } = {}) {
     normalizedFiles.has("Dockerfile") ||
     normalizedFiles.has("services/discord-bot/Dockerfile") ||
     normalizedFiles.has("scripts/deploy/Dockerfile");
-  const sast = [...normalizedFiles].some(
-    (file) =>
-      file.startsWith(".github/actions/") ||
-      file.startsWith(".github/workflows/") ||
-      /\.(?:cjs|cts|js|jsx|mjs|mts|py|ts|tsx)$/u.test(file),
-  );
+  const sast =
+    nodeDependencies ||
+    pythonDependencies ||
+    [...normalizedFiles].some(
+      (file) =>
+        file.startsWith(".github/actions/") ||
+        file.startsWith(".github/workflows/") ||
+        /\.(?:cjs|cts|js|jsx|mjs|mts|py|ts|tsx)$/u.test(file),
+    );
 
   return { containers, nodeDependencies, pythonDependencies, sast };
 }
