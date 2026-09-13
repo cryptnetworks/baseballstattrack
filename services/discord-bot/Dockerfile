@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM python:3.12-alpine3.23@sha256:601d3d3797e90e2534782e69c85fafb7971b43f24c7b1b079b7e48dd435e458d
+FROM python:3.12-alpine3.23@sha256:167bc85084c9df34480efc26b4528fb68feaa8a79183b5658952137025b6f061
 
 ARG VCS_REF=unknown
 
@@ -18,7 +18,10 @@ LABEL org.opencontainers.image.title="Baseball Stat Track Discord bot" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.licenses="MIT"
 
-RUN addgroup -S -g 10001 bot \
+# The pinned Python image includes fixed OpenSSL and SQLite, but still carries
+# libuuid from before the util-linux security fixes.
+RUN apk add --no-cache --upgrade 'libuuid>=2.41.6-r1' \
+    && addgroup -S -g 10001 bot \
     && adduser -S -D -H -u 10001 -G bot bot
 
 COPY requirements.lock ./requirements.lock
