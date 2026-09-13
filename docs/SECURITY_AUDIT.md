@@ -32,7 +32,7 @@ audit workstation has no Docker daemon.
 | SEC-006 | Medium                      | Fixed                        | Dependabot omitted the Discord service's Python dependencies. Weekly pip monitoring now covers its locked requirements.                                                                                                                                                                                                                       |
 | SEC-007 | Medium                      | Fixed                        | Active repository rulesets protect `main` and `v*` release tags. `main` requires pull requests, resolved conversations, current branches, `verify`, and the stable `SAST required gate`; force pushes and deletion are blocked. The SAST gate plans CodeQL by changed path so non-source pull requests do not deadlock.                       |
 | SEC-008 | Low                         | Fixed                        | Security guidance still described a private repository without secret scanning or private vulnerability reporting. The documents now match live settings.                                                                                                                                                                                     |
-| SEC-009 | Medium                      | Mitigated and monitored      | Reassessed 2026-09-13: cloudflared 2026.9.1 removes 11 fixable High findings, with three remaining upstream. PostgreSQL retains 24 fixable High findings in PCRE2 and gosu; the latest vendor image has the same findings. Digest pins, exposure controls, and monitoring remain in place.                                                    |
+| SEC-009 | Medium                      | Mitigated and monitored      | Reassessed 2026-09-13: cloudflared 2026.9.1 removes 11 fixable High findings, with three remaining upstream. PostgreSQL retains 24 fixable High/Critical findings in PCRE2 and gosu; the latest vendor image has the same findings. Digest pins, exposure controls, and monitoring remain in place.                                           |
 
 ### SEC-009 upstream image review
 
@@ -41,7 +41,7 @@ checks and the scheduled monthly security audit, with immediate reassessment on
 an upstream digest or exposure change.
 
 Reassessed on 2026-09-13 with Trivy 0.73.0. The pinned PostgreSQL image
-retains 24 High findings with upstream fixes: two in `libpcre2-8-0` and 22
+retains 24 High/Critical findings with upstream fixes: two in `libpcre2-8-0` and 22
 in the Go 1.24.6 standard library embedded in gosu 1.19. The current
 `postgres:17-bookworm` manifest (`sha256:051f7b…72e0`) has the same findings,
 so replacing the existing digest would not remediate them. The latest
@@ -50,7 +50,7 @@ PCRE2 needs `10.42-1+deb12u1`; fixing the shipped image now would require
 maintaining a derived database image, and gosu would additionally require a
 vendor rebuild or a separately reviewed binary replacement. These changes are
 outside this dependency cleanup's existing vendor-image deployment contract.
-The full scan additionally reports 72 High and 16 Critical findings without an
+The full scan additionally reports 73 High and 15 Critical findings without an
 available fixed version, for 112 High/Critical findings in the PostgreSQL image
 overall. Counts are scanner package findings, not confirmed exploitable paths.
 

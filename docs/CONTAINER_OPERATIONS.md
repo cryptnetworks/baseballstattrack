@@ -44,10 +44,10 @@ review. Dependabot checks image metadata weekly, and the monthly security audit
 reports High and Critical vulnerabilities without scanning image files for
 credentials or packaged test keys.
 
-| Image             | Reviewed identity                                            | Upstream status on 2026-09-13                                                                                                                                                                 |
-| ----------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PostgreSQL        | `postgres:17-bookworm@sha256:4f736a…b394` (`17.10-bookworm`) | 24 fixable High findings: two PCRE2 and 22 in gosu's Go standard library. The latest vendor digest `051f7b…72e0` has the same findings; no replacement is adopted without a security benefit. |
-| Cloudflare Tunnel | `cloudflare/cloudflared:2026.9.1@sha256:b269e8…54e4`         | Removes 11 fixable High findings from 2026.7.3. Three remain in x/crypto 0.53.0 and gRPC 1.83.0; fixed dependencies are 0.55.0 and 1.83.2.                                                    |
+| Image             | Reviewed identity                                            | Upstream status on 2026-09-13                                                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| PostgreSQL        | `postgres:17-bookworm@sha256:4f736a…b394` (`17.10-bookworm`) | 24 fixable High/Critical findings: two PCRE2 and 22 in gosu's Go standard library. The latest vendor digest `051f7b…72e0` has the same findings; no replacement is adopted without a security benefit. |
+| Cloudflare Tunnel | `cloudflare/cloudflared:2026.9.1@sha256:b269e8…54e4`         | Removes 11 fixable High findings from 2026.7.3. Three remain in x/crypto 0.53.0 and gRPC 1.83.0; fixed dependencies are 0.55.0 and 1.83.2.                                                             |
 
 Counts use Trivy 0.73.0 with `--ignore-unfixed`; the monthly scan also reports
 findings without available fixes. The detailed advisories and vendor-image
