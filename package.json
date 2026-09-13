@@ -61,8 +61,14 @@
     },
     "find-my-way": "9.7.0",
     "postcss": "8.5.23",
-    "sharp": "0.35.3",
-    "valibot": "1.4.2"
+    "sharp": "0.35.4",
+    "valibot": "1.4.2",
+    "prisma": {
+      "mysql2": "3.23.1"
+    },
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.0"
+    }
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",
@@ -91,7 +97,7 @@
     "prettier-plugin-tailwindcss": "0.8.1",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
-    "vitest": "4.1.10",
+    "vitest": "4.1.11",
     "yaml": "2.9.0"
   },
   "allowScripts": {
