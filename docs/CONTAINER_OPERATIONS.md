@@ -44,35 +44,29 @@ review. Dependabot checks image metadata weekly, and the monthly security audit
 reports High and Critical vulnerabilities without scanning image files for
 credentials or packaged test keys.
 
-| Image             | Reviewed identity                                            | Upstream status on 2026-08-03                                                                                                                                                                                                                                                                                                                                        |
-| ----------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PostgreSQL        | `postgres:17-bookworm@sha256:4f736a…b394` (`17.10-bookworm`) | The current tag still resolves to this digest. The [vendor Dockerfile](https://github.com/docker-library/postgres/blob/4f9ced003ba58a854656ba150d146243d27ae3ac/17/bookworm/Dockerfile) contains [gosu 1.19](https://github.com/tianon/gosu/releases/tag/1.19), built with Go 1.24.6; no newer gosu release or rebuilt PostgreSQL image uses a patched Go toolchain. |
-| Cloudflare Tunnel | `cloudflare/cloudflared:2026.7.3@sha256:e39ee8…d91d`         | [`2026.7.3`](https://github.com/cloudflare/cloudflared/releases/tag/2026.7.3) and `latest` resolve to this same digest. The binary uses Go 1.26.4 and gRPC 1.81.1; the [vendor notes](https://github.com/cloudflare/cloudflared/blob/2026.7.3/RELEASE_NOTES) do not identify an image with both affected dependencies fixed.                                         |
+| Image             | Reviewed identity                                            | Upstream status on 2026-09-13                                                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| PostgreSQL        | `postgres:17-bookworm@sha256:4f736a…b394` (`17.10-bookworm`) | 24 fixable High/Critical findings: two PCRE2 and 22 in gosu's Go standard library. The latest vendor digest `051f7b…72e0` has the same findings; no replacement is adopted without a security benefit. |
+| Cloudflare Tunnel | `cloudflare/cloudflared:2026.9.1@sha256:b269e8…54e4`         | Removes 11 fixable High findings from 2026.7.3. Three remain in x/crypto 0.53.0 and gRPC 1.83.0; fixed dependencies are 0.55.0 and 1.83.2.                                                             |
 
-The ephemeral CI database is also pinned to the current
-`postgres:17.10-alpine3.24` manifest. It comes from the same reviewed PostgreSQL
-source revision as the production image and cannot drift between workflow runs.
+Counts use Trivy 0.73.0 with `--ignore-unfixed`; the monthly scan also reports
+findings without available fixes. The detailed advisories and vendor-image
+blockers are recorded in [SEC-009](SECURITY_AUDIT.md#sec-009-upstream-image-review).
+The ephemeral CI database remains pinned to `postgres:17.10-alpine3.24`.
 
-Trivy 0.73.0 reports one Critical and 14 High Go-standard-library findings in
-`/usr/local/bin/gosu`. The same scan reports 31 High and 19 Critical Debian
-advisories with no currently installable fix in the image; `--ignore-unfixed`
-removes those OS findings but retains every gosu finding. Gosu runs only during
-local container startup to drop from root to the `postgres` user using the
-vendor entrypoint's fixed arguments. PostgreSQL has no host port and remains on
-the internal database network.
-
-The cloudflared binary has two High findings: `CVE-2026-39822` in Go 1.26.4 and
-`GHSA-hrxh-6v49-42gf` in gRPC 1.81.1. The tunnel is disabled unless its Compose
-profile is selected. When enabled it runs non-root with a read-only filesystem,
-no Linux capabilities, no privilege escalation, and autoupdate disabled. Its
-token is injected only at runtime and is not available to image scans.
+Gosu runs only during local startup with fixed privilege-drop arguments.
+PostgreSQL has no host port and remains on the internal database network.
+The optional tunnel runs non-root with a read-only filesystem, no capabilities,
+no privilege escalation, and autoupdate disabled. Its token is injected at
+runtime. Live tunnel connectivity requires deployment credentials and is not
+covered by the local smoke tests.
 
 These controls reduce exposure but do not mark the findings fixed. Reassess
 immediately when any of the following occurs:
 
 - the PostgreSQL or cloudflared registry tag resolves to a new digest;
-- gosu is released with Go 1.24.13 or later, or cloudflared is released with Go
-  1.26.5 or later and gRPC 1.82.1 or later;
+- the vendor PostgreSQL image patches PCRE2 and rebuilds gosu with a patched Go
+  toolchain, or cloudflared ships x/crypto 0.55.0 and gRPC 1.83.2 or later;
 - Trivy changes a finding, severity, fix version, or reachability assessment;
 - the PostgreSQL entrypoint arguments or network exposure change; or
 - the Cloudflare profile is enabled in a new environment or its permissions,

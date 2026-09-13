@@ -5,8 +5,10 @@ FROM ${NODE_IMAGE}
 
 ARG VCS_REF=unknown
 
-RUN apk add --no-cache \
+RUN apk add --no-cache --upgrade \
     ca-certificates \
+    'libcrypto3>=3.5.8-r0' \
+    'libssl3>=3.5.8-r0' \
     docker-cli \
     docker-cli-buildx \
     docker-cli-compose \

@@ -22,17 +22,17 @@ audit workstation has no Docker daemon.
 
 ## Findings
 
-| ID      | Severity                    | Status                       | Finding and remediation                                                                                                                                                                                                                                                                                                                             |
-| ------- | --------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SEC-001 | High                        | Fixed                        | `fast-uri` 3.1.4 and `brace-expansion` 5.0.8 were present in the npm lockfile. The lockfile now resolves fixed releases; both full and production npm audits report zero findings.                                                                                                                                                                  |
-| SEC-002 | High                        | Fixed                        | Documentation heading normalization removed nested HTML-like text in one pass. Repeated removal now reaches a stable value before the strict anchor allowlist runs, with a nested-markup regression test.                                                                                                                                           |
-| SEC-003 | High alert / false positive | Dismissed after confirmation | CodeQL classified the Discord OAuth-state HMAC as password hashing. The value is a random state integrity tag, not a password. Advanced CodeQL confirmed the trace ends at test-supplied signing keys; alert 1 is dismissed with that rationale. The implementation constructs an explicit secret key and rejects keys shorter than 32 bytes.       |
-| SEC-004 | High                        | Fixed                        | An Account-managed feed URL could redirect a server-held provider API key to another HTTPS origin. A deployment-owned `EXTERNAL_DATA_PROVIDER_ALLOWED_ORIGIN` now binds that key to one exact origin. Redirects remain disabled.                                                                                                                    |
-| SEC-005 | Critical/High               | Fixed                        | Debian application and Discord images inherited numerous operating-system CVEs. Both images now use digest-pinned Alpine 3.23 bases. The Node build tool upgrades npm, clears its cache, and removes npm from shipped images. CI builds and scans the final runtime, migration, and bot images, blocking fixable High or Critical findings.         |
-| SEC-006 | Medium                      | Fixed                        | Dependabot omitted the Discord service's Python dependencies. Weekly pip monitoring now covers its locked requirements.                                                                                                                                                                                                                             |
-| SEC-007 | Medium                      | Fixed                        | Active repository rulesets protect `main` and `v*` release tags. `main` requires pull requests, resolved conversations, current branches, `verify`, and the stable `SAST required gate`; force pushes and deletion are blocked. The SAST gate plans CodeQL by changed path so non-source pull requests do not deadlock.                             |
-| SEC-008 | Low                         | Fixed                        | Security guidance still described a private repository without secret scanning or private vulnerability reporting. The documents now match live settings.                                                                                                                                                                                           |
-| SEC-009 | Medium                      | Mitigated and monitored      | No patched upstream image exists as of 2026-08-03. PostgreSQL still contains gosu 1.19 built with Go 1.24.6; cloudflared 2026.7.3 still contains Go 1.26.4 and gRPC 1.81.1. Both images remain digest-pinned, and an executable policy requires monthly vulnerability monitoring. Context, ownership, and reassessment triggers are recorded below. |
+| ID      | Severity                    | Status                       | Finding and remediation                                                                                                                                                                                                                                                                                                                       |
+| ------- | --------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SEC-001 | High                        | Fixed                        | `fast-uri` 3.1.4 and `brace-expansion` 5.0.8 were present in the npm lockfile. The lockfile now resolves fixed releases; both full and production npm audits report zero findings.                                                                                                                                                            |
+| SEC-002 | High                        | Fixed                        | Documentation heading normalization removed nested HTML-like text in one pass. Repeated removal now reaches a stable value before the strict anchor allowlist runs, with a nested-markup regression test.                                                                                                                                     |
+| SEC-003 | High alert / false positive | Dismissed after confirmation | CodeQL classified the Discord OAuth-state HMAC as password hashing. The value is a random state integrity tag, not a password. Advanced CodeQL confirmed the trace ends at test-supplied signing keys; alert 1 is dismissed with that rationale. The implementation constructs an explicit secret key and rejects keys shorter than 32 bytes. |
+| SEC-004 | High                        | Fixed                        | An Account-managed feed URL could redirect a server-held provider API key to another HTTPS origin. A deployment-owned `EXTERNAL_DATA_PROVIDER_ALLOWED_ORIGIN` now binds that key to one exact origin. Redirects remain disabled.                                                                                                              |
+| SEC-005 | Critical/High               | Fixed                        | Debian application and Discord images inherited numerous operating-system CVEs. Both images now use digest-pinned Alpine 3.23 bases. The Node build tool upgrades npm, clears its cache, and removes npm from shipped images. CI builds and scans the final runtime, migration, and bot images, blocking fixable High or Critical findings.   |
+| SEC-006 | Medium                      | Fixed                        | Dependabot omitted the Discord service's Python dependencies. Weekly pip monitoring now covers its locked requirements.                                                                                                                                                                                                                       |
+| SEC-007 | Medium                      | Fixed                        | Active repository rulesets protect `main` and `v*` release tags. `main` requires pull requests, resolved conversations, current branches, `verify`, and the stable `SAST required gate`; force pushes and deletion are blocked. The SAST gate plans CodeQL by changed path so non-source pull requests do not deadlock.                       |
+| SEC-008 | Low                         | Fixed                        | Security guidance still described a private repository without secret scanning or private vulnerability reporting. The documents now match live settings.                                                                                                                                                                                     |
+| SEC-009 | Medium                      | Mitigated and monitored      | Reassessed 2026-09-13: cloudflared 2026.9.1 removes 11 fixable High findings, with three remaining upstream. PostgreSQL retains 24 fixable High/Critical findings in PCRE2 and gosu; the latest vendor image has the same findings. Digest pins, exposure controls, and monitoring remain in place.                                           |
 
 ### SEC-009 upstream image review
 
@@ -40,30 +40,31 @@ Owner: repository security maintainer. Review cadence: weekly Dependabot image
 checks and the scheduled monthly security audit, with immediate reassessment on
 an upstream digest or exposure change.
 
-The current `postgres:17-bookworm` registry manifest is the already-pinned
-`sha256:4f736a…b394`, PostgreSQL 17.10 on Debian 12.15. The
-[Docker Official Image](https://github.com/docker-library/postgres/blob/4f9ced003ba58a854656ba150d146243d27ae3ac/17/bookworm/Dockerfile)
-still installs [gosu 1.19](https://github.com/tianon/gosu/releases/tag/1.19),
-whose latest vendor release was built with Go 1.24.6. Trivy 0.73.0 reports one
-Critical and 14 High fixed-upstream Go findings in `/usr/local/bin/gosu`. It
-separately reports 31 High and 19 Critical Debian findings that have no
-installable fixed package in this image. A scan with `--ignore-unfixed` removes
-the OS findings and retains all 15 gosu findings.
+Reassessed on 2026-09-13 with Trivy 0.73.0. The pinned PostgreSQL image
+retains 24 High/Critical findings with upstream fixes: two in `libpcre2-8-0` and 22
+in the Go 1.24.6 standard library embedded in gosu 1.19. The current
+`postgres:17-bookworm` manifest (`sha256:051f7b…72e0`) has the same findings,
+so replacing the existing digest would not remediate them. The latest
+[gosu release](https://github.com/tianon/gosu/releases/tag/1.19) is still 1.19.
+PCRE2 needs `10.42-1+deb12u1`; fixing the shipped image now would require
+maintaining a derived database image, and gosu would additionally require a
+vendor rebuild or a separately reviewed binary replacement. These changes are
+outside this dependency cleanup's existing vendor-image deployment contract.
+The full scan additionally reports 73 High and 15 Critical findings without an
+available fixed version, for 112 High/Critical findings in the PostgreSQL image
+overall. Counts are scanner package findings, not confirmed exploitable paths.
 
-The pinned cloudflared digest is Cloudflare's current
-[`2026.7.3` image](https://github.com/cloudflare/cloudflared/releases/tag/2026.7.3).
-The tag was changed from `latest` to `2026.7.3` without changing the digest.
-Its binary still uses Go 1.26.4 and gRPC 1.81.1. Trivy reports
-`CVE-2026-39822` and `GHSA-hrxh-6v49-42gf` as High, with fixed versions Go
-1.26.5 and gRPC 1.82.1. Cloudflare's
-[release notes](https://github.com/cloudflare/cloudflared/blob/2026.7.3/RELEASE_NOTES)
-include other dependency security work but no build that contains both required
-versions.
+Cloudflare Tunnel is upgraded from 2026.7.3 to
+[2026.9.1](https://github.com/cloudflare/cloudflared/releases/tag/2026.9.1),
+pinned to `sha256:b269e8…54e4`. Its Go 1.26.8 toolchain and refreshed base
+remove 11 fixable High findings. Three High findings remain in the latest
+vendor image: `CVE-2026-56854` (`golang.org/x/crypto` 0.53.0, fixed in
+0.55.0), and `CVE-2026-84304` / `CVE-2026-84445` (gRPC 1.83.0, both fixed
+in 1.83.2). No alert is dismissed and the infrastructure scans remain enabled.
+The [release notes](https://github.com/cloudflare/cloudflared/blob/2026.9.1/RELEASE_NOTES)
+retain the tunnel command used by Compose; live tunnel connectivity still
+requires deployment credentials and was not exercised during this cleanup.
 
-No digest was replaced because neither vendor has published a patched image.
-The ephemeral CI database was normalized from a floating major tag to the
-current exact `17.10-alpine3.24` version and digest from the same PostgreSQL
-source revision.
 Gosu is limited to fixed local privilege-drop arguments during PostgreSQL
 startup; the database has no host port and uses an internal network. The tunnel
 remains an optional profile and runs non-root, read-only, without capabilities

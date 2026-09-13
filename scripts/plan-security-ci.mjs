@@ -14,21 +14,27 @@ export function planSecurityAuditScopes(files, { forceFull = false } = {}) {
   const nodeDependencies =
     normalizedFiles.has("package.json") ||
     normalizedFiles.has("package-lock.json");
-  const pythonDependencies = normalizedFiles.has(
+  const pythonDependencies = [
+    "services/discord-bot/pyproject.toml",
+    "services/discord-bot/uv.lock",
     "services/discord-bot/requirements.lock",
-  );
+    "services/discord-bot/requirements-dev.lock",
+  ].some((file) => normalizedFiles.has(file));
   const containers =
     nodeDependencies ||
     pythonDependencies ||
     normalizedFiles.has("Dockerfile") ||
     normalizedFiles.has("services/discord-bot/Dockerfile") ||
     normalizedFiles.has("scripts/deploy/Dockerfile");
-  const sast = [...normalizedFiles].some(
-    (file) =>
-      file.startsWith(".github/actions/") ||
-      file.startsWith(".github/workflows/") ||
-      /\.(?:cjs|cts|js|jsx|mjs|mts|py|ts|tsx)$/u.test(file),
-  );
+  const sast =
+    nodeDependencies ||
+    pythonDependencies ||
+    [...normalizedFiles].some(
+      (file) =>
+        file.startsWith(".github/actions/") ||
+        file.startsWith(".github/workflows/") ||
+        /\.(?:cjs|cts|js|jsx|mjs|mts|py|ts|tsx)$/u.test(file),
+    );
 
   return { containers, nodeDependencies, pythonDependencies, sast };
 }

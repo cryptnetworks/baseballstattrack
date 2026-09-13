@@ -454,7 +454,7 @@ integration("privacy lifecycle persistence boundary", () => {
   });
 
   it("honors holds and performs Account deletion without mutating accepted history", async () => {
-    current = new Date("2026-08-02T00:00:00.000Z");
+    current = new Date();
     const prepared = await service.prepareExport(
       { accountId: ids.account, clientRequestId: `${prefix}-revoked-export` },
       actor("report.export"),
@@ -540,6 +540,8 @@ integration("privacy lifecycle persistence boundary", () => {
         eventId: webhookEvent.id,
         secretVersion: 1,
         retentionUntil: new Date(current.getTime() + 30 * 86_400_000),
+        createdAt: current,
+        updatedAt: current,
       },
     });
     await prisma.$transaction(async (tx) => {
@@ -632,7 +634,7 @@ integration("privacy lifecycle persistence boundary", () => {
       },
       worker(),
     );
-    current = new Date("2026-08-10T00:00:00.000Z");
+    current = new Date(current.getTime() + 8 * 86_400_000);
     await expect(
       service.executeRequest(
         { accountId: ids.account, requestId: created.request.id },
@@ -646,7 +648,7 @@ integration("privacy lifecycle persistence boundary", () => {
         worker(),
       ),
     ).resolves.toMatchObject({ status: "RELEASED", releasedAt: current });
-    current = new Date("2026-08-12T00:00:00.000Z");
+    current = new Date(current.getTime() + 2 * 86_400_000);
     await expect(
       service.executeRequest(
         { accountId: ids.account, requestId: created.request.id },
