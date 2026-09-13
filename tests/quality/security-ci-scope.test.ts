@@ -23,12 +23,14 @@ describe("security audit scope planner", () => {
   it.each(["pyproject.toml", "uv.lock", "requirements-dev.lock"])(
     "audits Python manifest and tooling changes in %s",
     (file) => {
-      expect(planSecurityAuditScopes([`services/discord-bot/${file}`])).toEqual({
-        containers: true,
-        nodeDependencies: false,
-        pythonDependencies: true,
-        sast: true,
-      });
+      expect(planSecurityAuditScopes([`services/discord-bot/${file}`])).toEqual(
+        {
+          containers: true,
+          nodeDependencies: false,
+          pythonDependencies: true,
+          sast: true,
+        },
+      );
     },
   );
 
