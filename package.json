@@ -84,7 +84,7 @@
   "devDependencies": {
     "@eslint/compat": "2.1.1",
     "@tailwindcss/postcss": "4.3.3",
-    "@types/node": "26.4.1",
+    "@types/node": "26.6.1",
     "@types/nodemailer": "8.0.1",
     "@types/pg": "8.23.1",
     "@types/react": "19.2.18",
@@ -92,13 +92,13 @@
     "@typescript/typescript6": "6.0.2",
     "dotenv": "17.4.2",
     "eslint": "10.10.0",
-    "eslint-config-next": "16.3.4",
-    "prettier": "^3.9.6",
+    "eslint-config-next": "16.3.5",
+    "prettier": "^3.9.8",
     "prettier-plugin-tailwindcss": "0.8.1",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
     "vitest": "4.1.11",
-    "yaml": "2.9.0"
+    "yaml": "2.9.1"
   },
   "allowScripts": {
     "@prisma/engines@7.9.0": true,
